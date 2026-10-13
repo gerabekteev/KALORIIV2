@@ -254,3 +254,41 @@ export interface StatsPeriodResponse {
 }
 
 export type StatsResponse = StatsPeriodResponse
+
+export interface BarcodeProductResult {
+  product_id?: number | null
+  name: string
+  brand?: string | null
+  barcode: string
+  calories_per_100g: number
+  protein_per_100g: number
+  fat_per_100g: number
+  carbs_per_100g: number
+  package_weight_grams: number
+  image_url?: string | null
+  source: 'local' | 'openfoodfacts' | 'ai_vision'
+  is_honest_sign: boolean
+}
+
+export interface RecentScannedProductItem {
+  id: number
+  product_id: number
+  name: string
+  brand?: string | null
+  barcode?: string | null
+  calories_per_100g: number
+  protein_per_100g: number
+  fat_per_100g: number
+  carbs_per_100g: number
+  package_weight_grams: number
+  image_url?: string | null
+  last_scanned_at: string
+  scan_count: number
+}
+
+export interface BarcodeScanImageResponse {
+  detected_code?: string | null
+  is_honest_sign: boolean
+  product?: BarcodeProductResult | null
+  message?: string | null
+}

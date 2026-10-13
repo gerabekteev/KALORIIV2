@@ -256,6 +256,55 @@ Authorization: Bearer <access_token>
 }
 ```
 
+### GET `/api/profile/ai-settings`
+Получить сохранённые приоритеты AI моделей и кастомные API-ключи пользователя. 🔒
+
+### PUT `/api/profile/ai-settings`
+Сохранить персональный порядок приоритета AI моделей и API-ключи в БД. 🔒
+
+---
+
+## 7. Barcode — Штрихкоды и «Честный Знак»
+
+### POST `/api/barcode/lookup`
+Поиск продукта по линейному штрихкоду (EAN-13, EAN-8, UPC) или 2D DataMatrix коду маркировки «Честный Знак». 🔒
+Сначала выполняет поиск в локальной БД, затем запрашивает Open Food Facts API и автоматически кэширует найденный продукт.
+
+**Body (JSON):**
+```json
+{
+  "barcode": "4607025140019"
+}
+```
+
+**Response 200:**
+```json
+{
+  "product_id": 42,
+  "name": "Молоко 3.2%",
+  "brand": "Простоквашино",
+  "barcode": "4607025140019",
+  "calories_per_100g": 59.0,
+  "protein_per_100g": 3.0,
+  "fat_per_100g": 3.2,
+  "carbs_per_100g": 4.7,
+  "package_weight_grams": 950.0,
+  "image_url": "https://images.openfoodfacts.org/...",
+  "source": "openfoodfacts",
+  "is_honest_sign": true
+}
+```
+
+### POST `/api/barcode/scan-image`
+Анализ фото упаковки или скриншота со штрихкодом через AI Vision каскад. 🔒
+Форма `multipart/form-data` с полем `photo`.
+
+### GET `/api/barcode/recent`
+Получить список недавно отсканированных товаров текущего пользователя для быстрой полки. 🔒
+
+### DELETE `/api/barcode/recent/{product_id}`
+Удалить товар из полки недавних сканирований. 🔒
+
 ---
 
 ## Коды ошибок

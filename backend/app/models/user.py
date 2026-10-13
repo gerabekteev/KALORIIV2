@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from app.models.meal import Meal
     from app.models.product import Product
     from app.models.recipe import Recipe
+    from app.models.scanned_product import UserScannedProduct
 
 
 class User(Base):
@@ -56,6 +57,9 @@ class User(Base):
     )
     custom_products: Mapped[List["Product"]] = relationship(
         "Product", back_populates="creator"
+    )
+    scanned_products: Mapped[List["UserScannedProduct"]] = relationship(
+        "UserScannedProduct", back_populates="user", cascade="all, delete-orphan"
     )
 
 

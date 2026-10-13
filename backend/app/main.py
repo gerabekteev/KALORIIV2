@@ -11,7 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base, AsyncSessionLocal
-from app.routers import auth, meals, products, recipes, stats, profile, ai
+from app.routers import auth, meals, products, recipes, stats, profile, ai, barcode
 from scripts.seed_products import seed_products
 
 # Logging setup
@@ -30,10 +30,17 @@ async def lifespan(app: FastAPI):
     # Ensure tables exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        try:
-            await conn.execute(text("ALTER TABLE users ADD COLUMN ai_settings_json VARCHAR(4000)"))
-        except Exception:
-            pass
+        for alter_sql in [
+            "ALTER TABLE users ADD COLUMN ai_settings_json VARCHAR(4000)",
+            "ALTER TABLE products ADD COLUMN barcode VARCHAR(100)",
+            "ALTER TABLE products ADD COLUMN brand VARCHAR(255)",
+            "ALTER TABLE products ADD COLUMN image_url VARCHAR(500)",
+            "ALTER TABLE products ADD COLUMN package_weight_grams FLOAT DEFAULT 100.0",
+        ]:
+            try:
+                await conn.execute(text(alter_sql))
+            except Exception:
+                pass
 
     # Seed products if empty
     async with AsyncSessionLocal() as session:
@@ -79,6 +86,7 @@ app.include_router(recipes.router, prefix=settings.API_V1_PREFIX)
 app.include_router(stats.router, prefix=settings.API_V1_PREFIX)
 app.include_router(profile.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ai.router, prefix=settings.API_V1_PREFIX)
+app.include_router(barcode.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/api/health", tags=["Служебные"])
