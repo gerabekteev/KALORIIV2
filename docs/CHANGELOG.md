@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-10-13] — Production Deployment & Live Infrastructure Verification (v1.1.0)
+
+### 🚀 Production Deployment на сервере 62.60.186.12
+- **Docker Compose + Caddy архитектура**:
+  - Приложение полностью контейнеризировано в образе `kalorii` (`python:3.12-slim`).
+  - Интегрировано в сеть `remnawave-network` существующего контейнера `caddy` (`caddy:2-alpine`).
+  - Подключены persistent Docker volumes: `kalorii-data` (SQLite БД) и `kalorii-uploads` (фотографии блюд).
+  - Настроен обратный прокси в `/opt/caddy-remnawave/Caddyfile` для домена `kalorii.lopni.fun` с автоматическим получением TLS-сертификатов Let's Encrypt / ZeroSSL.
+  - Настроен автоматический редирект HTTP -> HTTPS и сжатие gzip/zstd.
+- **Встроенная раздача SPA (Self-contained Frontend)**:
+  - Скомпилированный продакшен-бандл React/Vite встроен напрямую в бэкенд FastAPI (`backend/static`).
+  - Бесшовный SPA client-side fallback для клиентских роутов (`/`, `/login`, `/register`, `/stats`, `/profile`).
+- **Оптимизация AI-цепочки под реальные лимиты и квоты**:
+  - `gemini-3.1-flash-lite` установлен основным приоритетом (#1): щедрый лимит **500 RPD** и **15 RPM** без гео-блокировок.
+  - Резервные модели: `gemini-3.5-flash` (20 RPD), `gemini-3.6-flash` (20 RPD), `gemini-3.8-flash` (20 RPD), `gemini-3.7-flash` (20 RPD).
+  - OpenRouter мультимодальный fallback: `google/gemma-4-26b-a4b-it:free`, `google/gemma-4-31b-it:free`, `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`.
+  - Мгновенный переключатель при ошибках 503 (high demand) и 429 (quota exceeded) без задержек.
+- **100% прохождение тестов в продакшене**:
+  - Все интеграционные тесты (11 endpoints в `test_live_api.py`, `test_backend.py`, `test_edge_cases.py`, `test_wave4_recipes_and_ai.py`) выполнены непосредственно внутри продакшен-контейнера на сервере с результатом **PASS**.
+
+---
+
 ## [2026-10-13] — Релиз v1.0.0 (100% готовность к релизу и продакшену)
 
 ### ⭐ Новые возможности (Wave 4)
