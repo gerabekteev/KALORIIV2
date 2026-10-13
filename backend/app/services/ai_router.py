@@ -16,11 +16,15 @@ logger = logging.getLogger("kalorii.ai_router")
 
 # Default priority model chain defined in AI-MODELS-CATALOG.md
 DEFAULT_MODEL_CHAIN: List[Tuple[str, str]] = [
-    ("gemini", "gemini-3.5-flash-lite"),
+    ("gemini", "gemini-3.1-flash-lite"),
+    ("gemini", "gemini-3.5-flash"),
+    ("gemini", "gemini-3.6-flash"),
     ("gemini", "gemini-3.8-flash"),
     ("gemini", "gemini-3.7-flash"),
+    ("gemini", "gemini-3.5-flash-lite"),
     ("openrouter", "google/gemma-4-26b-a4b-it:free"),
-    ("openrouter", "openrouter/free"),
+    ("openrouter", "google/gemma-4-31b-it:free"),
+    ("openrouter", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"),
 ]
 
 
@@ -131,10 +135,15 @@ class AIRouter:
                     )
                     errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
 
+                    err_str = str(err).lower()
+                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
+                        logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
+                        break
+
                     if attempt == 1:
-                        # Wait 5 seconds before retrying the same model
-                        logger.info(f"Waiting 5 seconds before retry for {provider_type}/{model_id}...")
-                        await asyncio.sleep(5)
+                        # Wait 2 seconds before retrying the same model for network glitches
+                        logger.info(f"Waiting 2 seconds before retry for {provider_type}/{model_id}...")
+                        await asyncio.sleep(2)
 
                 except Exception as ex:
                     logger.error(
