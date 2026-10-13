@@ -27,13 +27,19 @@ def test_live_api():
     print(f"=== Testing Live API at {BASE_URL} ===")
     client = get_client()
 
-    # 1. GET / - should return health check
-    print("\n--- 1. GET / ---")
-    res1 = client.get("/")
+    # 1. GET /api/health - should return health check
+    print("\n--- 1. GET /api/health ---")
+    res1 = client.get("/api/health")
     print(f"Status: {res1.status_code}, Body: {res1.text}")
     assert res1.status_code == 200
     assert res1.json().get("status") == "ok"
-    print("PASSED: Health check / returned status ok")
+    print("PASSED: Health check /api/health returned status ok")
+
+    # 1.1 GET / - should return SPA HTML
+    res_spa = client.get("/")
+    assert res_spa.status_code == 200
+    assert "<!doctype html>" in res_spa.text.lower()
+    print("PASSED: SPA root / returned index.html")
 
     # 2. POST /api/auth/register - register a test user
     print("\n--- 2. POST /api/auth/register ---")
