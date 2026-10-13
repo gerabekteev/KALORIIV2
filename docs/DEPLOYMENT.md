@@ -1,6 +1,6 @@
 # 🔧 KaloriiAI — Deployment & Operations
 
-> Инструкции по деплою, обновлению и обслуживанию на сервере.
+> Инструкции по деплою, обновлению и обслуживанию на сервере в контейнерной среде Docker + Caddy.
 
 ---
 
@@ -8,125 +8,131 @@
 
 | Параметр | Значение |
 |---|---|
-| IP | 62.60.186.12 |
-| Локация | Швеция |
-| ОС | Ubuntu 26.04 |
-| CPU | 1 ядро |
-| RAM | 3.8 GB |
-| Домен | kalorii.lopni.fun |
-| TLS | Caddy (автоматический ACME через Cloudflare DNS) |
+| IP целевого сервера | `62.60.186.12` |
+| Jump host (промежуточный) | `194.48.140.56` (`fi` в ~/.ssh/config) |
+| Доступ | `ssh -o StrictHostKeyChecking=no -J fi root@62.60.186.12` |
+| Локация | Швеция (Стокгольм) |
+| ОС | Ubuntu 26.04 minimal |
+| Архитектура деплоя | Docker Compose + Caddy Reverse Proxy (`caddy:2-alpine`) |
+| Домен | `kalorii.lopni.fun` |
+| TLS | Автоматические сертификаты Let's Encrypt / ZeroSSL через Caddy |
 
 ---
 
-## Структура на сервере
+## Архитектура контейнеров на сервере
 
 ```
-/opt/kalorii/
-├── backend/          # Код бэкенда
-├── venv/             # Python virtualenv
-├── data/
-│   └── db.sqlite3    # База данных
-├── uploads/          # Загруженные фото
-└── .env              # Секреты
-
-/var/www/kalorii/     # Собранный React фронтенд
+Интернет (HTTPS :443 / HTTP :80)
+            │
+            ▼
+┌────────────────────────────────────────────────────────┐
+│  Docker Container: caddy (caddy:2-alpine)             │
+│  Сеть: remnawave-network                               │
+│  Конфиг: /opt/caddy-remnawave/Caddyfile               │
+└───────────────────────┬────────────────────────────────┘
+                        │
+                        │ Внутренняя маршрутизация по Docker DNS
+                        ▼
+┌────────────────────────────────────────────────────────┐
+│  Docker Container: kalorii (python:3.12-slim)         │
+│  Сеть: remnawave-network                               │
+│  Порт: kalorii:5100 (также опубликован на 127.0.0.1:5100)
+│  Директория: /opt/kalorii                              │
+│  Volumes:                                              │
+│    - kalorii-data    -> /app/backend/data              │
+│    - kalorii-uploads -> /app/backend/uploads           │
+│  Frontend SPA + API в одном процессе Uvicorn/FastAPI   │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Порты
+## Быстрый деплой и запуск
 
-| Сервис | Порт | Статус |
-|---|---|---|
-| Caddy (HTTPS) | 443 | Общий |
-| KaloriiAI Backend | 5100 | Только localhost |
-| VPN сервисы | 2053, 2222, 8443, 39851 | Занято |
-
----
-
-## Деплой (первый раз)
+### 1. Клонирование / обновление на сервере
 
 ```bash
-# На сервере:
-sudo useradd -r -s /bin/nologin kalorii
-sudo mkdir -p /opt/kalorii /var/www/kalorii
-sudo chown kalorii:kalorii /opt/kalorii
+ssh -J fi root@62.60.186.12
+cd /opt
+if [ ! -d "/opt/kalorii" ]; then
+    git clone https://github.com/gerabekteev/KALORIIV2.git kalorii
+    cd kalorii
+else
+    cd kalorii
+    git pull origin main
+fi
+```
 
-# Скопировать backend/
-scp -r backend/ root@62.60.186.12:/opt/kalorii/backend/
+### 2. Настройка окружения (`/opt/kalorii/backend/.env`)
 
-# Создать venv
-cd /opt/kalorii
-python3 -m venv venv
-source venv/bin/activate
-pip install -r backend/requirements.txt
+```bash
+cat << 'EOF' > /opt/kalorii/backend/.env
+PROJECT_NAME="KaloriiAI"
+DEBUG=false
+DATABASE_URL=sqlite+aiosqlite:////app/backend/data/db.sqlite3
+JWT_SECRET=super_secure_jwt_secret_kalorii_production_2026
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+CORS_ORIGINS=["https://kalorii.lopni.fun","http://localhost:5100"]
+UPLOAD_DIR=/app/backend/uploads
+RATE_LIMIT_AI_PER_MINUTE=10
+EOF
+```
 
-# Настроить .env
-cp backend/.env.example .env
-nano .env  # Заполнить ключи
+### 3. Запуск контейнера KaloriiAI
 
-# Миграции
-cd backend
-alembic upgrade head
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-# Systemd
-sudo cp deploy/kalorii.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now kalorii
+### 4. Настройка Caddy на сервере
 
-# Caddy — добавить блок в Caddyfile
-sudo nano /etc/caddy/Caddyfile  # Добавить блок из deploy/Caddyfile.kalorii
-sudo systemctl reload caddy
+В файл `/opt/caddy-remnawave/Caddyfile` добавляется блок:
 
-# Фронтенд
-cd frontend
-npm run build
-sudo cp -r dist/* /var/www/kalorii/
+```caddyfile
+kalorii.lopni.fun {
+    encode zstd gzip
+
+    reverse_proxy kalorii:5100 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+```
+
+Перезагрузка конфигурации Caddy (без даунтайма):
+```bash
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 ---
 
-## Обновление
+## Проверка статуса и логи
 
 ```bash
-# Быстрый деплой
-./deploy/deploy.sh
-```
+# Проверка работы контейнера
+docker ps | grep kalorii
 
-Или вручную:
-```bash
-# Backend
-scp -r backend/ root@62.60.186.12:/opt/kalorii/backend/
-ssh root@62.60.186.12 "cd /opt/kalorii && source venv/bin/activate && pip install -r backend/requirements.txt && cd backend && alembic upgrade head && sudo systemctl restart kalorii"
+# Просмотр логов в реальном времени
+docker logs -f kalorii
 
-# Frontend
-cd frontend && npm run build
-scp -r dist/* root@62.60.186.12:/var/www/kalorii/
-```
+# Локальная проверка здоровья изнутри сервера
+curl -I http://127.0.0.1:5100/api/health
 
----
-
-## Бэкап
-
-```bash
-# База данных (один файл!)
-scp root@62.60.186.12:/opt/kalorii/data/db.sqlite3 ./backup/
-
-# Фото
-scp -r root@62.60.186.12:/opt/kalorii/uploads/ ./backup/uploads/
+# Проверка через HTTPS домен
+curl -I https://kalorii.lopni.fun/api/health
 ```
 
 ---
 
-## Мониторинг
+## Бэкап базы данных и фото
 
 ```bash
-# Статус сервиса
-sudo systemctl status kalorii
+# Бэкап БД из Docker Volume
+docker run --rm -v kalorii-data:/data -v /tmp:/backup alpine cp /data/db.sqlite3 /backup/kalorii-db-$(date +%Y%m%d).sqlite3
 
-# Логи
-sudo journalctl -u kalorii -f
-
-# Проверить API
-curl https://kalorii.lopni.fun/api/auth/me
+# Бэкап загрузок
+docker run --rm -v kalorii-uploads:/uploads -v /tmp:/backup alpine tar -czf /backup/kalorii-uploads-$(date +%Y%m%d).tar.gz /uploads
 ```

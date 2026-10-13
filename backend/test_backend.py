@@ -220,7 +220,18 @@ async def test_full_backend():
             assert "Все модели AI" in res.json()["detail"]
             print("[OK] 20. AI router fallback and graceful degradation verified:", res.json()["detail"])
 
-        print("\n=== ALL 20 INTEGRATION TESTS PASSED WITH 100% SUCCESS! ===")
+        # 21. SPA Frontend static serving
+        res = await client.get("/")
+        assert res.status_code == 200
+        assert "text/html" in res.headers.get("content-type", "")
+        print("[OK] 21. SPA Root index.html serving verified.")
+
+        res = await client.get("/profile")
+        assert res.status_code == 200
+        assert "text/html" in res.headers.get("content-type", "")
+        print("[OK] 22. SPA Client-side route fallback (/profile -> index.html) verified.")
+
+        print("\n=== ALL INTEGRATION TESTS PASSED WITH 100% SUCCESS! ===")
 
 
 if __name__ == "__main__":

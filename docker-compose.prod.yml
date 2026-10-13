@@ -1,0 +1,25 @@
+services:
+  kalorii:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kalorii
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - kalorii-data:/app/backend/data
+      - kalorii-uploads:/app/backend/uploads
+    ports:
+      - "127.0.0.1:5100:5100"
+    networks:
+      - default
+      - remnawave-network
+
+volumes:
+  kalorii-data:
+  kalorii-uploads:
+
+networks:
+  remnawave-network:
+    external: true

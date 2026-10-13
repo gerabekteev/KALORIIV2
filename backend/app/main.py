@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -85,15 +86,38 @@ async def health_check():
     }
 
 
-@app.get("/", tags=["Служебные"])
-async def root():
-    """Root redirect / welcome endpoint."""
-    return {
-        "status": "ok",
-        "message": "Добро пожаловать в API KaloriiAI!",
-        "docs": "/docs",
-        "health": "/api/health",
-    }
+# Static frontend files and SPA client-side routing
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+if not STATIC_DIR.exists():
+    STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+if STATIC_DIR.exists():
+    from fastapi.responses import FileResponse
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        # Allow API, docs, and uploads to pass through or 404
+        if full_path.startswith(("api", "uploads", "docs", "redoc", "openapi.json")):
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        file_path = STATIC_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+
+        index_file = STATIC_DIR / "index.html"
+        if index_file.is_file():
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="Frontend index.html not found")
+else:
+    @app.get("/", tags=["Служебные"])
+    async def root():
+        """Root redirect / welcome endpoint."""
+        return {
+            "status": "ok",
+            "message": "Добро пожаловать в API KaloriiAI!",
+            "docs": "/docs",
+            "health": "/api/health",
+        }
 
 
 @app.exception_handler(Exception)

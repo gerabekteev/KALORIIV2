@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="100%" stop-color="#09090b" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <g transform="translate(106, 86) scale(0.6)">
+    <!-- Stylized flame / leaf combination representing calories & nutrition -->
+    <path fill="url(#flameGrad)" d="M250,50 C260,150 350,200 350,300 C350,380 290,450 200,450 C110,450 50,380 50,300 C50,220 120,160 170,110 C180,180 240,210 240,260 C240,290 220,310 190,310 C160,310 145,290 145,270 C145,240 160,220 170,200 C120,240 100,280 100,320 C100,380 140,410 200,410 C260,410 300,360 300,290 C300,210 220,160 250,50 Z" />
+  </g>
+</svg>

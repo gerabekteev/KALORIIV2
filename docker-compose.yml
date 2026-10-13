@@ -1,0 +1,18 @@
+services:
+  kalorii:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kalorii
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    volumes:
+      - kalorii-data:/app/backend/data
+      - kalorii-uploads:/app/backend/uploads
+    ports:
+      - "5100:5100"
+
+volumes:
+  kalorii-data:
+  kalorii-uploads:
