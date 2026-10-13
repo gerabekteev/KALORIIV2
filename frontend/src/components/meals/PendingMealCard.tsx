@@ -32,7 +32,7 @@ export const PendingMealCard: React.FC<PendingMealCardProps> = ({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl p-4 transition-all duration-300 shadow-md ${
+      className={`relative overflow-hidden rounded-2xl p-3.5 transition-all duration-300 shadow-md ${
         isAnalyzing
           ? 'bg-[#1b1c21] border border-emerald-500/50 shadow-emerald-950/20 ring-1 ring-emerald-500/20'
           : 'bg-[#22181a] border border-rose-500/50 shadow-rose-950/20'
@@ -45,7 +45,7 @@ export const PendingMealCard: React.FC<PendingMealCardProps> = ({
 
       <div className="relative flex items-start gap-3">
         {/* Thumbnail / Icon container */}
-        <div className="relative w-16 h-16 rounded-xl bg-neutral-800 border border-neutral-700/60 overflow-hidden shrink-0 flex items-center justify-center">
+        <div className="relative w-14 h-14 rounded-xl bg-neutral-800 border border-neutral-700/60 overflow-hidden shrink-0 flex items-center justify-center">
           {isPhoto && pendingMeal.previewUrl ? (
             <>
               <img

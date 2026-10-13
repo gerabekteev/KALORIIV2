@@ -105,33 +105,51 @@ export const TodayPage: React.FC = () => {
         </div>
       )}
 
-      {/* Daily Progress Card */}
-      <Card variant="default" padding="md" className="space-y-5">
-        <div className="flex flex-col sm:flex-row items-center justify-around gap-5">
-          {/* Circular Calorie Ring */}
-          <div className="relative">
+      {/* Daily Progress Card — Compact, space-efficient side-by-side layout */}
+      <Card
+        variant="default"
+        padding="sm"
+        className="bg-[#18181c]/90 border border-neutral-800/80 rounded-2xl shadow-md p-3 sm:p-4"
+      >
+        <div className="flex items-center justify-between gap-3 sm:gap-6">
+          {/* Compact Circular Calorie Ring */}
+          <div className="shrink-0 flex items-center justify-center pl-1 sm:pl-2">
             <ProgressRing
               current={totals.calories}
               target={dailyGoalCalories}
-              size={170}
-              strokeWidth={13}
-              label="ккал"
-              sublabel={
-                totals.calories > dailyGoalCalories
-                  ? `+${totals.calories - dailyGoalCalories} сверх нормы`
-                  : `осталось ${remainingCalories} ккал`
-              }
-              showPercentage
-            />
+              size={114}
+              strokeWidth={9}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <span className="text-xl font-extrabold text-white tracking-tight leading-none">
+                  {totals.calories}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium mt-0.5">
+                  ккал
+                </span>
+                <span
+                  className={`text-[9px] font-semibold mt-1 px-1.5 py-0.5 rounded-full ${
+                    totals.calories > dailyGoalCalories
+                      ? 'bg-amber-500/15 text-amber-300'
+                      : 'bg-emerald-500/15 text-emerald-400'
+                  }`}
+                >
+                  {totals.calories > dailyGoalCalories
+                    ? `+${totals.calories - dailyGoalCalories}`
+                    : `ост. ${remainingCalories}`}
+                </span>
+              </div>
+            </ProgressRing>
           </div>
 
           {/* Macros Progress Bars */}
-          <div className="w-full sm:w-1/2 space-y-3.5">
+          <div className="flex-1 min-w-0 space-y-2 sm:space-y-2.5 pr-1">
             <ProgressBar
               current={totals.protein}
               target={dailyGoalProtein}
               label="Белки"
               color="blue"
+              size="sm"
               unit="г"
             />
             <ProgressBar
@@ -139,6 +157,7 @@ export const TodayPage: React.FC = () => {
               target={dailyGoalFat}
               label="Жиры"
               color="amber"
+              size="sm"
               unit="г"
             />
             <ProgressBar
@@ -146,6 +165,7 @@ export const TodayPage: React.FC = () => {
               target={dailyGoalCarbs}
               label="Углеводы"
               color="purple"
+              size="sm"
               unit="г"
             />
           </div>
@@ -184,19 +204,6 @@ export const TodayPage: React.FC = () => {
 
       {/* Meals List */}
       <MealList meals={meals} isLoading={isLoading} />
-
-      {/* Floating Action Button (FAB) for quick meal addition */}
-      <div className="fixed bottom-20 right-4 sm:right-auto sm:left-1/2 sm:translate-x-32 z-30">
-        <button
-          onClick={openAddMeal}
-          className="flex items-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-full shadow-xl shadow-emerald-500/35 border border-emerald-400/30 transition-all duration-200 cursor-pointer"
-        >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
-          <span className="hidden xs:inline flex items-center gap-1.5 font-bold">
-            <Sparkles className="w-4 h-4" /> Добавить еду
-          </span>
-        </button>
-      </div>
     </div>
   )
 }
