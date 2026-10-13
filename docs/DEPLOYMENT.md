@@ -15,7 +15,7 @@
 | ОС | Ubuntu 26.04 minimal |
 | Архитектура деплоя | Docker Compose + Caddy Reverse Proxy (`caddy:2-alpine`) |
 | Домен | `kalorii.lopni.fun` |
-| TLS / CDN | Автоматический Let's Encrypt через Caddy + Cloudflare Edge Proxy (DPI-bypass) |
+| TLS | Прямой автоматический Let's Encrypt через Caddy (DNS only / серое облако) |
 
 ---
 
