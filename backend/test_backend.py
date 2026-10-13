@@ -17,12 +17,12 @@ async def test_full_backend():
         # 1. Health check
         res = await client.get("/api/health")
         assert res.status_code == 200, f"Health check failed: {res.text}"
-        print("✓ 1. Health check passed:", res.json())
+        print("[OK] 1. Health check passed:", res.json())
 
         # 2. Check product seed
         async with AsyncSessionLocal() as session:
             count = (await session.execute(select(func.count(Product.id)))).scalar_one()
-            print(f"✓ 2. Products table count in database: {count}")
+            print(f"[OK] 2. Products table count in database: {count}")
             assert count >= 50, f"Expected at least 50 seeded products, got {count}"
 
         # 3. User Registration
@@ -40,24 +40,24 @@ async def test_full_backend():
         refresh_token = reg_data["token"]["refresh_token"]
         user_id = reg_data["user"]["id"]
         headers = {"Authorization": f"Bearer {token}"}
-        print(f"✓ 3. Registration passed. User ID: {user_id}")
+        print(f"[OK] 3. Registration passed. User ID: {user_id}")
 
         # 4. User Login
         res = await client.post("/api/auth/login", json={"email": test_email, "password": test_pass})
         assert res.status_code == 200, f"Login failed: {res.text}"
-        print("✓ 4. Login passed.")
+        print("[OK] 4. Login passed.")
 
         # 5. Token Refresh
         res = await client.post("/api/auth/refresh", json={"refresh_token": refresh_token})
         assert res.status_code == 200, f"Refresh failed: {res.text}"
         new_token = res.json()["access_token"]
         headers = {"Authorization": f"Bearer {new_token}"}
-        print("✓ 5. Token refresh passed.")
+        print("[OK] 5. Token refresh passed.")
 
         # 6. Get Current User / Profile
         res = await client.get("/api/auth/me", headers=headers)
         assert res.status_code == 200, f"Get me failed: {res.text}"
-        print("✓ 6. /api/auth/me passed.")
+        print("[OK] 6. /api/auth/me passed.")
 
         # 7. Calculate KBJU (Mifflin-St Jeor)
         calc_payload = {
@@ -71,7 +71,7 @@ async def test_full_backend():
         res = await client.post("/api/profile/calculate", json=calc_payload, headers=headers)
         assert res.status_code == 200, f"Calculate failed: {res.text}"
         calc_res = res.json()
-        print(f"✓ 7. Mifflin-St Jeor calculation passed: {calc_res}")
+        print(f"[OK] 7. Mifflin-St Jeor calculation passed: {calc_res}")
 
         # 8. Update Profile with goals
         update_profile_payload = {
@@ -88,17 +88,17 @@ async def test_full_backend():
         }
         res = await client.put("/api/profile", json=update_profile_payload, headers=headers)
         assert res.status_code == 200, f"Update profile failed: {res.text}"
-        print("✓ 8. Profile updated with calculated goals.")
+        print("[OK] 8. Profile updated with calculated goals.")
 
         # 9. Log Weight
         res = await client.post("/api/profile/weight", json={"weight_kg": 79.5}, headers=headers)
         assert res.status_code == 201, f"Log weight failed: {res.text}"
-        print("✓ 9. Weight log entry added.")
+        print("[OK] 9. Weight log entry added.")
 
         # 10. Weight stats
         res = await client.get("/api/stats/weight", headers=headers)
         assert res.status_code == 200, f"Weight stats failed: {res.text}"
-        print("✓ 10. Weight stats retrieved:", res.json())
+        print("[OK] 10. Weight stats retrieved:", res.json())
 
         # 11. Search Products
         res = await client.get("/api/products?search=греч", headers=headers)
@@ -106,7 +106,7 @@ async def test_full_backend():
         products_found = res.json()
         assert len(products_found) > 0, "Expected to find buckwheat in seed products"
         grechka_id = products_found[0]["id"]
-        print(f"✓ 11. Search products found: {products_found[0]['name']} (ID {grechka_id})")
+        print(f"[OK] 11. Search products found: {products_found[0]['name']} (ID {grechka_id})")
 
         # 12. Create Custom Product
         res = await client.post(
@@ -123,7 +123,7 @@ async def test_full_backend():
         )
         assert res.status_code == 201, f"Create custom product failed: {res.text}"
         custom_prod_id = res.json()["id"]
-        print(f"✓ 12. Custom product created with ID: {custom_prod_id}")
+        print(f"[OK] 12. Custom product created with ID: {custom_prod_id}")
 
         # 13. Create Recipe
         recipe_payload = {
@@ -138,12 +138,12 @@ async def test_full_backend():
         assert res.status_code == 201, f"Create recipe failed: {res.text}"
         recipe_data = res.json()
         recipe_id = recipe_data["id"]
-        print(f"✓ 13. Recipe created: {recipe_data['name']}, total calories: {recipe_data['total_calories']}")
+        print(f"[OK] 13. Recipe created: {recipe_data['name']}, total calories: {recipe_data['total_calories']}")
 
         # 14. Toggle Recipe Favorite
         res = await client.put(f"/api/recipes/{recipe_id}/favorite", headers=headers)
         assert res.status_code == 200 and res.json()["is_favorite"] is True
-        print("✓ 14. Recipe toggled to favorite.")
+        print("[OK] 14. Recipe toggled to favorite.")
 
         # 15. Create Meal
         today_str = date.today().isoformat()
@@ -161,7 +161,7 @@ async def test_full_backend():
         res = await client.post("/api/meals", json=meal_payload, headers=headers)
         assert res.status_code == 201, f"Create meal failed: {res.text}"
         meal_id = res.json()["id"]
-        print(f"✓ 15. Meal created with ID: {meal_id}")
+        print(f"[OK] 15. Meal created with ID: {meal_id}")
 
         # 16. Get Meals for Today
         res = await client.get(f"/api/meals?date={today_str}", headers=headers)
@@ -169,7 +169,7 @@ async def test_full_backend():
         daily_summary = res.json()
         assert len(daily_summary["meals"]) == 1
         assert daily_summary["total_calories"] == 320.0
-        print(f"✓ 16. Daily meals summary passed: {daily_summary['total_calories']} kcal consumed.")
+        print(f"[OK] 16. Daily meals summary passed: {daily_summary['total_calories']} kcal consumed.")
 
         # 17. Update Meal
         res = await client.put(
@@ -178,7 +178,7 @@ async def test_full_backend():
             headers=headers,
         )
         assert res.status_code == 200 and res.json()["calories"] == 350.0
-        print("✓ 17. Meal updated.")
+        print("[OK] 17. Meal updated.")
 
         # 18. Stats Period
         res = await client.get("/api/stats?period=week", headers=headers)
@@ -186,7 +186,7 @@ async def test_full_backend():
         stats_data = res.json()
         assert stats_data["period"] == "week"
         assert len(stats_data["daily_stats"]) == 7
-        print(f"✓ 18. Weekly statistics passed: {stats_data['tracked_days']} tracked day(s).")
+        print(f"[OK] 18. Weekly statistics passed: {stats_data['tracked_days']} tracked day(s).")
 
         # 19. AI Recognize (rate limit and validation test)
         # Create a dummy JPEG in memory
@@ -202,7 +202,7 @@ async def test_full_backend():
             headers=headers,
         )
         assert res.status_code == 400
-        print(f"✓ 19. AI endpoint MIME type validation passed: {res.json()['detail']}")
+        print(f"[OK] 19. AI endpoint MIME type validation passed: {res.json()['detail']}")
 
         # Test upload of valid photo when API keys are not provided
         res = await client.post(
@@ -214,9 +214,9 @@ async def test_full_backend():
         # Without valid Gemini/OpenRouter keys in test env, it should return 503 with Russian friendly message:
         assert res.status_code == 503
         assert "Все модели AI" in res.json()["detail"]
-        print("✓ 20. AI router fallback and graceful degradation verified:", res.json()["detail"])
+        print("[OK] 20. AI router fallback and graceful degradation verified:", res.json()["detail"])
 
-        print("\n🎉 ALL 20 INTEGRATION TESTS PASSED WITH 100% SUCCESS!")
+        print("\n=== ALL 20 INTEGRATION TESTS PASSED WITH 100% SUCCESS! ===")
 
 
 if __name__ == "__main__":
