@@ -68,9 +68,13 @@ def process_image(image_bytes: bytes) -> Tuple[bytes, str]:
 async def save_uploaded_file(file: UploadFile) -> Tuple[Path, str]:
     """
     Validate, process, and save uploaded meal image to uploads directory.
-    Returns (relative_file_path, mime_type).
+    Returns (dest_path: Path, relative_url_path: str).
     """
-    if file.content_type and file.content_type.lower() not in ALLOWED_MIME_TYPES:
+    valid_mime = bool(file.content_type and file.content_type.lower() in ALLOWED_MIME_TYPES)
+    ext = Path(file.filename or "").suffix.lower()
+    valid_ext = ext in {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
+
+    if not (valid_mime or valid_ext):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Поддерживаются только изображения формата JPEG, PNG, WebP или HEIC",

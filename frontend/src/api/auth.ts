@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { AuthResponse, User } from '../types'
+import { AuthResponse, Token, User } from '../types'
 
 export interface LoginPayload {
   email: string
@@ -27,9 +27,11 @@ export const authApi = {
     })
   },
 
-  async refresh(): Promise<{ access_token: string; token_type: string }> {
-    return apiClient<{ access_token: string; token_type: string }>('/auth/refresh', {
+  async refresh(refreshToken?: string): Promise<Token> {
+    const token = refreshToken || localStorage.getItem('kalorii_refresh_token') || ''
+    return apiClient<Token>('/auth/refresh', {
       method: 'POST',
+      body: JSON.stringify({ refresh_token: token }),
     })
   },
 

@@ -52,9 +52,18 @@ export async function apiClient<T>(
 
   // Handle 401 Unauthorized
   if (response.status === 401) {
-    // If request was to auth/refresh or auth/login, clear token and redirect
+    // If request was to auth/refresh or auth/login, clear tokens and exit
     if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/login')) {
       localStorage.removeItem('kalorii_token')
+      localStorage.removeItem('kalorii_refresh_token')
+      throw new ApiError('Unauthorized', 401)
+    }
+
+    const refreshToken = localStorage.getItem('kalorii_refresh_token')
+
+    if (!refreshToken) {
+      localStorage.removeItem('kalorii_token')
+      window.dispatchEvent(new Event('auth:unauthorized'))
       throw new ApiError('Unauthorized', 401)
     }
 
@@ -66,14 +75,20 @@ export async function apiClient<T>(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({ refresh_token: refreshToken }),
         })
 
         if (refreshResponse.ok) {
           const data = await refreshResponse.json()
           const newToken = data.access_token
+          const newRefreshToken = data.refresh_token || refreshToken
+
           localStorage.setItem('kalorii_token', newToken)
+          if (data.refresh_token) {
+            localStorage.setItem('kalorii_refresh_token', newRefreshToken)
+          }
+
           isRefreshing = false
           onRefreshed(newToken)
 
@@ -84,16 +99,23 @@ export async function apiClient<T>(
             const errorData = await retryRes.json().catch(() => ({}))
             throw new ApiError(errorData.detail || 'Request failed', retryRes.status, errorData)
           }
+          if (retryRes.status === 204) {
+            return {} as T
+          }
           return retryRes.json()
         } else {
           isRefreshing = false
           localStorage.removeItem('kalorii_token')
+          localStorage.removeItem('kalorii_refresh_token')
           window.dispatchEvent(new Event('auth:unauthorized'))
+          throw new ApiError('Session expired', 401)
         }
       } catch (e) {
         isRefreshing = false
         localStorage.removeItem('kalorii_token')
+        localStorage.removeItem('kalorii_refresh_token')
         window.dispatchEvent(new Event('auth:unauthorized'))
+        throw e
       }
     } else {
       // Wait for token refresh
@@ -106,7 +128,11 @@ export async function apiClient<T>(
               const errorData = await retryRes.json().catch(() => ({}))
               reject(new ApiError(errorData.detail || 'Request failed', retryRes.status, errorData))
             } else {
-              resolve(await retryRes.json())
+              if (retryRes.status === 204) {
+                resolve({} as T)
+              } else {
+                resolve(await retryRes.json())
+              }
             }
           } catch (err) {
             reject(err)

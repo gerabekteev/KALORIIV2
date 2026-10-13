@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Sparkles, Edit2, Trash2, Clock, Image as ImageIcon } from 'lucide-react'
+import { Sparkles, Edit2, Trash2, Clock, Image as ImageIcon, BookmarkPlus } from 'lucide-react'
 import { Meal } from '../../types'
 import { useUIStore } from '../../store/uiStore'
 import { useMealsStore } from '../../store/mealsStore'
+import { recipesApi } from '../../api/recipes'
 
 interface MealCardProps {
   meal: Meal
@@ -12,6 +13,22 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const { openEditMeal, addToast } = useUIStore()
   const { deleteMeal } = useMealsStore()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSavingRecipe, setIsSavingRecipe] = useState(false)
+  const [isSavedRecipe, setIsSavedRecipe] = useState(false)
+
+  const handleSaveAsRecipe = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsSavingRecipe(true)
+    try {
+      await recipesApi.saveMealAsRecipe(meal)
+      setIsSavedRecipe(true)
+      addToast(`"${meal.name}" сохранено в Мои рецепты!`, 'success')
+    } catch {
+      addToast('Не удалось сохранить блюдо как рецепт', 'error')
+    } finally {
+      setIsSavingRecipe(false)
+    }
+  }
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -40,7 +57,13 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
         <div className="relative w-14 h-14 rounded-xl bg-neutral-800 border border-neutral-700/60 overflow-hidden shrink-0 flex items-center justify-center">
           {meal.photo_path ? (
             <img
-              src={meal.photo_path.startsWith('http') ? meal.photo_path : `/uploads/${meal.photo_path.replace(/^\/+/, '')}`}
+              src={
+                meal.photo_path.startsWith('http') || meal.photo_path.startsWith('/uploads/')
+                  ? meal.photo_path
+                  : meal.photo_path.startsWith('uploads/')
+                  ? `/${meal.photo_path}`
+                  : `/uploads/${meal.photo_path.replace(/^\/+/, '')}`
+              }
               alt={meal.name}
               className="w-full h-full object-cover"
               onError={(e) => {
@@ -104,6 +127,18 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
 
         {/* Actions */}
         <div className="flex flex-col gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={handleSaveAsRecipe}
+            disabled={isSavingRecipe}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              isSavedRecipe
+                ? 'text-amber-400 bg-amber-500/10'
+                : 'text-neutral-400 hover:text-amber-400 hover:bg-neutral-800'
+            }`}
+            title="Сохранить как рецепт"
+          >
+            <BookmarkPlus className="w-3.5 h-3.5" />
+          </button>
           <button
             onClick={() => openEditMeal(meal)}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"

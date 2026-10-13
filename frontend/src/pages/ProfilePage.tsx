@@ -6,8 +6,6 @@ import {
   LogOut,
   Sparkles,
   Save,
-  CheckCircle2,
-  ShieldCheck,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
@@ -16,6 +14,7 @@ import { Gender, ActivityLevel } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { AISettingsCard } from '../components/settings/AISettingsCard'
 
 export const ProfilePage: React.FC = () => {
   const { user, setUser, logout } = useAuthStore()
@@ -75,13 +74,17 @@ export const ProfilePage: React.FC = () => {
     setIsCalculating(true)
     try {
       // First try server calculation
+      const targetW = parseFloat(targetWeight)
+      const goal = targetW && targetW < w ? 'lose_weight' : targetW && targetW > w ? 'gain_weight' : 'maintain'
       const calculated = await profileApi.calculateGoals({
         gender,
         height_cm: h,
+        weight_kg: w,
         current_weight_kg: w,
-        target_weight_kg: parseFloat(targetWeight) || w,
+        target_weight_kg: targetW || w,
         age: a,
         activity_level: activity,
+        goal,
       })
 
       setGoalCalories(calculated.daily_calories_goal.toString())
@@ -397,38 +400,8 @@ export const ProfilePage: React.FC = () => {
         </div>
       </Card>
 
-      {/* AI System Status & Providers */}
-      <Card variant="default" padding="md" className="space-y-2.5">
-        <div className="flex items-center gap-2 border-b border-neutral-800 pb-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <h3 className="text-sm font-bold text-white">AI Распознавание</h3>
-        </div>
-
-        <p className="text-xs text-neutral-400 leading-relaxed">
-          KaloriiAI использует интеллектуальный мультипровайдер с автоматическим fallback:
-        </p>
-
-        <div className="space-y-1.5 text-xs">
-          <div className="flex items-center justify-between p-2 rounded-lg bg-[#18181b] border border-neutral-800/80">
-            <span className="text-neutral-300">1. Gemini 2.0 Flash Vision</span>
-            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Основной
-            </span>
-          </div>
-          <div className="flex items-center justify-between p-2 rounded-lg bg-[#18181b] border border-neutral-800/80">
-            <span className="text-neutral-300">2. OpenRouter Vision Free</span>
-            <span className="text-blue-400 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Резерв 1
-            </span>
-          </div>
-          <div className="flex items-center justify-between p-2 rounded-lg bg-[#18181b] border border-neutral-800/80">
-            <span className="text-neutral-300">3. Gemini 1.5 Pro</span>
-            <span className="text-purple-400 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Резерв 2
-            </span>
-          </div>
-        </div>
-      </Card>
+      {/* Interactive AI Model Settings & Providers */}
+      <AISettingsCard />
     </div>
   )
 }

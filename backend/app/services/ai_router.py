@@ -8,6 +8,7 @@ from app.utils.ai_providers import (
     GeminiProvider,
     OpenRouterProvider,
     AIProviderError,
+    AIRateLimitError,
     AIAuthenticationError,
 )
 
@@ -15,13 +16,11 @@ logger = logging.getLogger("kalorii.ai_router")
 
 # Default priority model chain defined in AI-MODELS-CATALOG.md
 DEFAULT_MODEL_CHAIN: List[Tuple[str, str]] = [
-    ("gemini", "gemini-3.8-flash"),
-    ("gemini", "gemini-3-flash-preview"),
-    ("openrouter", "qwen/qwen2.5-vl-72b-instruct:free"),
-    ("gemini", "gemini-2.5-flash"),
     ("gemini", "gemini-3.5-flash-lite"),
+    ("gemini", "gemini-3.8-flash"),
+    ("gemini", "gemini-3.7-flash"),
+    ("openrouter", "google/gemma-4-26b-a4b-it:free"),
     ("openrouter", "openrouter/free"),
-    ("gemini", "gemini-2.0-flash"),
 ]
 
 
@@ -47,19 +46,27 @@ class AIRouter:
         self.openrouter_api_key = openrouter_api_key or settings.OPENROUTER_API_KEY
         self.model_chain = model_chain or DEFAULT_MODEL_CHAIN
 
-    def _get_provider_instance(self, provider_type: str, model_id: str) -> Optional[BaseAIProvider]:
+    def _get_provider_instance(
+        self,
+        provider_type: str,
+        model_id: str,
+        gemini_key: Optional[str] = None,
+        openrouter_key: Optional[str] = None,
+    ) -> Optional[BaseAIProvider]:
         """Instantiate appropriate provider adapter if API key is configured."""
         if provider_type == "gemini":
-            if not self.gemini_api_key:
+            key = gemini_key or self.gemini_api_key
+            if not key:
                 logger.debug(f"Gemini API key is not configured; skipping {model_id}")
                 return None
-            return GeminiProvider(api_key=self.gemini_api_key, model_id=model_id)
+            return GeminiProvider(api_key=key, model_id=model_id)
 
         elif provider_type == "openrouter":
-            if not self.openrouter_api_key:
+            key = openrouter_key or self.openrouter_api_key
+            if not key:
                 logger.debug(f"OpenRouter API key is not configured; skipping {model_id}")
                 return None
-            return OpenRouterProvider(api_key=self.openrouter_api_key, model_id=model_id)
+            return OpenRouterProvider(api_key=key, model_id=model_id)
 
         return None
 
@@ -68,6 +75,9 @@ class AIRouter:
         image_bytes: bytes,
         mime_type: str = "image/jpeg",
         user_comment: Optional[str] = None,
+        custom_gemini_key: Optional[str] = None,
+        custom_openrouter_key: Optional[str] = None,
+        custom_model_chain: Optional[List[Tuple[str, str]]] = None,
     ) -> Tuple[FoodAnalysisResult, str, str]:
         """
         Execute food recognition across the fallback priority chain.
@@ -75,9 +85,15 @@ class AIRouter:
         Raises AllProvidersFailedError if all models exhaust retries.
         """
         errors_collected: List[str] = []
+        chain_to_use = custom_model_chain if custom_model_chain else self.model_chain
 
-        for provider_type, model_id in self.model_chain:
-            provider = self._get_provider_instance(provider_type, model_id)
+        for provider_type, model_id in chain_to_use:
+            provider = self._get_provider_instance(
+                provider_type,
+                model_id,
+                gemini_key=custom_gemini_key,
+                openrouter_key=custom_openrouter_key,
+            )
             if not provider:
                 continue
 
@@ -101,6 +117,13 @@ class AIRouter:
                     )
                     errors_collected.append(f"{provider_type}/{model_id}: {auth_err}")
                     break  # Skip 2nd attempt if auth failed
+
+                except AIRateLimitError as rate_err:
+                    logger.warning(
+                        f"Rate limit for {provider_type}/{model_id}: {rate_err}. Falling back immediately to next model in chain."
+                    )
+                    errors_collected.append(f"{provider_type}/{model_id}: {rate_err}")
+                    break  # Skip 2nd attempt, fallback immediately
 
                 except AIProviderError as err:
                     logger.warning(

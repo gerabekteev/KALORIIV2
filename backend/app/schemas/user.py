@@ -23,6 +23,9 @@ class Token(BaseModel):
 class AuthResponse(BaseModel):
     user: "UserResponse"
     token: Token
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 
 class TokenPayload(BaseModel):
@@ -32,7 +35,7 @@ class TokenPayload(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
@@ -86,12 +89,17 @@ class WeightLogResponse(BaseModel):
 
 
 class ProfileCalculateRequest(BaseModel):
-    height_cm: float = Field(..., ge=50, le=280)
-    weight_kg: float = Field(..., ge=20, le=400)
-    age: int = Field(..., ge=10, le=120)
-    gender: Literal["male", "female"]
-    activity_level: Literal["sedentary", "light", "moderate", "active", "very_active"]
-    goal: Literal["lose_weight", "maintain", "gain_weight"] = "maintain"
+    height_cm: Optional[float] = Field(None, ge=50, le=280)
+    weight_kg: Optional[float] = Field(None, ge=20, le=400)
+    current_weight_kg: Optional[float] = Field(None, ge=20, le=400)
+    target_weight_kg: Optional[float] = Field(None, ge=20, le=400)
+    age: Optional[int] = Field(None, ge=10, le=120)
+    gender: Optional[Literal["male", "female"]] = None
+    activity_level: Optional[
+        Literal["sedentary", "light", "moderate", "active", "very_active"]
+    ] = None
+    goal: Optional[str] = "maintain"
+    goal_type: Optional[str] = None
 
 
 class ProfileCalculateResponse(BaseModel):

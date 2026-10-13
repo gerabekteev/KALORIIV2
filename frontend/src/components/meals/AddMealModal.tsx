@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react'
-import { Camera, Image as ImageIcon, Sparkles, Search, PenTool, X } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Camera, Image as ImageIcon, Sparkles, Search, PenTool, X, Star } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { ProductSearch } from '../products/ProductSearch'
+import { RecipeList } from '../recipes/RecipeList'
 import { useUIStore } from '../../store/uiStore'
 import { useMealsStore } from '../../store/mealsStore'
 import { aiApi } from '../../api/ai'
@@ -12,7 +13,7 @@ export const AddMealModal: React.FC = () => {
   const { isAddMealOpen, closeAddMeal, openAIResult, addToast } = useUIStore()
   const { addMeal, selectedDate } = useMealsStore()
 
-  const [mode, setMode] = useState<'ai' | 'search' | 'manual'>('ai')
+  const [mode, setMode] = useState<'ai' | 'search' | 'recipes' | 'manual'>('ai')
 
   // AI mode state
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
@@ -35,12 +36,20 @@ export const AddMealModal: React.FC = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    if (selectedPhoto) {
+      const url = URL.createObjectURL(selectedPhoto)
+      setPhotoPreview(url)
+      return () => URL.revokeObjectURL(url)
+    } else {
+      setPhotoPreview(null)
+    }
+  }, [selectedPhoto])
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       setSelectedPhoto(file)
-      const previewUrl = URL.createObjectURL(file)
-      setPhotoPreview(previewUrl)
     }
   }
 
@@ -131,6 +140,28 @@ export const AddMealModal: React.FC = () => {
     }
   }
 
+  const handleSelectRecipe = async (recipeData: {
+    name: string
+    calories: number
+    protein: number
+    fat: number
+    carbs: number
+    weight_grams: number
+  }) => {
+    try {
+      await addMeal({
+        ...recipeData,
+        meal_time: new Date().toTimeString().slice(0, 5),
+        meal_date: selectedDate,
+        is_manually_edited: false,
+      })
+      addToast(`Рецепт добавлен: ${recipeData.name}`, 'success')
+      closeAddMeal()
+    } catch {
+      addToast('Ошибка добавления рецепта', 'error')
+    }
+  }
+
   return (
     <Modal
       isOpen={isAddMealOpen}
@@ -138,40 +169,59 @@ export const AddMealModal: React.FC = () => {
       title="Добавить приём пищи"
       maxWidth="md"
     >
-      {/* Tab Switcher */}
-      <div className="flex bg-[#141417] p-1 rounded-xl mb-5 border border-neutral-800">
+      {/* Tab Switcher - 4 tabs */}
+      <div className="grid grid-cols-4 bg-[#141417] p-1 rounded-xl mb-4 border border-neutral-800 gap-1">
         <button
           type="button"
           onClick={() => setMode('ai')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             mode === 'ai'
               ? 'bg-emerald-500 text-white shadow-md'
               : 'text-neutral-400 hover:text-white'
           }`}
+          title="Распознавание по фото"
         >
-          <Sparkles className="w-3.5 h-3.5" /> AI по фото
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">AI фото</span>
         </button>
         <button
           type="button"
           onClick={() => setMode('search')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             mode === 'search'
               ? 'bg-emerald-500 text-white shadow-md'
               : 'text-neutral-400 hover:text-white'
           }`}
+          title="Поиск по базе продуктов"
         >
-          <Search className="w-3.5 h-3.5" /> База продуктов
+          <Search className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">Продукты</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('recipes')}
+          className={`flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            mode === 'recipes'
+              ? 'bg-emerald-500 text-white shadow-md'
+              : 'text-neutral-400 hover:text-white'
+          }`}
+          title="Мои рецепты и избранное"
+        >
+          <Star className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">Рецепты</span>
         </button>
         <button
           type="button"
           onClick={() => setMode('manual')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             mode === 'manual'
               ? 'bg-emerald-500 text-white shadow-md'
               : 'text-neutral-400 hover:text-white'
           }`}
+          title="Ввод вручную"
         >
-          <PenTool className="w-3.5 h-3.5" /> Вручную
+          <PenTool className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">Вручную</span>
         </button>
       </div>
 
@@ -276,7 +326,12 @@ export const AddMealModal: React.FC = () => {
         <ProductSearch onSelectProduct={handleSelectProduct} />
       )}
 
-      {/* Mode 3: Manual Entry */}
+      {/* Mode 3: Saved Recipes & Favorites */}
+      {mode === 'recipes' && (
+        <RecipeList onSelectRecipe={handleSelectRecipe} />
+      )}
+
+      {/* Mode 4: Manual Entry */}
       {mode === 'manual' && (
         <form onSubmit={handleManualSubmit} className="space-y-3.5">
           <Input

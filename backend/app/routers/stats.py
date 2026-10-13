@@ -30,7 +30,7 @@ async def get_stats(
     """Get aggregated nutrition statistics and daily breakdowns for a given period."""
     today = date.today()
 
-    if period == "day":
+    if period in ("day", "today"):
         start = today
         end = today
     elif period == "week":
@@ -58,7 +58,7 @@ async def get_stats(
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Недопустимый период. Допустимые значения: day, week, month, year, custom",
+            detail="Недопустимый период. Допустимые значения: day, today, week, month, year, custom",
         )
 
     # Fetch all meals in range
@@ -125,6 +125,7 @@ async def get_stats(
                 carbs=day_carb,
                 meals_count=len(day_meals),
                 goal_calories=current_user.daily_calories_goal,
+                target_calories=current_user.daily_calories_goal,
                 goal_protein=current_user.daily_protein_goal,
                 goal_fat=current_user.daily_fat_goal,
                 goal_carbs=current_user.daily_carbs_goal,
@@ -161,12 +162,19 @@ async def get_stats(
         end_date=end,
         total_days=total_days,
         tracked_days=tracked_days,
+        days_tracked=tracked_days,
         goal_met_days=goal_met_days,
         goal_met_percentage=goal_met_percentage,
+        target_met_percentage=goal_met_percentage,
+        total_calories=round(sum_cal, 1),
         average_calories=avg_cal,
+        avg_calories=avg_cal,
         average_protein=avg_prot,
+        avg_protein=avg_prot,
         average_fat=avg_fat,
+        avg_fat=avg_fat,
         average_carbs=avg_carb,
+        avg_carbs=avg_carb,
         macro_distribution=MacroDistribution(
             protein_grams=round(sum_prot, 1),
             fat_grams=round(sum_fat, 1),
@@ -176,6 +184,7 @@ async def get_stats(
             carbs_percent=c_pct,
         ),
         daily_stats=daily_stats,
+        days=daily_stats,
     )
 
 
@@ -194,7 +203,12 @@ async def get_weight_stats(
     logs = list(result.scalars().all())
 
     history = [
-        WeightHistoryPoint(date=log.log_date, weight_kg=log.weight_kg)
+        WeightHistoryPoint(
+            id=log.id,
+            date=log.log_date,
+            log_date=log.log_date,
+            weight_kg=log.weight_kg,
+        )
         for log in logs
     ]
 

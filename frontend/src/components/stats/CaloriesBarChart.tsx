@@ -30,7 +30,8 @@ export const CaloriesBarChart: React.FC<CaloriesBarChartProps> = ({
 
   // Format short date for X axis: "13 окт"
   const chartData = data.map((d) => {
-    const dateObj = new Date(d.date)
+    const parts = d.date.split('-').map(Number)
+    const dateObj = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
     const formattedDate = dateObj.toLocaleDateString('ru-RU', {
       day: 'numeric',
       month: 'short',

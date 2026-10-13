@@ -23,7 +23,8 @@ export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) 
   }
 
   const chartData = data.map((d) => {
-    const dateObj = new Date(d.date)
+    const parts = d.date.split('-').map(Number)
+    const dateObj = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
     return {
       ...d,
       shortDate: dateObj.toLocaleDateString('ru-RU', {
@@ -42,8 +43,8 @@ export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) 
         >
           <defs>
             <linearGradient id="calorieTrend" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stop-color="#10b981" stopOpacity={0.4} />
-              <stop offset="95%" stop-color="#10b981" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
             </linearGradient>
           </defs>
           <XAxis

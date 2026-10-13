@@ -29,5 +29,5 @@ class Product(Base):
     # Relationships
     creator: Mapped[Optional["User"]] = relationship("User", back_populates="custom_products")
     recipe_items: Mapped[List["RecipeItem"]] = relationship(
-        "RecipeItem", back_populates="product", cascade="all, delete-orphan"
+        "RecipeItem", back_populates="product"
     )

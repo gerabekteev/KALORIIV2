@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.models.meal import Meal
@@ -48,9 +49,13 @@ async def get_meals_by_date(
         total_fat=total_fat,
         total_carbs=total_carbs,
         target_calories=current_user.daily_calories_goal,
+        goal_calories=current_user.daily_calories_goal,
         target_protein=current_user.daily_protein_goal,
+        goal_protein=current_user.daily_protein_goal,
         target_fat=current_user.daily_fat_goal,
+        goal_fat=current_user.daily_fat_goal,
         target_carbs=current_user.daily_carbs_goal,
+        goal_carbs=current_user.daily_carbs_goal,
         meals=[MealResponse.model_validate(m) for m in meals],
     )
 
@@ -157,6 +162,16 @@ async def delete_meal(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Приём пищи не найден",
         )
+
+    # Clean up uploaded photo if exists
+    if meal.photo_path and meal.photo_path.startswith("/uploads/"):
+        filename = meal.photo_path.replace("/uploads/", "")
+        photo_file = settings.UPLOAD_DIR / filename
+        if photo_file.exists():
+            try:
+                photo_file.unlink()
+            except Exception:
+                pass
 
     await db.delete(meal)
     await db.commit()

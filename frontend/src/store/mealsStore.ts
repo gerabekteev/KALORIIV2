@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Meal, CreateMealPayload, UpdateMealPayload } from '../types'
+import { Meal, CreateMealPayload, UpdateMealPayload, DailyMealsSummary } from '../types'
 import { mealsApi } from '../api/meals'
 
 export function getTodayDateString(): string {
@@ -12,6 +12,7 @@ export function getTodayDateString(): string {
 
 interface MealsState {
   meals: Meal[]
+  dailySummary: DailyMealsSummary | null
   selectedDate: string
   isLoading: boolean
   error: string | null
@@ -25,6 +26,7 @@ interface MealsState {
 
 export const useMealsStore = create<MealsState>((set, get) => ({
   meals: [],
+  dailySummary: null,
   selectedDate: getTodayDateString(),
   isLoading: false,
   error: null,
@@ -39,7 +41,12 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const data = await mealsApi.getMeals(targetDate)
-      set({ meals: data || [], isLoading: false })
+      const mealList = Array.isArray(data) ? data : (data?.meals || [])
+      set({
+        meals: mealList,
+        dailySummary: data && !Array.isArray(data) ? data : null,
+        isLoading: false,
+      })
     } catch (err: any) {
       set({
         error: err.message || 'Ошибка загрузки приемов пищи',
@@ -113,6 +120,9 @@ export const useMealsStore = create<MealsState>((set, get) => ({
 
   getTotals: () => {
     const meals = get().meals
+    if (!Array.isArray(meals)) {
+      return { calories: 0, protein: 0, fat: 0, carbs: 0 }
+    }
     return meals.reduce(
       (acc, meal) => ({
         calories: Math.round(acc.calories + (meal.calories || 0)),

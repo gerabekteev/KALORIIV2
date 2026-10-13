@@ -47,8 +47,11 @@ def build_system_prompt(user_comment: Optional[str] = None) -> str:
 
 
 def extract_json_from_text(text: str) -> Dict[str, Any]:
-    """Extract valid JSON from LLM response text, stripping markdown code fences if present."""
+    """Extract valid JSON from LLM response text, stripping markdown code fences and thought blocks if present."""
     text = text.strip()
+
+    # Strip reasoning / thought tags if present
+    text = re.sub(r"<(?:thought|thinking|think)>[\s\S]*?</(?:thought|thinking|think)>", "", text, flags=re.IGNORECASE).strip()
 
     # Look for ```json ... ``` or ``` ... ```
     code_block_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
@@ -68,6 +71,22 @@ def extract_json_from_text(text: str) -> Dict[str, Any]:
         raise AIProviderError(f"Не удалось распарсить JSON из ответа нейросети: {text[:200]}")
 
 
+def _parse_float_safely(val: Any, default: float = 0.0) -> float:
+    """Safely extract float from numbers or strings with units like '300g' or '~250'."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return float(val)
+    val_str = str(val).strip().replace(",", ".")
+    match = re.search(r"[-+]?\d*\.?\d+", val_str)
+    if match:
+        try:
+            return float(match.group(0))
+        except ValueError:
+            pass
+    return default
+
+
 def parse_food_result(raw_json: Dict[str, Any]) -> FoodAnalysisResult:
     """Validate and normalize raw JSON into FoodAnalysisResult."""
     confidence = str(raw_json.get("confidence", "medium")).lower()
@@ -76,11 +95,11 @@ def parse_food_result(raw_json: Dict[str, Any]) -> FoodAnalysisResult:
 
     return FoodAnalysisResult(
         name=str(raw_json.get("name", "Блюдо")).strip(),
-        weight_grams=max(0.0, float(raw_json.get("weight_grams", 100.0))),
-        calories=max(0.0, float(raw_json.get("calories", 0.0))),
-        protein=max(0.0, float(raw_json.get("protein", 0.0))),
-        fat=max(0.0, float(raw_json.get("fat", 0.0))),
-        carbs=max(0.0, float(raw_json.get("carbs", 0.0))),
+        weight_grams=max(0.0, _parse_float_safely(raw_json.get("weight_grams"), 100.0)),
+        calories=max(0.0, _parse_float_safely(raw_json.get("calories"), 0.0)),
+        protein=max(0.0, _parse_float_safely(raw_json.get("protein"), 0.0)),
+        fat=max(0.0, _parse_float_safely(raw_json.get("fat"), 0.0)),
+        carbs=max(0.0, _parse_float_safely(raw_json.get("carbs"), 0.0)),
         confidence=confidence,  # type: ignore[arg-type]
     )
 

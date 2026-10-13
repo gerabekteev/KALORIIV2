@@ -233,9 +233,16 @@ async def toggle_favorite_recipe(
 
     recipe.is_favorite = not recipe.is_favorite
     await db.commit()
-    await db.refresh(recipe)
 
-    return RecipeResponse.model_validate(recipe)
+    reload_query = (
+        select(Recipe)
+        .where(Recipe.id == recipe.id)
+        .options(selectinload(Recipe.items).joinedload(RecipeItem.product))
+    )
+    reload_result = await db.execute(reload_query)
+    updated_recipe = reload_result.scalar_one()
+
+    return RecipeResponse.model_validate(updated_recipe)
 
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)

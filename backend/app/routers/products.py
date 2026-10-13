@@ -36,7 +36,8 @@ async def search_products(
 
     if search:
         search_pattern = f"%{search.strip().lower()}%"
-        conditions.append(Product.name.ilike(search_pattern))
+        from sqlalchemy import func
+        conditions.append(func.lower(Product.name).like(search_pattern))
 
     if category:
         conditions.append(Product.category == category)
@@ -162,6 +163,23 @@ async def delete_custom_product(
             detail="Продукт не найден или недоступен для удаления",
         )
 
-    await db.delete(product)
-    await db.commit()
+    from app.models.recipe import RecipeItem
+    recipe_usage = await db.execute(
+        select(RecipeItem).where(RecipeItem.product_id == product_id)
+    )
+    if recipe_usage.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Невозможно удалить продукт, так как он используется в сохранённых рецептах.",
+        )
+
+    try:
+        await db.delete(product)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Невозможно удалить продукт, так как он используется в сохранённых рецептах.",
+        )
     return None

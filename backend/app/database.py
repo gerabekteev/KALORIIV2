@@ -17,12 +17,17 @@ engine = create_async_engine(
     connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
 )
 
-# Enable foreign keys for SQLite
+# Enable foreign keys and UTF-8 case-insensitive lower for SQLite
 @event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+    try:
+        # Enable Python's unicode lower() inside SQLite SQL queries
+        dbapi_connection.create_function("lower", 1, lambda s: s.lower() if s is not None else None)
+    except Exception:
+        pass
 
 
 # Session factory

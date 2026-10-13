@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useMealsStore } from '../store/mealsStore'
+import { useMealsStore, getTodayDateString } from '../store/mealsStore'
 
 export const useMeals = (date?: string) => {
   const {
@@ -21,28 +21,22 @@ export const useMeals = (date?: string) => {
     } else {
       fetchMeals(selectedDate)
     }
-  }, [date, selectedDate])
+  }, [date])
 
   const totals = getTotals()
 
-  const goToPreviousDay = () => {
-    const current = new Date(selectedDate)
-    current.setDate(current.getDate() - 1)
-    const newDate = current.toISOString().split('T')[0]
-    setSelectedDate(newDate)
+  const shiftDate = (days: number) => {
+    const parts = selectedDate.split('-').map(Number)
+    const d = new Date(parts[0], parts[1] - 1, parts[2] + days)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    setSelectedDate(`${y}-${m}-${day}`)
   }
 
-  const goToNextDay = () => {
-    const current = new Date(selectedDate)
-    current.setDate(current.getDate() + 1)
-    const newDate = current.toISOString().split('T')[0]
-    setSelectedDate(newDate)
-  }
-
-  const goToToday = () => {
-    const today = new Date().toISOString().split('T')[0]
-    setSelectedDate(today)
-  }
+  const goToPreviousDay = () => shiftDate(-1)
+  const goToNextDay = () => shiftDate(1)
+  const goToToday = () => setSelectedDate(getTodayDateString())
 
   return {
     meals,

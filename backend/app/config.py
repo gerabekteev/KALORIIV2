@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-from typing import List
-from pydantic import Field
+from typing import List, Any
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,9 +34,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    # AI API Keys
+    # AI API Keys & Proxy Configuration
     GEMINI_API_KEY: str = Field(default="", description="Google Gemini API key")
     OPENROUTER_API_KEY: str = Field(default="", description="OpenRouter API key")
+    GEMINI_BASE_URL: str = Field(
+        default="https://generativelanguage.googleapis.com/v1beta/models",
+        description="Base URL for Gemini API (can be overridden with a reverse proxy)",
+    )
+    GEMINI_PROXY_URL: str = Field(
+        default="",
+        description="Optional HTTP/SOCKS5 proxy URL for Gemini API (e.g. http://127.0.0.1:10808 or socks5://...)",
+    )
 
     # Storage
     UPLOAD_DIR: Path = Field(
@@ -53,6 +61,22 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "https://kalorii.lopni.fun",
     ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return []
 
     # Rate Limiting
     RATE_LIMIT_AI_PER_MINUTE: int = 10

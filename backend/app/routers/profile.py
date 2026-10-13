@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -79,25 +79,32 @@ async def calculate_profile_goals(
     using the Mifflin-St Jeor formula and activity coefficients.
     """
     if calc_in:
-        height = calc_in.height_cm
-        weight = calc_in.weight_kg
-        age = calc_in.age
-        gender = calc_in.gender
-        activity = calc_in.activity_level
-        goal = calc_in.goal
+        height = calc_in.height_cm or current_user.height_cm
+        weight = calc_in.weight_kg or calc_in.current_weight_kg or current_user.current_weight_kg
+        target_weight = calc_in.target_weight_kg or current_user.target_weight_kg
+        age = calc_in.age or current_user.age
+        gender = calc_in.gender or current_user.gender
+        activity = calc_in.activity_level or current_user.activity_level
+
+        # Determine goal
+        raw_goal = calc_in.goal or calc_in.goal_type
+        if raw_goal in ("lose", "lose_weight"):
+            goal = "lose_weight"
+        elif raw_goal in ("gain", "gain_weight"):
+            goal = "gain_weight"
+        elif raw_goal == "maintain":
+            goal = "maintain"
+        elif target_weight and weight:
+            if float(target_weight) < float(weight) - 0.5:
+                goal = "lose_weight"
+            elif float(target_weight) > float(weight) + 0.5:
+                goal = "gain_weight"
+            else:
+                goal = "maintain"
+        else:
+            goal = "maintain"
     else:
         # Fallback to user profile data
-        if not (
-            current_user.height_cm
-            and current_user.current_weight_kg
-            and current_user.age
-            and current_user.gender
-            and current_user.activity_level
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Для расчёта необходимо указать рост, вес, возраст, пол и уровень активности",
-            )
         height = current_user.height_cm
         weight = current_user.current_weight_kg
         age = current_user.age
@@ -105,12 +112,18 @@ async def calculate_profile_goals(
         activity = current_user.activity_level
         goal = "maintain"
 
+    if not (height and weight and age and gender and activity):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Для расчёта необходимо указать рост, вес, возраст, пол и уровень активности",
+        )
+
     result = calculate_nutrition_plan(
-        weight_kg=weight,
-        height_cm=height,
-        age=age,
-        gender=gender,
-        activity_level=activity,
+        weight_kg=float(weight),
+        height_cm=float(height),
+        age=int(age),
+        gender=gender,  # type: ignore[arg-type]
+        activity_level=activity,  # type: ignore[arg-type]
         goal=goal,
     )
 
@@ -163,3 +176,18 @@ async def log_weight(
     await db.refresh(log_entry)
 
     return WeightLogResponse.model_validate(log_entry)
+
+
+@router.get("/weight", response_model=List[WeightLogResponse])
+async def get_weight_logs(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all weight logs for current user."""
+    result = await db.execute(
+        select(WeightLog)
+        .where(WeightLog.user_id == current_user.id)
+        .order_by(WeightLog.log_date.asc())
+    )
+    logs = list(result.scalars().all())
+    return [WeightLogResponse.model_validate(log) for log in logs]

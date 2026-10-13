@@ -2,12 +2,12 @@ export type Gender = 'male' | 'female'
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
 
-export type GoalType = 'lose' | 'maintain' | 'gain'
+export type GoalType = 'lose' | 'maintain' | 'gain' | 'lose_weight' | 'gain_weight'
 
 export interface User {
   id: number
   email: string
-  name: string
+  name?: string | null
   height_cm?: number | null
   current_weight_kg?: number | null
   target_weight_kg?: number | null
@@ -22,10 +22,18 @@ export interface User {
   updated_at?: string
 }
 
-export interface AuthResponse {
+export interface Token {
   access_token: string
+  refresh_token: string
   token_type: string
+}
+
+export interface AuthResponse {
   user: User
+  token: Token
+  // Direct compatibility aliases
+  access_token?: string
+  token_type?: string
 }
 
 export interface Meal {
@@ -53,14 +61,35 @@ export interface CreateMealPayload {
   fat: number
   carbs: number
   weight_grams?: number
-  photo_path?: string
-  user_comment?: string
+  photo_path?: string | null
+  user_comment?: string | null
+  ai_raw_response?: string | null
   is_manually_edited?: boolean
   meal_date?: string
   meal_time?: string
 }
 
 export interface UpdateMealPayload extends Partial<CreateMealPayload> {}
+
+export interface DailyMealsSummary {
+  date: string
+  total_calories: number
+  total_protein: number
+  total_fat: number
+  total_carbs: number
+  target_calories: number
+  target_protein: number
+  target_fat: number
+  target_carbs: number
+  meals: Meal[]
+  // Aliases for compatibility with earlier code
+  goal_calories?: number
+  goal_protein?: number
+  goal_fat?: number
+  goal_carbs?: number
+}
+
+export type DailySummary = DailyMealsSummary
 
 export interface Product {
   id: number
@@ -80,7 +109,7 @@ export interface CreateProductPayload {
   protein_per_100g: number
   fat_per_100g: number
   carbs_per_100g: number
-  category?: string
+  category?: string | null
 }
 
 export interface RecipeItem {
@@ -107,10 +136,25 @@ export interface Recipe {
 }
 
 export interface WeightLog {
-  id: number
-  user_id: number
+  id?: number
+  user_id?: number
   weight_kg: number
   log_date: string // YYYY-MM-DD
+  date?: string   // alias for backend WeightHistoryPoint compatibility
+}
+
+export interface WeightHistoryPoint {
+  date: string
+  weight_kg: number
+  log_date?: string // compatibility alias
+}
+
+export interface WeightStatsResponse {
+  current_weight?: number | null
+  target_weight?: number | null
+  start_weight?: number | null
+  change_kg?: number | null
+  history: WeightHistoryPoint[]
 }
 
 export interface NutritionGoals {
@@ -118,16 +162,29 @@ export interface NutritionGoals {
   daily_protein_goal: number
   daily_fat_goal: number
   daily_carbs_goal: number
+  bmr?: number
+  tdee?: number
 }
 
 export interface CalculateGoalsParams {
-  gender: Gender
   height_cm: number
-  current_weight_kg: number
+  weight_kg?: number
+  current_weight_kg?: number
   target_weight_kg?: number
   age: number
+  gender: Gender
   activity_level: ActivityLevel
+  goal?: 'lose_weight' | 'maintain' | 'gain_weight'
   goal_type?: GoalType
+}
+
+export interface ProfileCalculateResponse {
+  bmr: number
+  tdee: number
+  daily_calories_goal: number
+  daily_protein_goal: number
+  daily_fat_goal: number
+  daily_carbs_goal: number
 }
 
 export interface AIRecognitionResult {
@@ -137,41 +194,63 @@ export interface AIRecognitionResult {
   protein: number
   fat: number
   carbs: number
-  confidence?: 'high' | 'medium' | 'low'
-  photo_path?: string
-  raw_response?: string
+  confidence: 'high' | 'medium' | 'low' | string
+  photo_path?: string | null
+  provider_used?: string | null
+  model_used?: string | null
+  raw_response?: string | null
 }
 
-export interface DailySummary {
-  date: string
-  total_calories: number
-  total_protein: number
-  total_fat: number
-  total_carbs: number
-  goal_calories: number
-  goal_protein: number
-  goal_fat: number
-  goal_carbs: number
-  meals: Meal[]
-}
-
-export interface StatsDayData {
+export interface DayStats {
   date: string
   calories: number
   protein: number
   fat: number
   carbs: number
-  target_calories: number
+  meals_count: number
+  goal_calories: number
+  goal_protein: number
+  goal_fat: number
+  goal_carbs: number
+  goal_achieved: boolean
+  // Compatibility alias
+  target_calories?: number
 }
 
-export interface StatsResponse {
-  period: 'today' | 'week' | 'month' | 'year' | 'custom'
-  days: StatsDayData[]
-  total_calories: number
-  avg_calories: number
-  avg_protein: number
-  avg_fat: number
-  avg_carbs: number
-  days_tracked: number
-  target_met_percentage: number
+export type StatsDayData = DayStats
+
+export interface MacroDistribution {
+  protein_grams: number
+  fat_grams: number
+  carbs_grams: number
+  protein_percent: number
+  fat_percent: number
+  carbs_percent: number
 }
+
+export interface StatsPeriodResponse {
+  period: string
+  start_date: string
+  end_date: string
+  total_days: number
+  tracked_days: number
+  goal_met_days: number
+  goal_met_percentage: number
+  average_calories: number
+  average_protein: number
+  average_fat: number
+  average_carbs: number
+  macro_distribution: MacroDistribution
+  daily_stats: DayStats[]
+  // Convenience aliases for frontend components
+  days?: DayStats[]
+  avg_calories?: number
+  avg_protein?: number
+  avg_fat?: number
+  avg_carbs?: number
+  total_calories?: number
+  days_tracked?: number
+  target_met_percentage?: number
+}
+
+export type StatsResponse = StatsPeriodResponse

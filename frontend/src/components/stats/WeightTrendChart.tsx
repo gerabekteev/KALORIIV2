@@ -31,12 +31,16 @@ export const WeightTrendChart: React.FC<WeightTrendChartProps> = ({
   }
 
   // Sort logs by date ascending
-  const sortedLogs = [...logs].sort(
-    (a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime()
-  )
+  const sortedLogs = [...logs].sort((a, b) => {
+    const dateA = a.log_date || a.date || ''
+    const dateB = b.log_date || b.date || ''
+    return new Date(dateA).getTime() - new Date(dateB).getTime()
+  })
 
   const chartData = sortedLogs.map((item) => {
-    const dateObj = new Date(item.log_date)
+    const rawDate = item.log_date || item.date || ''
+    const parts = rawDate.split('-').map(Number)
+    const dateObj = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(rawDate)
     return {
       ...item,
       shortDate: dateObj.toLocaleDateString('ru-RU', {

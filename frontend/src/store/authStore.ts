@@ -27,11 +27,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       const response = await authApi.login(credentials)
-      localStorage.setItem('kalorii_token', response.access_token)
+      const accessToken = response.token?.access_token || response.access_token
+      const refreshToken = response.token?.refresh_token
+
+      if (accessToken) {
+        localStorage.setItem('kalorii_token', accessToken)
+      }
+      if (refreshToken) {
+        localStorage.setItem('kalorii_refresh_token', refreshToken)
+      }
+
       set({
-        token: response.access_token,
+        token: accessToken || null,
         user: response.user,
-        isAuthenticated: true,
+        isAuthenticated: !!accessToken,
         isLoading: false,
       })
     } catch (err: any) {
@@ -47,11 +56,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       const response = await authApi.register(payload)
-      localStorage.setItem('kalorii_token', response.access_token)
+      const accessToken = response.token?.access_token || response.access_token
+      const refreshToken = response.token?.refresh_token
+
+      if (accessToken) {
+        localStorage.setItem('kalorii_token', accessToken)
+      }
+      if (refreshToken) {
+        localStorage.setItem('kalorii_refresh_token', refreshToken)
+      }
+
       set({
-        token: response.access_token,
+        token: accessToken || null,
         user: response.user,
-        isAuthenticated: true,
+        isAuthenticated: !!accessToken,
         isLoading: false,
       })
     } catch (err: any) {
@@ -65,6 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem('kalorii_token')
+    localStorage.removeItem('kalorii_refresh_token')
     set({
       user: null,
       token: null,
@@ -86,6 +105,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user, isAuthenticated: true, isLoading: false })
     } catch (err) {
       localStorage.removeItem('kalorii_token')
+      localStorage.removeItem('kalorii_refresh_token')
       set({ user: null, token: null, isAuthenticated: false, isLoading: false })
     }
   },

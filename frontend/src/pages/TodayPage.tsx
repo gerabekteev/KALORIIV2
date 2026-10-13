@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Calendar, Plus, Camera, Sparkles } from 'luc
 import { useMeals } from '../hooks/useMeals'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
+import { getTodayDateString } from '../store/mealsStore'
 import { ProgressRing } from '../components/ui/ProgressRing'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { Card } from '../components/ui/Card'
@@ -27,10 +28,11 @@ export const TodayPage: React.FC = () => {
   const dailyGoalCarbs = user?.daily_carbs_goal || 275
 
   // Date formatting
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = getTodayDateString()
   const isToday = selectedDate === todayStr
 
-  const dateObj = new Date(selectedDate)
+  const [year, month, day] = selectedDate.split('-').map(Number)
+  const dateObj = new Date(year, month - 1, day)
   const formattedDate = dateObj.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',

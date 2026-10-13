@@ -1,0 +1,24 @@
+[Unit]
+Description=KaloriiAI FastAPI Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/kalorii/backend
+Environment="PATH=/var/www/kalorii/backend/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+EnvironmentFile=/var/www/kalorii/backend/.env
+ExecStart=/var/www/kalorii/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 5100 --workers 2
+
+Restart=always
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

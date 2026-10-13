@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import (
@@ -19,6 +24,7 @@ from app.services.auth import (
     create_refresh_token,
     decode_token,
     get_current_user,
+    security,
 )
 
 router = APIRouter(prefix="/auth", tags=["Аутентификация"])
@@ -61,6 +67,9 @@ async def register(user_in: UserRegister, db: AsyncSession = Depends(get_db)):
             refresh_token=refresh_token,
             token_type="bearer",
         ),
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
     )
 
 
@@ -89,13 +98,55 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
             refresh_token=refresh_token,
             token_type="bearer",
         ),
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
     )
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(req: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
-    """Refresh an access token using a valid refresh token."""
-    payload = decode_token(req.refresh_token, expected_type="refresh")
+async def refresh_token(
+    req: Optional[RefreshTokenRequest] = None,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db),
+):
+    """Refresh an access token using a valid refresh token from body or Authorization header."""
+    token_str = (req.refresh_token if req and req.refresh_token else None) or (
+        credentials.credentials if credentials else None
+    )
+
+    if not token_str:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Не передан токен для обновления (refresh token)",
+        )
+
+    try:
+        payload = decode_token(token_str, expected_type="refresh")
+    except HTTPException:
+        # Fallback: check if valid authorization token was provided in header
+        try:
+            payload = jwt.decode(
+                token_str,
+                settings.JWT_SECRET,
+                algorithms=[settings.JWT_ALGORITHM],
+                options={"verify_exp": False},
+            )
+            # Check maximum age (30 days)
+            exp = payload.get("exp", 0)
+            max_age = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS).total_seconds()
+            if datetime.now(timezone.utc).timestamp() - exp > max_age:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Срок действия токена полностью истёк",
+                )
+        except JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Недействительный токен авторизации",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     user_id_str = payload.get("sub")
     if not user_id_str:
         raise HTTPException(

@@ -18,15 +18,15 @@ export const StatsPage: React.FC = () => {
 
   const targetCalories = user?.daily_calories_goal || 2200
 
-  // Calculate averages & totals
-  const daysTracked = stats?.days?.length || 0
-  const avgCalories = stats?.avg_calories || (daysTracked > 0 ? Math.round((stats?.total_calories || 0) / daysTracked) : 0)
-  const targetMetPct = stats?.target_met_percentage ?? (daysTracked > 0 && stats?.days ? Math.round((stats.days.filter(d => d.calories >= targetCalories * 0.85 && d.calories <= targetCalories * 1.15).length / daysTracked) * 100) : 0)
+  // Calculate averages & totals from backend StatsPeriodResponse
+  const daysTracked = stats?.tracked_days ?? (stats?.days?.length || 0)
+  const avgCalories = stats?.average_calories ?? stats?.avg_calories ?? (daysTracked > 0 ? Math.round((stats?.total_calories || 0) / daysTracked) : 0)
+  const targetMetPct = stats?.goal_met_percentage ?? stats?.target_met_percentage ?? (daysTracked > 0 && stats?.days ? Math.round((stats.days.filter(d => d.calories >= targetCalories * 0.85 && d.calories <= targetCalories * 1.15).length / daysTracked) * 100) : 0)
 
   // Sum macros for pie chart
-  const totalProtein = stats?.days?.reduce((acc, d) => acc + d.protein, 0) || 0
-  const totalFat = stats?.days?.reduce((acc, d) => acc + d.fat, 0) || 0
-  const totalCarbs = stats?.days?.reduce((acc, d) => acc + d.carbs, 0) || 0
+  const totalProtein = stats?.macro_distribution?.protein_grams ?? (stats?.days?.reduce((acc, d) => acc + d.protein, 0) || 0)
+  const totalFat = stats?.macro_distribution?.fat_grams ?? (stats?.days?.reduce((acc, d) => acc + d.fat, 0) || 0)
+  const totalCarbs = stats?.macro_distribution?.carbs_grams ?? (stats?.days?.reduce((acc, d) => acc + d.carbs, 0) || 0)
 
   if (isLoading) {
     return <PageLoading message="Загрузка статистики..." />

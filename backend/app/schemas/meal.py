@@ -59,7 +59,11 @@ class DailyMealsSummary(BaseModel):
     total_fat: float
     total_carbs: float
     target_calories: int
+    goal_calories: Optional[int] = None
     target_protein: int
+    goal_protein: Optional[int] = None
     target_fat: int
+    goal_fat: Optional[int] = None
     target_carbs: int
+    goal_carbs: Optional[int] = None
     meals: List[MealResponse]

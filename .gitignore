@@ -1,20 +1,15 @@
-# Environment Variables
+# ==========================================
+# KaloriiAI .gitignore
+# ==========================================
+
+# Environment variables & secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
 
-# Node / Frontend
-node_modules/
-dist/
-dist-ssr/
-*.local
-*.tsbuildinfo
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Python
+# Python & Virtual Environments
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,22 +21,47 @@ dist/
 downloads/
 eggs/
 .eggs/
+lib/
+lib64/
 parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.pytest_cache/
+MANIFEST
 
-# Virtual Environments
+# Virtual environments
 .venv/
 venv/
 ENV/
 env/
+.ENV/
+.env/
 
-# Databases and Local Data
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# Node.js & Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/*.tsbuildinfo
+.eslintcache
+
+# SQLite & Database files
 *.sqlite
 *.sqlite3
 *.db
@@ -50,15 +70,31 @@ backend/data/*.db
 !backend/data/.gitkeep
 !backend/data/products_seed.json
 
-# Uploads
+# User Uploads
 backend/uploads/*
 !backend/uploads/.gitkeep
 
-# Operating System & Editors
-.DS_Store
-Thumbs.db
+# IDEs & Editors
 .idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 *.swp
 *.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Logs
+logs/
+*.log

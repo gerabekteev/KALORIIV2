@@ -26,7 +26,8 @@ async def test_full_backend():
             assert count >= 50, f"Expected at least 50 seeded products, got {count}"
 
         # 3. User Registration
-        test_email = "bektemir_test@example.com"
+        import time
+        test_email = f"bektemir_test_{int(time.time())}@example.com"
         test_pass = "SecurePass123!"
         reg_payload = {
             "email": test_email,
@@ -204,17 +205,20 @@ async def test_full_backend():
         assert res.status_code == 400
         print(f"[OK] 19. AI endpoint MIME type validation passed: {res.json()['detail']}")
 
-        # Test upload of valid photo when API keys are not provided
+        # Test upload of valid photo
         res = await client.post(
             "/api/ai/recognize",
             files={"photo": ("food.jpg", dummy_jpeg, "image/jpeg")},
             data={"comment": "Тестовое блюдо"},
             headers=headers,
         )
-        # Without valid Gemini/OpenRouter keys in test env, it should return 503 with Russian friendly message:
-        assert res.status_code == 503
-        assert "Все модели AI" in res.json()["detail"]
-        print("[OK] 20. AI router fallback and graceful degradation verified:", res.json()["detail"])
+        if res.status_code == 200:
+            ai_data = res.json()
+            print(f"[OK] 20. AI router successful recognition: '{ai_data['name']}' ({ai_data['calories']} kcal, {ai_data['protein']}g protein) using {ai_data['provider_used']}/{ai_data['model_used']}")
+        else:
+            assert res.status_code == 503
+            assert "Все модели AI" in res.json()["detail"]
+            print("[OK] 20. AI router fallback and graceful degradation verified:", res.json()["detail"])
 
         print("\n=== ALL 20 INTEGRATION TESTS PASSED WITH 100% SUCCESS! ===")
 

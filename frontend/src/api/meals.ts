@@ -1,10 +1,10 @@
 import { apiClient } from './client'
-import { Meal, CreateMealPayload, UpdateMealPayload } from '../types'
+import { Meal, CreateMealPayload, UpdateMealPayload, DailyMealsSummary } from '../types'
 
 export const mealsApi = {
-  async getMeals(date?: string): Promise<Meal[]> {
+  async getMeals(date?: string): Promise<DailyMealsSummary> {
     const query = date ? `?date=${encodeURIComponent(date)}` : ''
-    return apiClient<Meal[]>(`/meals${query}`, {
+    return apiClient<DailyMealsSummary>(`/meals${query}`, {
       method: 'GET',
     })
   },
