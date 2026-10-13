@@ -55,18 +55,28 @@ export const useUIStore = create<UIState>((set) => ({
     set({ isAIResultOpen: false, aiResultData: null, aiPhotoFile: null }),
 
   addToast: (message: string, type: ToastType = 'info', duration = 3000) => {
-    const id = Math.random().toString(36).substring(2, 9)
-    set((state) => ({
-      toasts: [...state.toasts, { id, message, type, duration }],
-    }))
+    set((state) => {
+      // 1. Deduplication: if an active toast with the same message already exists, ignore
+      if (state.toasts.some((t) => t.message === message)) {
+        return state
+      }
 
-    if (duration > 0) {
-      setTimeout(() => {
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
-        }))
-      }, duration)
-    }
+      // 2. Limit capacity: keep at most 2 existing toasts so there are never more than 3 on screen
+      const current = state.toasts.length >= 3 ? state.toasts.slice(-2) : state.toasts
+      const id = Math.random().toString(36).substring(2, 9)
+
+      if (duration > 0) {
+        setTimeout(() => {
+          set((s) => ({
+            toasts: s.toasts.filter((t) => t.id !== id),
+          }))
+        }, duration)
+      }
+
+      return {
+        toasts: [...current, { id, message, type, duration }],
+      }
+    })
   },
 
   removeToast: (id: string) =>

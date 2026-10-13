@@ -250,7 +250,6 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
               <Input
                 label="Общий вес (г)"
                 type="number"
-                min="1"
                 placeholder="100"
                 value={quickForm.weight_grams}
                 onChange={(e) =>
@@ -388,7 +387,6 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                   </div>
                   <input
                     type="number"
-                    min="1"
                     placeholder="Вес, г"
                     value={ingredientWeight}
                     onChange={(e) => setIngredientWeight(e.target.value)}

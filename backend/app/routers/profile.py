@@ -24,6 +24,7 @@ from app.schemas.profile import (
 from app.services.ai_router import get_default_model_items
 from app.services.auth import get_current_user
 from app.services.nutrition import calculate_nutrition_plan
+from app.routers.ai import _sanitize_api_key
 
 logger = logging.getLogger("kalorii.profile")
 router = APIRouter(prefix="/profile", tags=["Профиль"])
@@ -41,7 +42,7 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update profile parameters and daily nutrition goals."""
+    """Update profile parameters and daily nutrition goals with guaranteed rollback."""
     update_data = profile_in.model_dump(exclude_unset=True)
 
     weight_changed = "current_weight_kg" in update_data and update_data["current_weight_kg"] is not None
@@ -72,8 +73,16 @@ async def update_profile(
             )
             db.add(new_log)
 
-    await db.commit()
-    await db.refresh(current_user)
+    try:
+        await db.commit()
+        await db.refresh(current_user)
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating user profile {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обновлении профиля",
+        )
 
     return UserResponse.model_validate(current_user)
 
@@ -181,8 +190,16 @@ async def log_weight(
     if target_date >= date.today():
         current_user.current_weight_kg = round(weight_in.weight_kg, 1)
 
-    await db.commit()
-    await db.refresh(log_entry)
+    try:
+        await db.commit()
+        await db.refresh(log_entry)
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error logging weight for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при сохранении веса",
+        )
 
     return WeightLogResponse.model_validate(log_entry)
 
@@ -228,8 +245,8 @@ async def get_ai_settings(
 
             raw_gemini = data.get("gemini_api_key") or data.get("geminiApiKey")
             raw_openrouter = data.get("openrouter_api_key") or data.get("openrouterApiKey")
-            gemini_clean = raw_gemini.strip() if raw_gemini and str(raw_gemini).strip() else None
-            openrouter_clean = raw_openrouter.strip() if raw_openrouter and str(raw_openrouter).strip() else None
+            gemini_clean = _sanitize_api_key(raw_gemini)
+            openrouter_clean = _sanitize_api_key(raw_openrouter)
 
             return UserAISettingsResponse(
                 models=models_items,
@@ -256,9 +273,12 @@ async def update_ai_settings(
 ):
     """
     Update and persist current user's AI model priorities and custom API keys.
+    Sanitizes keys, validates formats, and guarantees rollback on failure.
     """
-    clean_gemini = settings_in.gemini_api_key.strip() if settings_in.gemini_api_key and settings_in.gemini_api_key.strip() else None
-    clean_openrouter = settings_in.openrouter_api_key.strip() if settings_in.openrouter_api_key and settings_in.openrouter_api_key.strip() else None
+    raw_gemini = settings_in.gemini_api_key or settings_in.geminiApiKey
+    raw_openrouter = settings_in.openrouter_api_key or settings_in.openrouterApiKey
+    clean_gemini = _sanitize_api_key(raw_gemini)
+    clean_openrouter = _sanitize_api_key(raw_openrouter)
 
     saved_data = {
         "models": [item.model_dump() for item in settings_in.models],
@@ -267,8 +287,17 @@ async def update_ai_settings(
     }
 
     current_user.ai_settings_json = json.dumps(saved_data, ensure_ascii=False)
-    await db.commit()
-    await db.refresh(current_user)
+
+    try:
+        await db.commit()
+        await db.refresh(current_user)
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating AI settings for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при сохранении настроек AI",
+        )
 
     return UserAISettingsResponse(
         models=settings_in.models,
@@ -277,4 +306,3 @@ async def update_ai_settings(
         geminiApiKey=clean_gemini,
         openrouterApiKey=clean_openrouter,
     )
-

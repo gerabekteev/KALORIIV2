@@ -103,10 +103,7 @@ export const AddMealModal: React.FC = () => {
           const file = items[i].getAsFile()
           if (file) {
             e.preventDefault()
-            // If in barcode mode, process in barcode
-            if (mode === 'barcode') {
-              handleBarcodeImageUploaded(file)
-            } else {
+            if (mode !== 'barcode') {
               setSelectedPhoto(file)
               setMode('ai_photo')
               addToast('Скриншот получен из буфера обмена (Ctrl+V)', 'info')
@@ -120,39 +117,6 @@ export const AddMealModal: React.FC = () => {
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
   }, [isAddMealOpen, mode, addToast])
-
-  // Barcode scan handlers
-  const handleBarcodeDetected = async (code: string) => {
-    try {
-      addToast('Поиск товара по коду...', 'info', 2000)
-      const product = await barcodeApi.lookup(code)
-      setScannedProduct(product)
-      setIsPortionModalOpen(true)
-      setRecentRefreshTrigger((prev) => prev + 1)
-    } catch (err: any) {
-      addToast(
-        err.message || 'Товар не найден в базе. Вы можете ввести данные вручную.',
-        'error',
-        4000
-      )
-    }
-  }
-
-  const handleBarcodeImageUploaded = async (file: File) => {
-    try {
-      addToast('Распознаём товар по фотографии...', 'info', 3000)
-      const res = await barcodeApi.scanImage(file)
-      if (res.product) {
-        setScannedProduct(res.product)
-        setIsPortionModalOpen(true)
-        setRecentRefreshTrigger((prev) => prev + 1)
-      } else {
-        addToast(res.message || 'Не удалось распознать товар', 'warning')
-      }
-    } catch (err: any) {
-      addToast(err.message || 'Ошибка распознавания фото товара', 'error')
-    }
-  }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -365,15 +329,15 @@ export const AddMealModal: React.FC = () => {
             <button
               type="button"
               onClick={() => setMode('search')}
-              className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl bg-[#19191d] hover:bg-[#202026] border border-neutral-800 hover:border-neutral-700 transition-all cursor-pointer group text-left shadow-sm"
+              className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl bg-[#19191d] hover:bg-[#202026] border border-neutral-800 hover:border-neutral-700 transition-all cursor-pointer group text-left shadow-sm min-w-0"
             >
-              <div className="flex items-center gap-2.5 text-neutral-400 group-hover:text-neutral-200">
-                <Search className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-medium">
+              <div className="flex items-center gap-2.5 text-neutral-400 group-hover:text-neutral-200 min-w-0 flex-1 mr-2">
+                <Search className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-xs font-medium truncate">
                   Поиск в базе (156+ продуктов) и рецептах...
                 </span>
               </div>
-              <span className="text-[10px] text-neutral-500 bg-neutral-900 border border-neutral-800 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] text-neutral-500 bg-neutral-900 border border-neutral-800 px-2 py-0.5 rounded-md shrink-0">
                 База
               </span>
             </button>
@@ -383,20 +347,20 @@ export const AddMealModal: React.FC = () => {
               <span className="text-[11px] font-semibold text-neutral-400 block px-0.5">
                 Быстрые способы:
               </span>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                 {/* AI Photo */}
                 <button
                   type="button"
                   onClick={() => setMode('ai_photo')}
-                  className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center"
+                  className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center min-w-0"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform mb-1.5">
-                    <Camera className="w-5 h-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
+                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight">
+                  <span className="text-xs font-bold text-white leading-tight truncate max-w-full">
                     AI Фото
                   </span>
-                  <span className="text-[10px] text-neutral-400 mt-0.5">
+                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
                     Снимок / Ctrl+V
                   </span>
                 </button>
@@ -405,16 +369,16 @@ export const AddMealModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setMode('barcode')}
-                  className="relative flex flex-col items-center justify-center p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center shadow-sm"
+                  className="relative flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center shadow-sm min-w-0"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-110 transition-transform mb-1.5">
-                    <Barcode className="w-5 h-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
+                    <Barcode className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight flex items-center gap-1">
+                  <span className="text-xs font-bold text-white leading-tight flex items-center gap-1 truncate max-w-full">
                     Штрихкод
                   </span>
-                  <span className="text-[10px] text-emerald-400 font-semibold mt-0.5 flex items-center gap-0.5">
-                    <ShieldCheck className="w-2.5 h-2.5" /> и ЧЗ
+                  <span className="text-[10px] text-emerald-400 font-semibold mt-0.5 flex items-center gap-0.5 truncate max-w-full">
+                    <ShieldCheck className="w-2.5 h-2.5 shrink-0" /> и ЧЗ
                   </span>
                 </button>
 
@@ -422,15 +386,15 @@ export const AddMealModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setMode('text_ai')}
-                  className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center"
+                  className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center min-w-0"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform mb-1.5">
-                    <Sparkles className="w-5 h-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight">
+                  <span className="text-xs font-bold text-white leading-tight truncate max-w-full">
                     Текст AI
                   </span>
-                  <span className="text-[10px] text-neutral-400 mt-0.5">
+                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
                     Описать текстом
                   </span>
                 </button>
@@ -452,29 +416,29 @@ export const AddMealModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMode('recipes')}
-                className="flex items-center justify-between p-3 rounded-xl bg-[#161619] hover:bg-[#1f1f24] border border-neutral-800 transition-all cursor-pointer text-left group"
+                className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[#161619] hover:bg-[#1f1f24] border border-neutral-800 transition-all cursor-pointer text-left group min-w-0"
               >
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-amber-400" />
-                  <span className="text-xs font-semibold text-neutral-200">
+                <div className="flex items-center gap-2 min-w-0 mr-1">
+                  <Star className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="text-xs font-semibold text-neutral-200 truncate">
                     Мои рецепты
                   </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white" />
+                <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white shrink-0" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setMode('manual')}
-                className="flex items-center justify-between p-3 rounded-xl bg-[#161619] hover:bg-[#1f1f24] border border-neutral-800 transition-all cursor-pointer text-left group"
+                className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[#161619] hover:bg-[#1f1f24] border border-neutral-800 transition-all cursor-pointer text-left group min-w-0"
               >
-                <div className="flex items-center gap-2">
-                  <PenTool className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs font-semibold text-neutral-200">
+                <div className="flex items-center gap-2 min-w-0 mr-1">
+                  <PenTool className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span className="text-xs font-semibold text-neutral-200 truncate">
                     Ввести вручную
                   </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white" />
+                <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white shrink-0" />
               </button>
             </div>
           </div>
@@ -485,8 +449,23 @@ export const AddMealModal: React.FC = () => {
         {/* ======================================================== */}
         {mode === 'barcode' && (
           <BarcodeScannerView
-            onCodeScanned={handleBarcodeDetected}
-            onImageUploaded={handleBarcodeImageUploaded}
+            onProductFound={(product) => {
+              setScannedProduct(product)
+              setIsPortionModalOpen(true)
+              setRecentRefreshTrigger((prev) => prev + 1)
+            }}
+            onSwitchToAI={(file, comment) => {
+              if (file) setSelectedPhoto(file)
+              if (comment) setAiComment(comment)
+              setMode('ai_photo')
+            }}
+            onSwitchToManual={(initialName, barcode) => {
+              setManualForm((prev) => ({
+                ...prev,
+                name: initialName || (barcode ? `Товар (${barcode})` : ''),
+              }))
+              setMode('manual')
+            }}
             onCancel={() => setMode('hub')}
           />
         )}

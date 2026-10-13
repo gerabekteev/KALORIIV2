@@ -362,7 +362,6 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                       <div className="relative flex-1">
                         <input
                           type="number"
-                          min="1"
                           placeholder="Вес порции, г"
                           value={portionWeight}
                           onChange={(e) => setPortionWeight(e.target.value)}

@@ -62,7 +62,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-neutral-800/80 shrink-0">
+          <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-neutral-800/80 shrink-0">
             <div>
               {title && <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>}
               {description && (
@@ -80,7 +80,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content Body */}
-        <div className="px-6 py-4 overflow-y-auto overflow-x-hidden flex-1 text-neutral-200">
+        <div className="px-4 sm:px-6 py-4 overflow-y-auto overflow-x-hidden flex-1 text-neutral-200">
           {children}
         </div>
       </div>

@@ -121,7 +121,9 @@ class AIRouter:
         Raises AllProvidersFailedError if all models exhaust retries.
         """
         errors_collected: List[str] = []
-        chain_to_use = custom_model_chain if custom_model_chain else self.model_chain
+        chain_to_use = custom_model_chain if custom_model_chain is not None else self.model_chain
+        if not chain_to_use:
+            raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
 
         for provider_type, model_id in chain_to_use:
             provider = self._get_provider_instance(
@@ -204,7 +206,9 @@ class AIRouter:
         Raises AllProvidersFailedError if all models exhaust retries.
         """
         errors_collected: List[str] = []
-        chain_to_use = custom_model_chain if custom_model_chain else self.model_chain
+        chain_to_use = custom_model_chain if custom_model_chain is not None else self.model_chain
+        if not chain_to_use:
+            raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
 
         for provider_type, model_id in chain_to_use:
             provider = self._get_provider_instance(

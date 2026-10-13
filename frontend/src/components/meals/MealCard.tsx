@@ -111,11 +111,26 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
 
   return (
     <>
-      <div className="relative group bg-[#1c1c20] hover:bg-[#222227] border border-neutral-800/80 rounded-2xl p-4 transition-all duration-200 shadow-md shadow-black/20">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => openEditMeal(meal)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            openEditMeal(meal)
+          }
+        }}
+        className="relative group bg-[#1c1c20] hover:bg-[#222227] hover:border-emerald-500/40 border border-neutral-800/80 rounded-2xl p-4 transition-all duration-200 shadow-md shadow-black/20 cursor-pointer active:scale-[0.99] select-none"
+        title="Нажмите в любое место карточки для редактирования блюда"
+      >
         <div className="flex items-start justify-between gap-3">
           {/* Meal Photo or Icon with expressive Lightbox trigger */}
           <div
-            onClick={() => photoUrl && setIsLightboxOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (photoUrl) setIsLightboxOpen(true)
+            }}
             className={`relative w-16 h-16 rounded-xl bg-neutral-800 border border-neutral-700/60 overflow-hidden shrink-0 flex items-center justify-center transition-all ${
               photoUrl
                 ? 'cursor-pointer hover:ring-2 hover:ring-emerald-400 group/photo active:scale-95 shadow-sm'
@@ -152,7 +167,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
           {/* Meal Details */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-white truncate">
+              <h3 className="text-sm font-semibold text-white truncate group-hover:text-emerald-300 transition-colors">
                 {meal.name}
               </h3>
               <span className="text-xs text-neutral-400 flex items-center gap-1 shrink-0 font-medium">
@@ -176,8 +191,11 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setIsEditingComment(true)}
-                    className="text-neutral-500 hover:text-emerald-400 p-0.5 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsEditingComment(true)
+                    }}
+                    className="text-neutral-500 hover:text-emerald-400 p-1 transition-colors cursor-pointer"
                     title="Изменить комментарий и пересчитать"
                   >
                     <Edit2 className="w-3 h-3" />
@@ -186,7 +204,10 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setIsEditingComment(true)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsEditingComment(true)
+                  }}
                   className="text-[11px] text-neutral-500 hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <MessageSquare className="w-3 h-3 text-neutral-600" />
@@ -212,52 +233,62 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-col gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+          {/* Action buttons (Larger Touch Targets for Mobile) */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex flex-col gap-1.5 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+          >
             <button
+              type="button"
               onClick={() => setIsEditingComment(!isEditingComment)}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              className={`p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-xl transition-colors cursor-pointer active:scale-95 ${
                 isEditingComment
                   ? 'text-emerald-400 bg-emerald-500/10'
                   : 'text-neutral-400 hover:text-emerald-400 hover:bg-neutral-800'
               }`}
               title="Пересчитать через AI по комментарию"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
             <button
+              type="button"
               onClick={handleSaveAsRecipe}
               disabled={isSavingRecipe}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              className={`p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-xl transition-colors cursor-pointer active:scale-95 ${
                 isSavedRecipe
                   ? 'text-amber-400 bg-amber-500/10'
                   : 'text-neutral-400 hover:text-amber-400 hover:bg-neutral-800'
               }`}
               title="Сохранить как рецепт"
             >
-              <BookmarkPlus className="w-3.5 h-3.5" />
+              <BookmarkPlus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
             <button
+              type="button"
               onClick={() => openEditMeal(meal)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-              title="Редактировать"
+              className="p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 active:scale-95 transition-colors cursor-pointer"
+              title="Редактировать блюдо"
             >
-              <Edit2 className="w-3.5 h-3.5" />
+              <Edit2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
             <button
+              type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="p-1.5 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50"
+              className="p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-xl text-neutral-500 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-colors cursor-pointer disabled:opacity-50"
               title="Удалить"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Comment edit & AI recalculate section */}
         {isEditingComment && (
-          <div className="mt-3 pt-3 border-t border-neutral-800/80 space-y-2.5 animate-in fade-in duration-200">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="mt-3 pt-3 border-t border-neutral-800/80 space-y-2.5 animate-in fade-in duration-200"
+          >
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />

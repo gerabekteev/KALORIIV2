@@ -90,9 +90,16 @@ async def create_meal(
         meal_date=meal_date,
         meal_time=meal_time,
     )
-    db.add(meal)
-    await db.commit()
-    await db.refresh(meal)
+    try:
+        db.add(meal)
+        await db.commit()
+        await db.refresh(meal)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при создании приёма пищи: {e}",
+        )
 
     return MealResponse.model_validate(meal)
 
@@ -144,8 +151,15 @@ async def update_meal(
     # Flag as manually edited if user changed values
     meal.is_manually_edited = True
 
-    await db.commit()
-    await db.refresh(meal)
+    try:
+        await db.commit()
+        await db.refresh(meal)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при обновлении приёма пищи: {e}",
+        )
 
     return MealResponse.model_validate(meal)
 
@@ -177,8 +191,15 @@ async def delete_meal(
             except Exception:
                 pass
 
-    await db.delete(meal)
-    await db.commit()
+    try:
+        await db.delete(meal)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при удалении приёма пищи: {e}",
+        )
     return None
 
 
@@ -295,7 +316,14 @@ async def recalculate_meal(
         ensure_ascii=False,
     )
 
-    await db.commit()
-    await db.refresh(meal)
+    try:
+        await db.commit()
+        await db.refresh(meal)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при сохранении пересчитанного приёма пищи: {e}",
+        )
 
     return MealResponse.model_validate(meal)

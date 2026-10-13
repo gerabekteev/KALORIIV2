@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+import urllib.parse
 from typing import Optional, Dict, Any, Tuple
 import httpx
 from sqlalchemy import select, and_, func
@@ -18,33 +19,66 @@ OFF_HEADERS = {
 }
 
 
-def parse_and_normalize_barcode(raw_input: str) -> Tuple[str, bool]:
+def _safe_float(val: Any, default: float = 0.0) -> float:
+    """Safely converts string or numeric values to float, handling commas and whitespace."""
+    if val is None:
+        return default
+    try:
+        return float(str(val).replace(",", ".").strip())
+    except (ValueError, TypeError):
+        return default
+
+
+def parse_and_normalize_barcode(raw_input: Optional[str]) -> Tuple[str, bool]:
     """
-    Normalizes a barcode string from either standard barcodes (EAN-13, EAN-8, UPC)
+    Normalizes a barcode string from standard barcodes (EAN-13, EAN-8, UPC)
     or Russian 'Chestny ZNAK' (DataMatrix / GS1 format).
+
+    Supports:
+    - GS1 symbology prefixes (]d2, ]C1, ]e0)
+    - Group separators: \x1d (GS), \x1e, \x1c, <GS>, [GS], <FNC1>, [FNC1]
+    - AI brackets: (01)...(21)...
+    - Surrounding quotes, spaces, newlines, and null bytes
+    - Leading zero handling in GTIN-14 (0 + 13 digits -> 13-digit EAN)
+    - Sanitization against SQL injection / non-barcode symbols
 
     Returns:
         (canonical_code, is_honest_sign)
     """
-    clean = raw_input.strip()
+    if not raw_input:
+        return "", False
 
-    # Clean brackets if provided in human-readable GS1 like '(01)04601234567890(21)...'
-    if "(01)" in clean:
-        match = re.search(r"\(01\)(\d{14})", clean)
-        if match:
-            gtin = match.group(1)
-            ean = gtin[1:] if gtin.startswith("0") else gtin
-            return ean, True
+    # 1. Clean whitespace, newlines, null bytes, and surrounding quotes/backticks
+    clean = raw_input.replace("\x00", "").strip()
+    clean = clean.strip("\"'`“”«»")
 
-    # Chestny ZNAK / GS1 DataMatrix string starting with 01
-    # Format: '01' + 14 digits GTIN + '21' + serial...
-    if clean.startswith("01") and len(clean) >= 16:
-        gtin_candidate = clean[2:16]
-        if gtin_candidate.isdigit():
-            ean = gtin_candidate[1:] if gtin_candidate.startswith("0") else gtin_candidate
-            return ean, True
+    if not clean:
+        return "", False
 
-    # Clean non-alphanumeric except spaces
+    # 2. Strip standard ISO/IEC 15424 barcode symbology prefixes (e.g., ]d2 for DataMatrix, ]C1 for GS1-128)
+    clean = re.sub(r"^\][a-zA-Z0-9]{2}", "", clean).strip()
+
+    # 3. Replace text representations of GS / FNC1 with standard \x1d
+    clean = re.sub(r"(?i)<gs>|\[gs\]|<fnc1>|\[fnc1\]", "\x1d", clean)
+
+    # Strip leading control characters / separators
+    clean = clean.lstrip("\x1d\x1e\x1c \t\r\n")
+
+    # 4. Check for human-readable GS1 AI brackets like '(01)04601234567890(21)...'
+    bracket_match = re.search(r"\(\s*01\s*\)\s*(\d{14})", clean)
+    if bracket_match:
+        gtin = bracket_match.group(1)
+        ean = gtin[1:] if gtin.startswith("0") else gtin
+        return ean, True
+
+    # 5. Check for GS1 DataMatrix starting with AI 01: '01' + 14 digits GTIN
+    ai01_match = re.search(r"(?:^|[\x1d\s])01(\d{14})", clean)
+    if ai01_match:
+        gtin = ai01_match.group(1)
+        ean = gtin[1:] if gtin.startswith("0") else gtin
+        return ean, True
+
+    # 6. Extract digits only for standard EAN/UPC/GTIN checks
     digits_only = re.sub(r"\D", "", clean)
 
     # 14 digits GTIN
@@ -52,12 +86,19 @@ def parse_and_normalize_barcode(raw_input: str) -> Tuple[str, bool]:
         ean = digits_only[1:] if digits_only.startswith("0") else digits_only
         return ean, True
 
-    # Standard EAN-13, UPC (12), EAN-8
+    # Standard EAN-13 (13 digits), UPC-A (12 digits), EAN-8 (8 digits)
     if len(digits_only) in (8, 12, 13):
         return digits_only, False
 
-    # Fallback to digits if any
-    return digits_only if digits_only else clean, False
+    # 7. Check if digits_only contains 01 prefix and 14-digit GTIN inside
+    if len(digits_only) > 14 and digits_only.startswith("01") and len(digits_only) >= 16:
+        gtin = digits_only[2:16]
+        ean = gtin[1:] if gtin.startswith("0") else gtin
+        return ean, True
+
+    # 8. Sanitized fallback (alphanumeric for custom/store barcodes, max 100 chars)
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", clean)[:100]
+    return (digits_only if digits_only else sanitized), False
 
 
 def parse_weight_grams_from_text(qty_str: Optional[str]) -> float:
@@ -82,8 +123,16 @@ def parse_weight_grams_from_text(qty_str: Optional[str]) -> float:
 
 
 async def fetch_from_open_food_facts(barcode: str) -> Optional[Dict[str, Any]]:
-    """Fetches product details from Open Food Facts API."""
-    url = OPEN_FOOD_FACTS_API_URL.format(barcode=barcode)
+    """
+    Fetches product details from Open Food Facts API with resilient error handling:
+    timeouts, 5xx upstream errors, network disconnects, and malformed JSON.
+    """
+    if not barcode or not re.match(r"^[a-zA-Z0-9_-]+$", barcode):
+        logger.warning(f"Invalid barcode format for OFF request: {barcode}")
+        return None
+
+    quoted_barcode = urllib.parse.quote(barcode.strip())
+    url = OPEN_FOOD_FACTS_API_URL.format(barcode=quoted_barcode)
     try:
         async with httpx.AsyncClient(timeout=5.5) as client:
             resp = await client.get(url, headers=OFF_HEADERS)
@@ -91,12 +140,17 @@ async def fetch_from_open_food_facts(barcode: str) -> Optional[Dict[str, Any]]:
                 logger.info(f"Open Food Facts returned status {resp.status_code} for {barcode}")
                 return None
 
-            data = resp.json()
-            if data.get("status") != 1:
+            try:
+                data = resp.json()
+            except (json.JSONDecodeError, ValueError) as json_err:
+                logger.warning(f"Open Food Facts returned non-JSON response for {barcode}: {json_err}")
+                return None
+
+            if not isinstance(data, dict) or data.get("status") != 1:
                 return None
 
             product = data.get("product")
-            if not product:
+            if not isinstance(product, dict):
                 return None
 
             name = (
@@ -111,33 +165,26 @@ async def fetch_from_open_food_facts(barcode: str) -> Optional[Dict[str, Any]]:
             if brand:
                 brand = brand.split(",")[0].strip()
 
-            nutriments = product.get("nutriments", {})
+            nutriments = product.get("nutriments") or {}
+            if not isinstance(nutriments, dict):
+                nutriments = {}
 
             # Calories extraction
-            calories = (
+            raw_cal = (
                 nutriments.get("energy-kcal_100g")
                 or nutriments.get("energy-kcal_value")
                 or nutriments.get("energy-kcal")
             )
-            if calories is None and "energy_100g" in nutriments:
-                calories = float(nutriments["energy_100g"]) / 4.184
-            calories = float(calories) if calories is not None else 0.0
+            if raw_cal is None and "energy_100g" in nutriments:
+                raw_kj = _safe_float(nutriments.get("energy_100g"), 0.0)
+                calories = raw_kj / 4.184
+            else:
+                calories = _safe_float(raw_cal, 0.0)
 
-            proteins = float(
-                nutriments.get("proteins_100g")
-                or nutriments.get("proteins_value")
-                or 0.0
-            )
-            fat = float(
-                nutriments.get("fat_100g")
-                or nutriments.get("fat_value")
-                or 0.0
-            )
-            carbs = float(
-                nutriments.get("carbohydrates_100g")
-                or nutriments.get("carbohydrates_value")
-                or 0.0
-            )
+            calories = max(0.0, calories)
+            proteins = max(0.0, _safe_float(nutriments.get("proteins_100g") or nutriments.get("proteins_value"), 0.0))
+            fat = max(0.0, _safe_float(nutriments.get("fat_100g") or nutriments.get("fat_value"), 0.0))
+            carbs = max(0.0, _safe_float(nutriments.get("carbohydrates_100g") or nutriments.get("carbohydrates_value"), 0.0))
 
             image_url = (
                 product.get("image_front_url")
@@ -150,7 +197,7 @@ async def fetch_from_open_food_facts(barcode: str) -> Optional[Dict[str, Any]]:
             package_grams = parse_weight_grams_from_text(str(quantity_raw) if quantity_raw else None)
 
             return {
-                "name": name.strip(),
+                "name": str(name).strip(),
                 "brand": brand,
                 "barcode": barcode,
                 "calories_per_100g": round(calories, 1),
@@ -162,8 +209,14 @@ async def fetch_from_open_food_facts(barcode: str) -> Optional[Dict[str, Any]]:
                 "category": product.get("compared_to_category") or "Продукты",
             }
 
+    except httpx.TimeoutException as te:
+        logger.warning(f"Timeout contacting Open Food Facts for {barcode}: {te}")
+        return None
+    except httpx.RequestError as re_err:
+        logger.warning(f"Network error contacting Open Food Facts for {barcode}: {re_err}")
+        return None
     except Exception as e:
-        logger.warning(f"Error fetching from Open Food Facts for {barcode}: {e}")
+        logger.warning(f"Error fetching from Open Food Facts for {barcode}: {e}", exc_info=True)
         return None
 
 
@@ -171,85 +224,136 @@ async def lookup_barcode_product(
     db: AsyncSession,
     user_id: int,
     raw_code: str,
+    force_refresh: bool = False,
 ) -> Optional[BarcodeProductResult]:
     """
     Looks up a product by barcode or Chestny ZNAK code.
     Checks:
-    1. Local database (Product.barcode)
+    1. Local database (Product.barcode) unless force_refresh is True
     2. Open Food Facts API (with auto-caching to Product)
     Records or updates in user_scanned_products.
+    Guarantees session rollback on any database errors.
     """
     clean_code, is_honest_sign = parse_and_normalize_barcode(raw_code)
     if not clean_code:
         return None
 
-    # 1. Search local DB
-    stmt = select(Product).where(
-        Product.barcode.in_([clean_code, raw_code.strip()])
-    ).limit(1)
-    res = await db.execute(stmt)
-    existing_product = res.scalar_one_or_none()
+    safe_raw = (raw_code or "").strip()[:100]
+    search_codes = list(set([c for c in [clean_code, safe_raw] if c]))
 
-    if existing_product:
-        # Record in user scanned history
-        await record_user_scan(db, user_id, existing_product.id, clean_code)
-        return BarcodeProductResult(
-            product_id=existing_product.id,
-            name=existing_product.name,
-            brand=existing_product.brand,
-            barcode=clean_code,
-            calories_per_100g=existing_product.calories_per_100g,
-            protein_per_100g=existing_product.protein_per_100g,
-            fat_per_100g=existing_product.fat_per_100g,
-            carbs_per_100g=existing_product.carbs_per_100g,
-            package_weight_grams=existing_product.package_weight_grams or 100.0,
-            image_url=existing_product.image_url,
-            source="local",
-            is_honest_sign=is_honest_sign,
-        )
+    existing_product: Optional[Product] = None
+    if not force_refresh:
+        # 1. Search local DB
+        stmt = select(Product).where(Product.barcode.in_(search_codes)).limit(1)
+        res = await db.execute(stmt)
+        existing_product = res.scalar_one_or_none()
+
+        if existing_product:
+            # Record in user scanned history
+            await record_user_scan(db, user_id, existing_product.id, clean_code)
+            return BarcodeProductResult(
+                product_id=existing_product.id,
+                name=existing_product.name,
+                brand=existing_product.brand,
+                barcode=clean_code,
+                calories_per_100g=existing_product.calories_per_100g,
+                protein_per_100g=existing_product.protein_per_100g,
+                fat_per_100g=existing_product.fat_per_100g,
+                carbs_per_100g=existing_product.carbs_per_100g,
+                package_weight_grams=existing_product.package_weight_grams or 100.0,
+                image_url=existing_product.image_url,
+                source="local",
+                is_honest_sign=is_honest_sign,
+            )
 
     # 2. Search Open Food Facts
     off_data = await fetch_from_open_food_facts(clean_code)
     if not off_data and len(clean_code) == 13:
-        # Try leading zero if 13 digits
+        # Try leading zero if 13 digits (EAN-13 -> GTIN-14)
+        off_data = await fetch_from_open_food_facts("0" + clean_code)
+    elif not off_data and len(clean_code) == 12:
+        # Try leading zero for UPC-A -> EAN-13
         off_data = await fetch_from_open_food_facts("0" + clean_code)
 
     if off_data:
-        # Cache product into local database
-        new_product = Product(
-            name=off_data["name"],
-            brand=off_data["brand"],
-            barcode=clean_code,
-            calories_per_100g=off_data["calories_per_100g"],
-            protein_per_100g=off_data["protein_per_100g"],
-            fat_per_100g=off_data["fat_per_100g"],
-            carbs_per_100g=off_data["carbs_per_100g"],
-            package_weight_grams=off_data["package_weight_grams"],
-            image_url=off_data["image_url"],
-            category=off_data.get("category", "Штрихкод"),
-            is_custom=False,
-        )
-        db.add(new_product)
-        await db.commit()
-        await db.refresh(new_product)
+        # Check if already in DB (especially when force_refresh=True)
+        stmt = select(Product).where(Product.barcode.in_(search_codes)).limit(1)
+        res = await db.execute(stmt)
+        target_product = res.scalar_one_or_none()
+
+        if target_product:
+            target_product.name = off_data["name"]
+            target_product.brand = off_data["brand"]
+            target_product.calories_per_100g = off_data["calories_per_100g"]
+            target_product.protein_per_100g = off_data["protein_per_100g"]
+            target_product.fat_per_100g = off_data["fat_per_100g"]
+            target_product.carbs_per_100g = off_data["carbs_per_100g"]
+            target_product.package_weight_grams = off_data["package_weight_grams"]
+            if off_data.get("image_url"):
+                target_product.image_url = off_data["image_url"]
+        else:
+            target_product = Product(
+                name=off_data["name"],
+                brand=off_data["brand"],
+                barcode=clean_code,
+                calories_per_100g=off_data["calories_per_100g"],
+                protein_per_100g=off_data["protein_per_100g"],
+                fat_per_100g=off_data["fat_per_100g"],
+                carbs_per_100g=off_data["carbs_per_100g"],
+                package_weight_grams=off_data["package_weight_grams"],
+                image_url=off_data["image_url"],
+                category=off_data.get("category", "Штрихкод"),
+                is_custom=False,
+            )
+            db.add(target_product)
+
+        try:
+            await db.commit()
+            await db.refresh(target_product)
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error persisting product from Open Food Facts: {e}", exc_info=True)
+            raise
 
         # Record in user scanned history
-        await record_user_scan(db, user_id, new_product.id, clean_code)
+        await record_user_scan(db, user_id, target_product.id, clean_code)
 
         return BarcodeProductResult(
-            product_id=new_product.id,
-            name=new_product.name,
-            brand=new_product.brand,
+            product_id=target_product.id,
+            name=target_product.name,
+            brand=target_product.brand,
             barcode=clean_code,
-            calories_per_100g=new_product.calories_per_100g,
-            protein_per_100g=new_product.protein_per_100g,
-            fat_per_100g=new_product.fat_per_100g,
-            carbs_per_100g=new_product.carbs_per_100g,
-            package_weight_grams=new_product.package_weight_grams or 100.0,
-            image_url=new_product.image_url,
+            calories_per_100g=target_product.calories_per_100g,
+            protein_per_100g=target_product.protein_per_100g,
+            fat_per_100g=target_product.fat_per_100g,
+            carbs_per_100g=target_product.carbs_per_100g,
+            package_weight_grams=target_product.package_weight_grams or 100.0,
+            image_url=target_product.image_url,
             source="openfoodfacts",
             is_honest_sign=is_honest_sign,
         )
+
+    # If force_refresh was True but OFF didn't find anything, fall back to existing DB product
+    if force_refresh:
+        stmt = select(Product).where(Product.barcode.in_(search_codes)).limit(1)
+        res = await db.execute(stmt)
+        fallback_prod = res.scalar_one_or_none()
+        if fallback_prod:
+            await record_user_scan(db, user_id, fallback_prod.id, clean_code)
+            return BarcodeProductResult(
+                product_id=fallback_prod.id,
+                name=fallback_prod.name,
+                brand=fallback_prod.brand,
+                barcode=clean_code,
+                calories_per_100g=fallback_prod.calories_per_100g,
+                protein_per_100g=fallback_prod.protein_per_100g,
+                fat_per_100g=fallback_prod.fat_per_100g,
+                carbs_per_100g=fallback_prod.carbs_per_100g,
+                package_weight_grams=fallback_prod.package_weight_grams or 100.0,
+                image_url=fallback_prod.image_url,
+                source="local",
+                is_honest_sign=is_honest_sign,
+            )
 
     return None
 
@@ -260,7 +364,7 @@ async def record_user_scan(
     product_id: int,
     barcode: str,
 ) -> None:
-    """Upserts a record into user_scanned_products."""
+    """Upserts a record into user_scanned_products with guaranteed rollback on failure."""
     try:
         stmt = select(UserScannedProduct).where(
             and_(
@@ -271,16 +375,18 @@ async def record_user_scan(
         res = await db.execute(stmt)
         record = res.scalar_one_or_none()
 
+        safe_barcode = (barcode or "")[:100]
+
         if record:
             record.scan_count += 1
             record.last_scanned_at = func.now()
-            if barcode and not record.barcode:
-                record.barcode = barcode
+            if safe_barcode and not record.barcode:
+                record.barcode = safe_barcode
         else:
             record = UserScannedProduct(
                 user_id=user_id,
                 product_id=product_id,
-                barcode=barcode,
+                barcode=safe_barcode,
                 scan_count=1,
             )
             db.add(record)
@@ -289,3 +395,71 @@ async def record_user_scan(
     except Exception as e:
         logger.warning(f"Error recording user scan: {e}")
         await db.rollback()
+
+
+async def update_barcode_product(
+    db: AsyncSession,
+    product_id: int,
+    user_id: int,
+    name: str,
+    calories_per_100g: float,
+    protein_per_100g: float,
+    fat_per_100g: float,
+    carbs_per_100g: float,
+    brand: Optional[str] = None,
+    package_weight_grams: Optional[float] = None,
+    image_url: Optional[str] = None,
+) -> Optional[BarcodeProductResult]:
+    """
+    Updates product data in the local database and refreshes user scanned cache.
+    Guarantees subsequent scans or shelf lookups return the user's verified values.
+    Includes guaranteed rollback on transaction errors.
+    """
+    if product_id <= 0:
+        return None
+
+    stmt = select(Product).where(Product.id == product_id)
+    res = await db.execute(stmt)
+    product = res.scalar_one_or_none()
+    if not product:
+        return None
+
+    product.name = name.strip()
+    if brand is not None:
+        product.brand = brand.strip() if brand else None
+    product.calories_per_100g = round(float(calories_per_100g), 1)
+    product.protein_per_100g = round(float(protein_per_100g), 1)
+    product.fat_per_100g = round(float(fat_per_100g), 1)
+    product.carbs_per_100g = round(float(carbs_per_100g), 1)
+    if package_weight_grams is not None:
+        product.package_weight_grams = max(1.0, round(float(package_weight_grams), 1))
+    if image_url is not None:
+        product.image_url = image_url.strip() if image_url else None
+
+    try:
+        await db.commit()
+        await db.refresh(product)
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating product {product_id}: {e}", exc_info=True)
+        raise
+
+    # Ensure scan record exists and is updated
+    await record_user_scan(db, user_id, product.id, product.barcode or "")
+
+    _, is_honest = parse_and_normalize_barcode(product.barcode or "")
+
+    return BarcodeProductResult(
+        product_id=product.id,
+        name=product.name,
+        brand=product.brand,
+        barcode=product.barcode or "",
+        calories_per_100g=product.calories_per_100g,
+        protein_per_100g=product.protein_per_100g,
+        fat_per_100g=product.fat_per_100g,
+        carbs_per_100g=product.carbs_per_100g,
+        package_weight_grams=product.package_weight_grams or 100.0,
+        image_url=product.image_url,
+        source="local",
+        is_honest_sign=is_honest,
+    )

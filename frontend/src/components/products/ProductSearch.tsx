@@ -22,7 +22,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [grams, setGrams] = useState<number>(100)
+  const [grams, setGrams] = useState<string>('100')
 
   useEffect(() => {
     let active = true
@@ -48,14 +48,16 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
 
   const handleConfirmPortion = () => {
     if (!selectedProduct) return
-    const ratio = (grams || 100) / 100
+    const parsedGrams = parseFloat(grams)
+    const safeGrams = !isNaN(parsedGrams) && parsedGrams > 0 ? parsedGrams : 100
+    const ratio = safeGrams / 100
     onSelectProduct({
       name: selectedProduct.name,
       calories: Math.round(selectedProduct.calories_per_100g * ratio),
       protein: Math.round(selectedProduct.protein_per_100g * ratio * 10) / 10,
       fat: Math.round(selectedProduct.fat_per_100g * ratio * 10) / 10,
       carbs: Math.round(selectedProduct.carbs_per_100g * ratio * 10) / 10,
-      weight_grams: grams || 100,
+      weight_grams: safeGrams,
     })
     setSelectedProduct(null)
   }
@@ -92,9 +94,14 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
               </label>
               <input
                 type="number"
-                min="1"
+                inputMode="decimal"
                 value={grams}
-                onChange={(e) => setGrams(Number(e.target.value))}
+                onChange={(e) => setGrams(e.target.value)}
+                onBlur={() => {
+                  const num = parseFloat(grams)
+                  if (isNaN(num) || num <= 0) setGrams('100')
+                }}
+                placeholder="100"
                 className="w-full bg-[#18181b] border border-neutral-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-emerald-500 outline-none"
               />
             </div>
@@ -103,7 +110,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                 Итого в порции:
               </span>
               <span className="text-sm font-bold text-emerald-400">
-                {Math.round(selectedProduct.calories_per_100g * (grams / 100))} ккал
+                {Math.round(selectedProduct.calories_per_100g * ((parseFloat(grams) || 100) / 100))} ккал
               </span>
             </div>
           </div>

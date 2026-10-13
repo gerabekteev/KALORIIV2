@@ -3,13 +3,24 @@ import {
   BarcodeProductResult,
   RecentScannedProductItem,
   BarcodeScanImageResponse,
+  BarcodeProductUpdateRequest,
 } from '../types'
 
 export const barcodeApi = {
-  lookup: async (barcode: string): Promise<BarcodeProductResult> => {
+  lookup: async (barcode: string, refresh = false): Promise<BarcodeProductResult> => {
     return apiClient<BarcodeProductResult>('/barcode/lookup', {
       method: 'POST',
-      body: JSON.stringify({ barcode }),
+      body: JSON.stringify({ barcode, refresh }),
+    })
+  },
+
+  updateProduct: async (
+    productId: number,
+    data: BarcodeProductUpdateRequest
+  ): Promise<BarcodeProductResult> => {
+    return apiClient<BarcodeProductResult>(`/barcode/product/${productId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     })
   },
 

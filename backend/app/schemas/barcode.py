@@ -4,6 +4,18 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class BarcodeLookupRequest(BaseModel):
     barcode: str = Field(..., min_length=3, max_length=150, description="Штрихкод или DataMatrix Честный Знак")
+    refresh: bool = Field(default=False, description="Принудительно запросить свежие данные из онлайн-базы")
+
+
+class BarcodeProductUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200, description="Название продукта")
+    brand: Optional[str] = Field(None, max_length=100, description="Бренд или производитель")
+    calories_per_100g: float = Field(..., ge=0, description="Калории на 100г")
+    protein_per_100g: float = Field(..., ge=0, description="Белки на 100г")
+    fat_per_100g: float = Field(..., ge=0, description="Жиры на 100г")
+    carbs_per_100g: float = Field(..., ge=0, description="Углеводы на 100г")
+    package_weight_grams: Optional[float] = Field(default=100.0, ge=1, description="Вес базовой упаковки (г)")
+    image_url: Optional[str] = Field(None, description="Ссылка на фото упаковки")
 
 
 class BarcodeProductResult(BaseModel):

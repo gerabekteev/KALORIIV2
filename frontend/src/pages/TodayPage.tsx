@@ -47,7 +47,7 @@ export const TodayPage: React.FC = () => {
       <div className="flex items-center justify-between bg-[#19191d] px-3 py-2 rounded-2xl border border-neutral-800/80 shadow-md">
         <button
           onClick={goToPreviousDay}
-          className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+          className="p-2 sm:p-1.5 min-w-[42px] min-h-[42px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer active:scale-95"
           title="Предыдущий день"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -61,7 +61,7 @@ export const TodayPage: React.FC = () => {
           {!isToday && (
             <button
               onClick={goToToday}
-              className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 ml-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 transition-all cursor-pointer"
+              className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 ml-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 transition-all cursor-pointer active:scale-95"
             >
               Сегодня
             </button>
@@ -70,7 +70,7 @@ export const TodayPage: React.FC = () => {
 
         <button
           onClick={goToNextDay}
-          className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+          className="p-2 sm:p-1.5 min-w-[42px] min-h-[42px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer active:scale-95"
           title="Следующий день"
         >
           <ChevronRight className="w-5 h-5" />
@@ -139,9 +139,9 @@ export const TodayPage: React.FC = () => {
 
         <button
           onClick={openAddMeal}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-500/30 transition-all cursor-pointer"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 rounded-xl border border-emerald-500/30 transition-all cursor-pointer active:scale-95 min-h-[40px]"
         >
-          <Camera className="w-3.5 h-3.5" />
+          <Camera className="w-4 h-4" />
           <span>Добавить</span>
         </button>
       </div>
@@ -153,11 +153,11 @@ export const TodayPage: React.FC = () => {
       <div className="fixed bottom-20 right-4 sm:right-auto sm:left-1/2 sm:translate-x-32 z-30">
         <button
           onClick={openAddMeal}
-          className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-full shadow-xl shadow-emerald-500/30 border border-emerald-400/30 transition-all duration-200 cursor-pointer"
+          className="flex items-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-full shadow-xl shadow-emerald-500/35 border border-emerald-400/30 transition-all duration-200 cursor-pointer"
         >
           <Plus className="w-5 h-5 stroke-[2.5]" />
-          <span className="hidden xs:inline flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> Добавить еду
+          <span className="hidden xs:inline flex items-center gap-1.5 font-bold">
+            <Sparkles className="w-4 h-4" /> Добавить еду
           </span>
         </button>
       </div>
