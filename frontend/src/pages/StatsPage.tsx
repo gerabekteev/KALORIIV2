@@ -21,7 +21,7 @@ export const StatsPage: React.FC = () => {
   // Calculate averages & totals
   const daysTracked = stats?.days?.length || 0
   const avgCalories = stats?.avg_calories || (daysTracked > 0 ? Math.round((stats?.total_calories || 0) / daysTracked) : 0)
-  const targetMetPct = stats?.target_met_percentage || (daysTracked > 0 ? Math.round((stats.days.filter(d => d.calories >= targetCalories * 0.85 && d.calories <= targetCalories * 1.15).length / daysTracked) * 100) : 0)
+  const targetMetPct = stats?.target_met_percentage ?? (daysTracked > 0 && stats?.days ? Math.round((stats.days.filter(d => d.calories >= targetCalories * 0.85 && d.calories <= targetCalories * 1.15).length / daysTracked) * 100) : 0)
 
   // Sum macros for pie chart
   const totalProtein = stats?.days?.reduce((acc, d) => acc + d.protein, 0) || 0
