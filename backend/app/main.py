@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base, AsyncSessionLocal
 from app.routers import auth, meals, products, recipes, stats, profile, ai
@@ -29,6 +30,10 @@ async def lifespan(app: FastAPI):
     # Ensure tables exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN ai_settings_json VARCHAR(4000)"))
+        except Exception:
+            pass
 
     # Seed products if empty
     async with AsyncSessionLocal() as session:

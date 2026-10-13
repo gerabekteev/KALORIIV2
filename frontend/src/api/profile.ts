@@ -58,4 +58,43 @@ export const profileApi = {
       }),
     })
   },
+
+  async getAISettings(): Promise<UserAISettings> {
+    return apiClient<UserAISettings>('/profile/ai-settings', {
+      method: 'GET',
+    })
+  },
+
+  async updateAISettings(data: UserAISettingsUpdate): Promise<UserAISettings> {
+    return apiClient<UserAISettings>('/profile/ai-settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+}
+
+export interface AIModelItem {
+  id: string
+  name: string
+  provider: 'gemini' | 'openrouter'
+  description: string
+  enabled: boolean
+}
+
+export interface UserAISettings {
+  models?: AIModelItem[]
+  gemini_api_key?: string | null
+  openrouter_api_key?: string | null
+  geminiApiKey?: string | null
+  openrouterApiKey?: string | null
+  updated_at?: string
+  updatedAt?: string
+}
+
+export interface UserAISettingsUpdate {
+  models?: AIModelItem[]
+  gemini_api_key?: string | null
+  openrouter_api_key?: string | null
+  geminiApiKey?: string | null
+  openrouterApiKey?: string | null
 }

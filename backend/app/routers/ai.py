@@ -2,7 +2,7 @@ import json
 import logging
 import time
 from collections import defaultdict, deque
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple, List
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Header, HTTPException, status
 
 from app.config import settings
@@ -71,9 +71,13 @@ async def recognize_food_endpoint(
     with open(dest_path, "rb") as f:
         image_bytes = f.read()
 
-    # 4. Parse custom model preferences if provided
-    # 4. Parse custom model preferences if provided
-    custom_chain = _parse_custom_ai_models(x_ai_models)
+    # 4. Resolve AI configuration (headers take precedence over user saved settings)
+    custom_gemini, custom_openrouter, custom_chain = resolve_ai_config(
+        current_user=current_user,
+        x_gemini_key=x_gemini_key,
+        x_openrouter_key=x_openrouter_key,
+        x_ai_models=x_ai_models,
+    )
 
     # 5. Invoke AI Router
     try:
@@ -81,8 +85,8 @@ async def recognize_food_endpoint(
             image_bytes=image_bytes,
             mime_type="image/jpeg",
             user_comment=resolved_comment,
-            custom_gemini_key=x_gemini_key.strip() if x_gemini_key and x_gemini_key.strip() else None,
-            custom_openrouter_key=x_openrouter_key.strip() if x_openrouter_key and x_openrouter_key.strip() else None,
+            custom_gemini_key=custom_gemini,
+            custom_openrouter_key=custom_openrouter,
             custom_model_chain=custom_chain,
         )
     except AllProvidersFailedError as e:
@@ -111,7 +115,7 @@ async def recognize_food_endpoint(
     )
 
 
-def _parse_custom_ai_models(x_ai_models: Optional[str]) -> Optional[list]:
+def _parse_custom_ai_models(x_ai_models: Optional[str]) -> Optional[List[Tuple[str, str]]]:
     """Helper to parse X-AI-Models header JSON."""
     if not x_ai_models:
         return None
@@ -121,12 +125,12 @@ def _parse_custom_ai_models(x_ai_models: Optional[str]) -> Optional[list]:
             chain = []
             for item in models_data:
                 if isinstance(item, dict) and "provider" in item and "id" in item:
+                    if not item.get("enabled", True):
+                        continue
                     prov = item["provider"].strip().lower()
                     mod_id = item["id"].strip()
                     if prov == "openrouter":
-                        if mod_id == "openrouter-free":
-                            mod_id = "openrouter/auto"
-                        elif mod_id == "openrouter-auto":
+                        if mod_id in ("openrouter-free", "openrouter-auto"):
                             mod_id = "openrouter/auto"
                         elif mod_id == "qwen-2.5-vl-72b":
                             mod_id = "qwen/qwen2.5-vl-72b-instruct:free"
@@ -136,6 +140,62 @@ def _parse_custom_ai_models(x_ai_models: Optional[str]) -> Optional[list]:
     except Exception as e:
         logger.debug(f"Could not parse custom X-AI-Models header: {e}")
     return None
+
+
+def resolve_ai_config(
+    current_user: Optional[User] = None,
+    x_gemini_key: Optional[str] = None,
+    x_openrouter_key: Optional[str] = None,
+    x_ai_models: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str], Optional[List[Tuple[str, str]]]]:
+    """
+    Resolve API keys and model chain taking into account request headers and user saved AI settings.
+    Priority:
+    1. Request headers (X-Gemini-Key, X-OpenRouter-Key, X-AI-Models)
+    2. User saved settings in current_user.ai_settings_json
+    3. Fallback to system default settings (None)
+    """
+    resolved_gemini = x_gemini_key.strip() if x_gemini_key and x_gemini_key.strip() else None
+    resolved_openrouter = x_openrouter_key.strip() if x_openrouter_key and x_openrouter_key.strip() else None
+    custom_chain = _parse_custom_ai_models(x_ai_models)
+
+    if current_user and getattr(current_user, "ai_settings_json", None):
+        try:
+            user_data = json.loads(current_user.ai_settings_json)
+            if isinstance(user_data, dict):
+                # Fallback for Gemini key
+                if not resolved_gemini:
+                    gem_key = user_data.get("gemini_api_key") or user_data.get("geminiApiKey")
+                    if gem_key and isinstance(gem_key, str) and gem_key.strip():
+                        resolved_gemini = gem_key.strip()
+
+                # Fallback for OpenRouter key
+                if not resolved_openrouter:
+                    open_key = user_data.get("openrouter_api_key") or user_data.get("openrouterApiKey")
+                    if open_key and isinstance(open_key, str) and open_key.strip():
+                        resolved_openrouter = open_key.strip()
+
+                # Fallback for custom model chain if x_ai_models header wasn't provided
+                if custom_chain is None and "models" in user_data and isinstance(user_data["models"], list):
+                    chain = []
+                    for item in user_data["models"]:
+                        if isinstance(item, dict) and "provider" in item and "id" in item:
+                            if not item.get("enabled", True):
+                                continue
+                            prov = item["provider"].strip().lower()
+                            mod_id = item["id"].strip()
+                            if prov == "openrouter":
+                                if mod_id in ("openrouter-free", "openrouter-auto"):
+                                    mod_id = "openrouter/auto"
+                                elif mod_id == "qwen-2.5-vl-72b":
+                                    mod_id = "qwen/qwen2.5-vl-72b-instruct:free"
+                            chain.append((prov, mod_id))
+                    if chain:
+                        custom_chain = chain
+        except Exception as e:
+            logger.debug(f"Could not parse user ai_settings_json: {e}")
+
+    return resolved_gemini, resolved_openrouter, custom_chain
 
 
 @router.post("/analyze-text", response_model=FoodRecognitionResponse)
@@ -155,15 +215,20 @@ async def analyze_food_text_endpoint(
     # 1. Check rate limit
     check_ai_rate_limit(current_user.id)
 
-    # 2. Parse custom model preferences if provided
-    custom_chain = _parse_custom_ai_models(x_ai_models)
+    # 2. Resolve AI configuration (headers take precedence over user saved settings)
+    custom_gemini, custom_openrouter, custom_chain = resolve_ai_config(
+        current_user=current_user,
+        x_gemini_key=x_gemini_key,
+        x_openrouter_key=x_openrouter_key,
+        x_ai_models=x_ai_models,
+    )
 
     # 3. Invoke AI Router for text
     try:
         result, provider_name, model_id = await ai_router.recognize_food_by_text(
             text=request.text,
-            custom_gemini_key=x_gemini_key.strip() if x_gemini_key and x_gemini_key.strip() else None,
-            custom_openrouter_key=x_openrouter_key.strip() if x_openrouter_key and x_openrouter_key.strip() else None,
+            custom_gemini_key=custom_gemini,
+            custom_openrouter_key=custom_openrouter,
             custom_model_chain=custom_chain,
         )
     except AllProvidersFailedError as e:

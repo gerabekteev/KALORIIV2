@@ -35,6 +35,9 @@ class User(Base):
     daily_fat_goal: Mapped[int] = mapped_column(Integer, default=70, nullable=False)
     daily_carbs_goal: Mapped[int] = mapped_column(Integer, default=250, nullable=False)
 
+    # AI settings
+    ai_settings_json: Mapped[Optional[str]] = mapped_column(String(4000), nullable=True)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

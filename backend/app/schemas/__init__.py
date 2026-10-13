@@ -35,6 +35,9 @@ from app.schemas.ai import (
     FoodAnalysisResult,
     FoodRecognitionResponse,
     TextAnalysisRequest,
+    AISettingsModelItem,
+    UserAISettingsResponse,
+    UserAISettingsUpdate,
 )
 from app.schemas.stats import (
     DayStats,
@@ -71,6 +74,9 @@ __all__ = [
     "FoodAnalysisResult",
     "FoodRecognitionResponse",
     "TextAnalysisRequest",
+    "AISettingsModelItem",
+    "UserAISettingsResponse",
+    "UserAISettingsUpdate",
     "DayStats",
     "StatsPeriodResponse",
     "WeightHistoryPoint",

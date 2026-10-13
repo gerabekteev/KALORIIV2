@@ -28,6 +28,37 @@ DEFAULT_MODEL_CHAIN: List[Tuple[str, str]] = [
     ("gemini", "gemini-3.5-flash-lite"),
 ]
 
+MODEL_METADATA_CATALOG: dict[str, Tuple[str, str]] = {
+    "gemini-3.1-flash-lite": ("Gemini 3.1 Flash-Lite (500 RPD)", "Лимит 500 запросов/день, 15 RPM. Быстрый и надёжный"),
+    "gemini-3.5-flash": ("Gemini 3.5 Flash", "Высокая точность и детализация блюд"),
+    "gemini-3.6-flash": ("Gemini 3.6 Flash", "Стабильная мультимодальная модель"),
+    "gemini-3.8-flash": ("Gemini 3.8 Flash", "Максимальный reasoning и точность (20 RPD)"),
+    "openrouter/auto": ("OpenRouter Auto", "Умный авто-выбор лучшей доступной модели"),
+    "google/gemma-4-26b-a4b-it:free": ("Gemma 4 26B (Free)", "Мощная визуальная модель от Google"),
+    "google/gemma-4-31b-it:free": ("Gemma 4 31B (Free)", "Продвинутая мультимодальная модель Google"),
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": ("NVIDIA Omni (Free)", "Reasoning VLM от NVIDIA с поддержкой vision"),
+    "gemini-3.7-flash": ("Gemini 3.7 Flash", "Сбалансированный анализ и высокая скорость (20 RPD)"),
+    "gemini-3.5-flash-lite": ("Gemini 3.5 Flash-Lite", "Экономичный и ультрабыстрый отклик"),
+}
+
+
+def get_default_model_items() -> List[dict]:
+    """Return default list of AI models formatted as dictionary items."""
+    items = []
+    for provider, model_id in DEFAULT_MODEL_CHAIN:
+        meta = MODEL_METADATA_CATALOG.get(model_id)
+        name = meta[0] if meta else model_id
+        desc = meta[1] if meta else None
+        items.append({
+            "id": model_id,
+            "name": name,
+            "provider": provider,
+            "description": desc,
+            "enabled": True,
+        })
+    return items
+
+
 
 class AllProvidersFailedError(Exception):
     """Raised when all configured AI models and providers fail."""

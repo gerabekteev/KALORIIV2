@@ -1,5 +1,5 @@
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Literal, List
+from pydantic import BaseModel, Field, field_validator, ConfigDict, AliasChoices
 
 
 class FoodAnalysisResult(BaseModel):
@@ -38,3 +38,35 @@ class TextAnalysisRequest(BaseModel):
         if not trimmed:
             raise ValueError("Описание блюда не может быть пустым")
         return trimmed
+
+
+class AISettingsModelItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    provider: str
+    description: Optional[str] = None
+    enabled: bool = True
+
+
+class UserAISettingsUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    models: List[AISettingsModelItem]
+    gemini_api_key: Optional[str] = Field(None, validation_alias=AliasChoices("gemini_api_key", "geminiApiKey"))
+    openrouter_api_key: Optional[str] = Field(None, validation_alias=AliasChoices("openrouter_api_key", "openrouterApiKey"))
+    geminiApiKey: Optional[str] = None
+    openrouterApiKey: Optional[str] = None
+
+
+class UserAISettingsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    models: List[AISettingsModelItem]
+    gemini_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    geminiApiKey: Optional[str] = None
+    openrouterApiKey: Optional[str] = None
+
+

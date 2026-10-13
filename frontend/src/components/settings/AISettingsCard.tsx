@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Cpu,
   CheckCircle2,
@@ -16,14 +16,9 @@ import {
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { useUIStore } from '../../store/uiStore'
+import { profileApi, AIModelItem } from '../../api/profile'
 
-export interface AIModelItem {
-  id: string
-  name: string
-  provider: 'gemini' | 'openrouter'
-  description: string
-  enabled: boolean
-}
+export type { AIModelItem }
 
 export const DEFAULT_AI_MODELS: AIModelItem[] = [
   {
@@ -127,8 +122,8 @@ function loadSavedSettings() {
       }
       return {
         models: initialModels,
-        geminiKey: parsed.geminiApiKey || '',
-        openrouterKey: parsed.openrouterApiKey || '',
+        geminiKey: parsed.geminiApiKey || parsed.gemini_api_key || '',
+        openrouterKey: parsed.openrouterApiKey || parsed.openrouter_api_key || '',
       }
     }
   } catch {
@@ -152,49 +147,144 @@ export const AISettingsCard: React.FC = () => {
   const [showOpenrouterKey, setShowOpenrouterKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Toggle model enable/disable
-  const handleToggle = (id: string) => {
-    setModels((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, enabled: !m.enabled } : m))
-    )
-  }
+  // 1. Initial mounting: fast load from localStorage done, now fetch from backend
+  useEffect(() => {
+    let isMounted = true
 
-  // Move model up
-  const handleMoveUp = (index: number) => {
-    if (index <= 0) return
-    setModels((prev) => {
-      const next = [...prev]
-      const temp = next[index - 1]
-      next[index - 1] = next[index]
-      next[index] = temp
-      return next
-    })
-  }
+    async function loadServerSettings() {
+      try {
+        const serverData = await profileApi.getAISettings()
+        if (!isMounted) return
 
-  // Move model down
-  const handleMoveDown = (index: number) => {
-    if (index >= models.length - 1) return
-    setModels((prev) => {
-      const next = [...prev]
-      const temp = next[index + 1]
-      next[index + 1] = next[index]
-      next[index] = temp
-      return next
-    })
-  }
+        if (serverData && Array.isArray(serverData.models) && serverData.models.length > 0) {
+          // Map legacy model IDs if any
+          const mappedServerModels = serverData.models.map((m) => {
+            if (m.id === 'openrouter-free') {
+              return {
+                ...m,
+                id: 'openrouter/auto',
+                name: 'OpenRouter Auto',
+                description: 'Умный авто-выбор лучшей доступной модели',
+              }
+            }
+            return m
+          })
 
-  // Save settings
-  const handleSave = () => {
-    setIsSaving(true)
+          const existingIds = new Set(mappedServerModels.map((m) => m.id))
+          const missingDefaults = DEFAULT_AI_MODELS.filter((m) => !existingIds.has(m.id))
+          const resolvedModels = [...mappedServerModels, ...missingDefaults]
+
+          setModels(resolvedModels)
+
+          const sGemini = serverData.geminiApiKey ?? serverData.gemini_api_key
+          const sOpenrouter = serverData.openrouterApiKey ?? serverData.openrouter_api_key
+
+          if (sGemini !== undefined && sGemini !== null) {
+            setGeminiKey(sGemini)
+          }
+          if (sOpenrouter !== undefined && sOpenrouter !== null) {
+            setOpenrouterKey(sOpenrouter)
+          }
+
+          // Cache server settings into localStorage
+          try {
+            const cachePayload = {
+              models: resolvedModels,
+              geminiApiKey: (sGemini !== undefined && sGemini !== null ? sGemini : geminiKey).trim() || undefined,
+              openrouterApiKey: (sOpenrouter !== undefined && sOpenrouter !== null ? sOpenrouter : openrouterKey).trim() || undefined,
+              updatedAt: serverData.updatedAt || serverData.updated_at || new Date().toISOString(),
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cachePayload))
+          } catch (e) {
+            console.error('Failed to cache server AI settings to localStorage', e)
+          }
+        }
+      } catch (err) {
+        // Fallback silently to localStorage already loaded in initial state
+        console.warn('Could not load AI settings from server:', err)
+      }
+    }
+
+    loadServerSettings()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  // Auto-persistence function: localStorage immediately + async PUT to backend
+  const persistSettings = async (
+    newModels: AIModelItem[],
+    newGeminiKey: string,
+    newOpenrouterKey: string
+  ): Promise<void> => {
+    const trimmedGemini = newGeminiKey.trim()
+    const trimmedOpenrouter = newOpenrouterKey.trim()
+
+    // 1. Instantly save to localStorage (key 'kalorii_ai_settings')
     try {
       const payload = {
-        models,
-        geminiApiKey: geminiKey.trim() || undefined,
-        openrouterApiKey: openrouterKey.trim() || undefined,
+        models: newModels,
+        geminiApiKey: trimmedGemini || undefined,
+        openrouterApiKey: trimmedOpenrouter || undefined,
         updatedAt: new Date().toISOString(),
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-      addToast('Настройки AI моделей успешно сохранены!', 'success')
+    } catch (e) {
+      console.error('Failed to save AI settings to localStorage', e)
+    }
+
+    // 2. Send PUT /api/profile/ai-settings to backend
+    try {
+      await profileApi.updateAISettings({
+        models: newModels,
+        gemini_api_key: trimmedGemini || null,
+        openrouter_api_key: trimmedOpenrouter || null,
+        geminiApiKey: trimmedGemini || null,
+        openrouterApiKey: trimmedOpenrouter || null,
+      })
+    } catch (err) {
+      console.warn('Backend AI settings update skipped or failed:', err)
+    }
+  }
+
+  // Toggle model enable/disable with immediate auto-persistence
+  const handleToggle = (id: string) => {
+    const nextModels = models.map((m) =>
+      m.id === id ? { ...m, enabled: !m.enabled } : m
+    )
+    setModels(nextModels)
+    persistSettings(nextModels, geminiKey, openrouterKey)
+  }
+
+  // Move model up with immediate auto-persistence
+  const handleMoveUp = (index: number) => {
+    if (index <= 0) return
+    const nextModels = [...models]
+    const temp = nextModels[index - 1]
+    nextModels[index - 1] = nextModels[index]
+    nextModels[index] = temp
+    setModels(nextModels)
+    persistSettings(nextModels, geminiKey, openrouterKey)
+  }
+
+  // Move model down with immediate auto-persistence
+  const handleMoveDown = (index: number) => {
+    if (index >= models.length - 1) return
+    const nextModels = [...models]
+    const temp = nextModels[index + 1]
+    nextModels[index + 1] = nextModels[index]
+    nextModels[index] = temp
+    setModels(nextModels)
+    persistSettings(nextModels, geminiKey, openrouterKey)
+  }
+
+  // Save settings explicitly via button
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await persistSettings(models, geminiKey, openrouterKey)
+      addToast('Настройки AI сохранены в профиле!', 'success')
     } catch {
       addToast('Ошибка сохранения настроек AI', 'error')
     } finally {
@@ -202,13 +292,13 @@ export const AISettingsCard: React.FC = () => {
     }
   }
 
-  // Reset to defaults
-  const handleReset = () => {
+  // Reset to defaults and sync with backend
+  const handleReset = async () => {
     if (!window.confirm('Сбросить порядок моделей и ключи к настройкам по умолчанию?')) return
     setModels(DEFAULT_AI_MODELS)
     setGeminiKey('')
     setOpenrouterKey('')
-    localStorage.removeItem(STORAGE_KEY)
+    await persistSettings(DEFAULT_AI_MODELS, '', '')
     addToast('Настройки AI сброшены к стандартным', 'info')
   }
 
@@ -360,7 +450,7 @@ export const AISettingsCard: React.FC = () => {
             </h4>
           </div>
           <span className="text-[10px] text-neutral-400">
-            Хранятся локально в браузере
+            Сохраняются в профиле и браузере
           </span>
         </div>
 

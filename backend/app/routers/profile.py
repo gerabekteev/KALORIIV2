@@ -1,5 +1,7 @@
 from datetime import date
 from typing import Optional, List
+import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -14,9 +16,16 @@ from app.schemas.user import (
     ProfileCalculateRequest,
     ProfileCalculateResponse,
 )
+from app.schemas.profile import (
+    AISettingsModelItem,
+    UserAISettingsResponse,
+    UserAISettingsUpdate,
+)
+from app.services.ai_router import get_default_model_items
 from app.services.auth import get_current_user
 from app.services.nutrition import calculate_nutrition_plan
 
+logger = logging.getLogger("kalorii.profile")
 router = APIRouter(prefix="/profile", tags=["Профиль"])
 
 
@@ -191,3 +200,81 @@ async def get_weight_logs(
     )
     logs = list(result.scalars().all())
     return [WeightLogResponse.model_validate(log) for log in logs]
+
+
+@router.get("/ai-settings", response_model=UserAISettingsResponse)
+async def get_ai_settings(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get current user's AI model preferences, priorities, and custom API keys.
+    Falls back to default model chain if no custom settings have been saved.
+    """
+    if not current_user.ai_settings_json or not current_user.ai_settings_json.strip():
+        return UserAISettingsResponse(
+            models=[AISettingsModelItem(**item) for item in get_default_model_items()],
+            gemini_api_key=None,
+            openrouter_api_key=None,
+        )
+
+    try:
+        data = json.loads(current_user.ai_settings_json)
+        if isinstance(data, dict):
+            models_data = data.get("models")
+            if not isinstance(models_data, list) or len(models_data) == 0:
+                models_items = [AISettingsModelItem(**item) for item in get_default_model_items()]
+            else:
+                models_items = [AISettingsModelItem(**m) for m in models_data]
+
+            raw_gemini = data.get("gemini_api_key") or data.get("geminiApiKey")
+            raw_openrouter = data.get("openrouter_api_key") or data.get("openrouterApiKey")
+            gemini_clean = raw_gemini.strip() if raw_gemini and str(raw_gemini).strip() else None
+            openrouter_clean = raw_openrouter.strip() if raw_openrouter and str(raw_openrouter).strip() else None
+
+            return UserAISettingsResponse(
+                models=models_items,
+                gemini_api_key=gemini_clean,
+                openrouter_api_key=openrouter_clean,
+                geminiApiKey=gemini_clean,
+                openrouterApiKey=openrouter_clean,
+            )
+    except Exception as e:
+        logger.warning(f"Error parsing user ai_settings_json for user {current_user.id}: {e}")
+
+    return UserAISettingsResponse(
+        models=[AISettingsModelItem(**item) for item in get_default_model_items()],
+        gemini_api_key=None,
+        openrouter_api_key=None,
+    )
+
+
+@router.put("/ai-settings", response_model=UserAISettingsResponse)
+async def update_ai_settings(
+    settings_in: UserAISettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update and persist current user's AI model priorities and custom API keys.
+    """
+    clean_gemini = settings_in.gemini_api_key.strip() if settings_in.gemini_api_key and settings_in.gemini_api_key.strip() else None
+    clean_openrouter = settings_in.openrouter_api_key.strip() if settings_in.openrouter_api_key and settings_in.openrouter_api_key.strip() else None
+
+    saved_data = {
+        "models": [item.model_dump() for item in settings_in.models],
+        "gemini_api_key": clean_gemini,
+        "openrouter_api_key": clean_openrouter,
+    }
+
+    current_user.ai_settings_json = json.dumps(saved_data, ensure_ascii=False)
+    await db.commit()
+    await db.refresh(current_user)
+
+    return UserAISettingsResponse(
+        models=settings_in.models,
+        gemini_api_key=clean_gemini,
+        openrouter_api_key=clean_openrouter,
+        geminiApiKey=clean_gemini,
+        openrouterApiKey=clean_openrouter,
+    )
+

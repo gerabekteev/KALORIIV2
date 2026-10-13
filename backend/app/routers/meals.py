@@ -18,7 +18,7 @@ from app.schemas.meal import (
 )
 from app.services.auth import get_current_user
 from app.services.ai_router import ai_router, AllProvidersFailedError
-from app.routers.ai import check_ai_rate_limit, _parse_custom_ai_models
+from app.routers.ai import check_ai_rate_limit, _parse_custom_ai_models, resolve_ai_config
 
 router = APIRouter(prefix="/meals", tags=["Приёмы пищи"])
 
@@ -217,10 +217,13 @@ async def recalculate_meal(
     if recalculate_in and recalculate_in.user_comment is not None:
         meal.user_comment = recalculate_in.user_comment.strip() or None
 
-    # 4. Parse custom model headers
-    custom_chain = _parse_custom_ai_models(x_ai_models)
-    custom_gemini = x_gemini_key.strip() if x_gemini_key and x_gemini_key.strip() else None
-    custom_openrouter = x_openrouter_key.strip() if x_openrouter_key and x_openrouter_key.strip() else None
+    # 4. Resolve AI configuration (headers take precedence over user saved settings)
+    custom_gemini, custom_openrouter, custom_chain = resolve_ai_config(
+        current_user=current_user,
+        x_gemini_key=x_gemini_key,
+        x_openrouter_key=x_openrouter_key,
+        x_ai_models=x_ai_models,
+    )
 
     # 5. Check if meal has a stored photo
     photo_bytes = None
