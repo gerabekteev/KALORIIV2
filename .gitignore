@@ -44,8 +44,10 @@ env/
 *.sqlite
 *.sqlite3
 *.db
-backend/data/*
+backend/data/*.sqlite*
+backend/data/*.db
 !backend/data/.gitkeep
+!backend/data/products_seed.json
 
 # Uploads
 backend/uploads/*

@@ -1,0 +1,164 @@
+import React from 'react'
+import { ChevronLeft, ChevronRight, Calendar, Plus, Camera, Sparkles } from 'lucide-react'
+import { useMeals } from '../hooks/useMeals'
+import { useAuthStore } from '../store/authStore'
+import { useUIStore } from '../store/uiStore'
+import { ProgressRing } from '../components/ui/ProgressRing'
+import { ProgressBar } from '../components/ui/ProgressBar'
+import { Card } from '../components/ui/Card'
+import { MealList } from '../components/meals/MealList'
+
+export const TodayPage: React.FC = () => {
+  const { user } = useAuthStore()
+  const { openAddMeal } = useUIStore()
+  const {
+    meals,
+    selectedDate,
+    isLoading,
+    totals,
+    goToPreviousDay,
+    goToNextDay,
+    goToToday,
+  } = useMeals()
+
+  const dailyGoalCalories = user?.daily_calories_goal || 2200
+  const dailyGoalProtein = user?.daily_protein_goal || 140
+  const dailyGoalFat = user?.daily_fat_goal || 73
+  const dailyGoalCarbs = user?.daily_carbs_goal || 275
+
+  // Date formatting
+  const todayStr = new Date().toISOString().split('T')[0]
+  const isToday = selectedDate === todayStr
+
+  const dateObj = new Date(selectedDate)
+  const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'short',
+  })
+
+  const remainingCalories = Math.max(dailyGoalCalories - totals.calories, 0)
+
+  return (
+    <div className="space-y-4">
+      {/* Date Navigation Bar */}
+      <div className="flex items-center justify-between bg-[#19191d] px-3 py-2 rounded-2xl border border-neutral-800/80 shadow-md">
+        <button
+          onClick={goToPreviousDay}
+          className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+          title="Предыдущий день"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-emerald-400" />
+          <span className="text-sm font-semibold text-white capitalize">
+            {isToday ? `Сегодня, ${formattedDate}` : formattedDate}
+          </span>
+          {!isToday && (
+            <button
+              onClick={goToToday}
+              className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 ml-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 transition-all cursor-pointer"
+            >
+              Сегодня
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={goToNextDay}
+          className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+          title="Следующий день"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Daily Progress Card */}
+      <Card variant="default" padding="md" className="space-y-5">
+        <div className="flex flex-col sm:flex-row items-center justify-around gap-5">
+          {/* Circular Calorie Ring */}
+          <div className="relative">
+            <ProgressRing
+              current={totals.calories}
+              target={dailyGoalCalories}
+              size={170}
+              strokeWidth={13}
+              label="ккал"
+              sublabel={
+                totals.calories > dailyGoalCalories
+                  ? `+${totals.calories - dailyGoalCalories} сверх нормы`
+                  : `осталось ${remainingCalories} ккал`
+              }
+              showPercentage
+            />
+          </div>
+
+          {/* Macros Progress Bars */}
+          <div className="w-full sm:w-1/2 space-y-3.5">
+            <ProgressBar
+              current={totals.protein}
+              target={dailyGoalProtein}
+              label="Белки"
+              color="blue"
+              unit="г"
+            />
+            <ProgressBar
+              current={totals.fat}
+              target={dailyGoalFat}
+              label="Жиры"
+              color="amber"
+              unit="г"
+            />
+            <ProgressBar
+              current={totals.carbs}
+              target={dailyGoalCarbs}
+              label="Углеводы"
+              color="purple"
+              unit="г"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Meals List Header */}
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <h2 className="text-base font-bold text-white tracking-tight my-0">
+            Приёмы пищи
+          </h2>
+          <p className="text-xs text-neutral-400">
+            {meals.length > 0
+              ? `${meals.length} ${meals.length === 1 ? 'запись' : 'записи'} за день`
+              : 'Дневник питания пуст'}
+          </p>
+        </div>
+
+        <button
+          onClick={openAddMeal}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-xl border border-emerald-500/30 transition-all cursor-pointer"
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>Добавить</span>
+        </button>
+      </div>
+
+      {/* Meals List */}
+      <MealList meals={meals} isLoading={isLoading} />
+
+      {/* Floating Action Button (FAB) for quick meal addition */}
+      <div className="fixed bottom-20 right-4 sm:right-auto sm:left-1/2 sm:translate-x-32 z-30">
+        <button
+          onClick={openAddMeal}
+          className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-full shadow-xl shadow-emerald-500/30 border border-emerald-400/30 transition-all duration-200 cursor-pointer"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <span className="hidden xs:inline flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5" /> Добавить еду
+          </span>
+        </button>
+      </div>
+    </div>
+  )
+}

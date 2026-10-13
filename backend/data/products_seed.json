@@ -1,0 +1,442 @@
+[
+  {
+    "name": "Гречка варёная",
+    "calories_per_100g": 110.0,
+    "protein_per_100g": 4.2,
+    "fat_per_100g": 1.1,
+    "carbs_per_100g": 21.3,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Овсяная каша на воде",
+    "calories_per_100g": 88.0,
+    "protein_per_100g": 3.0,
+    "fat_per_100g": 1.7,
+    "carbs_per_100g": 15.0,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Рис белый варёный",
+    "calories_per_100g": 116.0,
+    "protein_per_100g": 2.2,
+    "fat_per_100g": 0.5,
+    "carbs_per_100g": 25.0,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Рис бурый варёный",
+    "calories_per_100g": 111.0,
+    "protein_per_100g": 2.6,
+    "fat_per_100g": 0.9,
+    "carbs_per_100g": 23.0,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Макароны из тв. сортов варёные",
+    "calories_per_100g": 138.0,
+    "protein_per_100g": 5.0,
+    "fat_per_100g": 0.6,
+    "carbs_per_100g": 28.0,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Пшённая каша на воде",
+    "calories_per_100g": 90.0,
+    "protein_per_100g": 3.0,
+    "fat_per_100g": 0.7,
+    "carbs_per_100g": 17.0,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Перловая каша на воде",
+    "calories_per_100g": 109.0,
+    "protein_per_100g": 3.1,
+    "fat_per_100g": 0.4,
+    "carbs_per_100g": 22.8,
+    "category": "Крупы и каши"
+  },
+  {
+    "name": "Куриная грудка отварная",
+    "calories_per_100g": 137.0,
+    "protein_per_100g": 29.8,
+    "fat_per_100g": 1.8,
+    "carbs_per_100g": 0.0,
+    "category": "Мясо и птица"
+  },
+  {
+    "name": "Куриное филе запечённое",
+    "calories_per_100g": 165.0,
+    "protein_per_100g": 31.0,
+    "fat_per_100g": 3.6,
+    "carbs_per_100g": 0.0,
+    "category": "Мясо и птица"
+  },
+  {
+    "name": "Филе индейки отварное",
+    "calories_per_100g": 130.0,
+    "protein_per_100g": 25.0,
+    "fat_per_100g": 2.5,
+    "carbs_per_100g": 0.0,
+    "category": "Мясо и птица"
+  },
+  {
+    "name": "Говядина нежирная отварная",
+    "calories_per_100g": 187.0,
+    "protein_per_100g": 25.8,
+    "fat_per_100g": 9.2,
+    "carbs_per_100g": 0.0,
+    "category": "Мясо и птица"
+  },
+  {
+    "name": "Свинина постная тушёная",
+    "calories_per_100g": 235.0,
+    "protein_per_100g": 21.0,
+    "fat_per_100g": 16.5,
+    "carbs_per_100g": 0.0,
+    "category": "Мясо и птица"
+  },
+  {
+    "name": "Котлета мясная домашняя",
+    "calories_per_100g": 220.0,
+    "protein_per_100g": 15.0,
+    "fat_per_100g": 14.0,
+    "carbs_per_100g": 8.0,
+    "category": "Мясо и птица"
+  },
+  {
+    "name": "Лосось (сёмга) запечённый",
+    "calories_per_100g": 206.0,
+    "protein_per_100g": 22.0,
+    "fat_per_100g": 12.3,
+    "carbs_per_100g": 0.0,
+    "category": "Рыба и морепродукты"
+  },
+  {
+    "name": "Минтай отварной",
+    "calories_per_100g": 72.0,
+    "protein_per_100g": 16.0,
+    "fat_per_100g": 0.7,
+    "carbs_per_100g": 0.0,
+    "category": "Рыба и морепродукты"
+  },
+  {
+    "name": "Треска отварная",
+    "calories_per_100g": 78.0,
+    "protein_per_100g": 17.7,
+    "fat_per_100g": 0.7,
+    "carbs_per_100g": 0.0,
+    "category": "Рыба и морепродукты"
+  },
+  {
+    "name": "Тунец в собственном соку",
+    "calories_per_100g": 101.0,
+    "protein_per_100g": 23.5,
+    "fat_per_100g": 0.8,
+    "carbs_per_100g": 0.0,
+    "category": "Рыба и морепродукты"
+  },
+  {
+    "name": "Креветки варёные",
+    "calories_per_100g": 95.0,
+    "protein_per_100g": 19.0,
+    "fat_per_100g": 1.5,
+    "carbs_per_100g": 1.0,
+    "category": "Рыба и морепродукты"
+  },
+  {
+    "name": "Яйцо куриное варёное",
+    "calories_per_100g": 155.0,
+    "protein_per_100g": 12.6,
+    "fat_per_100g": 10.6,
+    "carbs_per_100g": 0.8,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Яичница глазунья",
+    "calories_per_100g": 190.0,
+    "protein_per_100g": 13.0,
+    "fat_per_100g": 15.0,
+    "carbs_per_100g": 0.7,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Омлет классический",
+    "calories_per_100g": 140.0,
+    "protein_per_100g": 10.0,
+    "fat_per_100g": 10.5,
+    "carbs_per_100g": 1.5,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Творог 5%",
+    "calories_per_100g": 121.0,
+    "protein_per_100g": 17.2,
+    "fat_per_100g": 5.0,
+    "carbs_per_100g": 1.8,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Творог 9%",
+    "calories_per_100g": 159.0,
+    "protein_per_100g": 16.7,
+    "fat_per_100g": 9.0,
+    "carbs_per_100g": 2.0,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Творог обезжиренный 0%",
+    "calories_per_100g": 71.0,
+    "protein_per_100g": 16.5,
+    "fat_per_100g": 0.2,
+    "carbs_per_100g": 1.3,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Молоко 2.5%",
+    "calories_per_100g": 52.0,
+    "protein_per_100g": 2.8,
+    "fat_per_100g": 2.5,
+    "carbs_per_100g": 4.7,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Кефир 1%",
+    "calories_per_100g": 40.0,
+    "protein_per_100g": 2.8,
+    "fat_per_100g": 1.0,
+    "carbs_per_100g": 4.0,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Сыр Российский 50%",
+    "calories_per_100g": 363.0,
+    "protein_per_100g": 24.1,
+    "fat_per_100g": 29.5,
+    "carbs_per_100g": 0.3,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Сыр Сулугуни",
+    "calories_per_100g": 285.0,
+    "protein_per_100g": 20.0,
+    "fat_per_100g": 22.0,
+    "carbs_per_100g": 0.0,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Йогурт натуральный 2%",
+    "calories_per_100g": 60.0,
+    "protein_per_100g": 3.5,
+    "fat_per_100g": 2.0,
+    "carbs_per_100g": 4.5,
+    "category": "Яйца и молочные продукты"
+  },
+  {
+    "name": "Помидор свежий",
+    "calories_per_100g": 20.0,
+    "protein_per_100g": 0.9,
+    "fat_per_100g": 0.2,
+    "carbs_per_100g": 3.9,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Огурец свежий",
+    "calories_per_100g": 15.0,
+    "protein_per_100g": 0.8,
+    "fat_per_100g": 0.1,
+    "carbs_per_100g": 3.0,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Капуста белокочанная",
+    "calories_per_100g": 27.0,
+    "protein_per_100g": 1.8,
+    "fat_per_100g": 0.1,
+    "carbs_per_100g": 4.7,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Морковь свежая",
+    "calories_per_100g": 35.0,
+    "protein_per_100g": 1.3,
+    "fat_per_100g": 0.1,
+    "carbs_per_100g": 6.9,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Картофель отварной",
+    "calories_per_100g": 82.0,
+    "protein_per_100g": 2.0,
+    "fat_per_100g": 0.4,
+    "carbs_per_100g": 16.7,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Картофельное пюре с молоком",
+    "calories_per_100g": 106.0,
+    "protein_per_100g": 2.1,
+    "fat_per_100g": 3.5,
+    "carbs_per_100g": 16.0,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Брокколи отварная",
+    "calories_per_100g": 35.0,
+    "protein_per_100g": 2.4,
+    "fat_per_100g": 0.4,
+    "carbs_per_100g": 4.4,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Перец болгарский сладкий",
+    "calories_per_100g": 27.0,
+    "protein_per_100g": 1.3,
+    "fat_per_100g": 0.1,
+    "carbs_per_100g": 5.3,
+    "category": "Овощи и зелень"
+  },
+  {
+    "name": "Яблоко свежее",
+    "calories_per_100g": 47.0,
+    "protein_per_100g": 0.4,
+    "fat_per_100g": 0.4,
+    "carbs_per_100g": 9.8,
+    "category": "Фрукты и ягоды"
+  },
+  {
+    "name": "Банан",
+    "calories_per_100g": 89.0,
+    "protein_per_100g": 1.5,
+    "fat_per_100g": 0.2,
+    "carbs_per_100g": 21.8,
+    "category": "Фрукты и ягоды"
+  },
+  {
+    "name": "Апельсин",
+    "calories_per_100g": 43.0,
+    "protein_per_100g": 0.9,
+    "fat_per_100g": 0.2,
+    "carbs_per_100g": 8.1,
+    "category": "Фрукты и ягоды"
+  },
+  {
+    "name": "Груша",
+    "calories_per_100g": 47.0,
+    "protein_per_100g": 0.4,
+    "fat_per_100g": 0.3,
+    "carbs_per_100g": 10.3,
+    "category": "Фрукты и ягоды"
+  },
+  {
+    "name": "Клубника свежая",
+    "calories_per_100g": 41.0,
+    "protein_per_100g": 0.8,
+    "fat_per_100g": 0.4,
+    "carbs_per_100g": 7.5,
+    "category": "Фрукты и ягоды"
+  },
+  {
+    "name": "Борщ с говядиной",
+    "calories_per_100g": 55.0,
+    "protein_per_100g": 3.5,
+    "fat_per_100g": 2.5,
+    "carbs_per_100g": 4.5,
+    "category": "Супы"
+  },
+  {
+    "name": "Щи из свежей капусты",
+    "calories_per_100g": 32.0,
+    "protein_per_100g": 1.5,
+    "fat_per_100g": 1.2,
+    "carbs_per_100g": 3.8,
+    "category": "Супы"
+  },
+  {
+    "name": "Суп куриный с лапшой",
+    "calories_per_100g": 45.0,
+    "protein_per_100g": 3.0,
+    "fat_per_100g": 1.8,
+    "carbs_per_100g": 4.2,
+    "category": "Супы"
+  },
+  {
+    "name": "Хлеб ржаной (Бородинский)",
+    "calories_per_100g": 208.0,
+    "protein_per_100g": 6.8,
+    "fat_per_100g": 1.3,
+    "carbs_per_100g": 40.7,
+    "category": "Хлеб и выпечка"
+  },
+  {
+    "name": "Хлеб цельнозерновой",
+    "calories_per_100g": 228.0,
+    "protein_per_100g": 9.0,
+    "fat_per_100g": 2.5,
+    "carbs_per_100g": 41.0,
+    "category": "Хлеб и выпечка"
+  },
+  {
+    "name": "Батон нарезной",
+    "calories_per_100g": 264.0,
+    "protein_per_100g": 7.5,
+    "fat_per_100g": 2.9,
+    "carbs_per_100g": 51.0,
+    "category": "Хлеб и выпечка"
+  },
+  {
+    "name": "Лаваш армянский тонкий",
+    "calories_per_100g": 236.0,
+    "protein_per_100g": 7.9,
+    "fat_per_100g": 1.0,
+    "carbs_per_100g": 48.0,
+    "category": "Хлеб и выпечка"
+  },
+  {
+    "name": "Миндаль сушёный",
+    "calories_per_100g": 579.0,
+    "protein_per_100g": 21.2,
+    "fat_per_100g": 49.9,
+    "carbs_per_100g": 21.6,
+    "category": "Орехи и семена"
+  },
+  {
+    "name": "Грецкий орех",
+    "calories_per_100g": 654.0,
+    "protein_per_100g": 15.2,
+    "fat_per_100g": 65.2,
+    "carbs_per_100g": 7.0,
+    "category": "Орехи и семена"
+  },
+  {
+    "name": "Масло оливковое",
+    "calories_per_100g": 884.0,
+    "protein_per_100g": 0.0,
+    "fat_per_100g": 100.0,
+    "carbs_per_100g": 0.0,
+    "category": "Масла и соусы"
+  },
+  {
+    "name": "Масло сливочное 82.5%",
+    "calories_per_100g": 748.0,
+    "protein_per_100g": 0.6,
+    "fat_per_100g": 82.5,
+    "carbs_per_100g": 0.8,
+    "category": "Масла и соусы"
+  },
+  {
+    "name": "Мёд натуральный",
+    "calories_per_100g": 304.0,
+    "protein_per_100g": 0.3,
+    "fat_per_100g": 0.0,
+    "carbs_per_100g": 82.0,
+    "category": "Сладости и десерты"
+  },
+  {
+    "name": "Шоколад тёмный 70%",
+    "calories_per_100g": 546.0,
+    "protein_per_100g": 6.2,
+    "fat_per_100g": 36.0,
+    "carbs_per_100g": 46.0,
+    "category": "Сладости и десерты"
+  }
+]
