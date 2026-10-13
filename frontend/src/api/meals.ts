@@ -1,5 +1,6 @@
 import { apiClient } from './client'
 import { Meal, CreateMealPayload, UpdateMealPayload, DailyMealsSummary } from '../types'
+import { getAIHeaders } from './ai'
 
 export const mealsApi = {
   async getMeals(date?: string): Promise<DailyMealsSummary> {
@@ -26,6 +27,15 @@ export const mealsApi = {
   async deleteMeal(id: number): Promise<void> {
     return apiClient<void>(`/meals/${id}`, {
       method: 'DELETE',
+    })
+  },
+
+  async recalculateMeal(mealId: number, userComment?: string): Promise<Meal> {
+    const headers = getAIHeaders()
+    return apiClient<Meal>(`/meals/${mealId}/recalculate`, {
+      method: 'POST',
+      body: JSON.stringify({ user_comment: userComment }),
+      headers,
     })
   },
 }

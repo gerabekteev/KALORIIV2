@@ -16,7 +16,7 @@ ALLOWED_MIME_TYPES = {
     "image/heif",
 }
 
-MAX_IMAGE_DIMENSION = 1280
+MAX_IMAGE_DIMENSION = 900
 JPEG_QUALITY = 85
 
 
@@ -25,7 +25,7 @@ def process_image(image_bytes: bytes) -> Tuple[bytes, str]:
     Process, normalize, resize, and compress image for AI processing.
     - Handles EXIF orientation
     - Converts RGBA/paletted images to RGB
-    - Scales down to max dimension of 1280px maintaining aspect ratio
+    - Scales down to max dimension of 900px maintaining aspect ratio
     - Compresses as JPEG with quality 85
     Returns (compressed_bytes, 'image/jpeg')
     """
@@ -43,8 +43,13 @@ def process_image(image_bytes: bytes) -> Tuple[bytes, str]:
     except Exception:
         pass
 
-    # Convert to RGB (dropping alpha channel or palette)
-    if image.mode != "RGB":
+    # Convert to RGB (composite transparent/RGBA/paletted onto clean white background)
+    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+        bg = Image.new("RGB", image.size, (255, 255, 255))
+        rgba_image = image.convert("RGBA")
+        bg.paste(rgba_image, mask=rgba_image.split()[3])
+        image = bg
+    elif image.mode != "RGB":
         image = image.convert("RGB")
 
     # Resize if larger than max dimensions
@@ -52,10 +57,10 @@ def process_image(image_bytes: bytes) -> Tuple[bytes, str]:
     if orig_w > MAX_IMAGE_DIMENSION or orig_h > MAX_IMAGE_DIMENSION:
         if orig_w >= orig_h:
             new_w = MAX_IMAGE_DIMENSION
-            new_h = int((orig_h * MAX_IMAGE_DIMENSION) / orig_w)
+            new_h = max(1, int((orig_h * MAX_IMAGE_DIMENSION) / orig_w))
         else:
             new_h = MAX_IMAGE_DIMENSION
-            new_w = int((orig_w * MAX_IMAGE_DIMENSION) / orig_h)
+            new_w = max(1, int((orig_w * MAX_IMAGE_DIMENSION) / orig_h))
         image = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
     output = io.BytesIO()

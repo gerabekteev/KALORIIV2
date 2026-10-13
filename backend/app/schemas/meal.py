@@ -32,6 +32,10 @@ class MealUpdate(BaseModel):
     meal_time: Optional[time] = None
 
 
+class MealRecalculateRequest(BaseModel):
+    user_comment: Optional[str] = Field(None, max_length=500, description="Новое пояснение к блюду для пересчёта AI")
+
+
 class MealResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

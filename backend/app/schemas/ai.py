@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class FoodAnalysisResult(BaseModel):
@@ -26,3 +26,15 @@ class FoodRecognitionResponse(BaseModel):
     provider_used: Optional[str] = None
     model_used: Optional[str] = None
     raw_response: Optional[str] = None
+
+
+class TextAnalysisRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=1000, description="Текстовое описание блюда или продуктов")
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, v: str) -> str:
+        trimmed = v.strip()
+        if not trimmed:
+            raise ValueError("Описание блюда не может быть пустым")
+        return trimmed

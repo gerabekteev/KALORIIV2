@@ -85,8 +85,8 @@ export const AIResultModal: React.FC = () => {
       maxWidth="md"
     >
       <div className="space-y-4">
-        {/* Photo Preview if available */}
-        {photoPreview && (
+        {/* Photo Preview if available or text AI card */}
+        {photoPreview ? (
           <div className="relative rounded-2xl overflow-hidden border border-neutral-700 bg-neutral-900 aspect-video max-h-48 flex items-center justify-center">
             <img
               src={photoPreview}
@@ -97,13 +97,27 @@ export const AIResultModal: React.FC = () => {
               <Sparkles className="w-3 h-3" /> AI Оценка
             </div>
           </div>
+        ) : (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/30 to-blue-950/20 border border-emerald-500/20 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-white">Расчёт через нейросеть AI</div>
+              <div className="text-[11px] text-neutral-400">
+                КБЖУ и порция определены на основе вашего текстового описания
+              </div>
+            </div>
+          </div>
         )}
 
         {/* AI Notification Banner */}
         <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs">
           <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
           <span>
-            Искусственный интеллект проанализировал фото. Вы можете скорректировать любые значения перед сохранением.
+            {photoPreview
+              ? 'Искусственный интеллект проанализировал фото. Вы можете скорректировать любые значения перед сохранением.'
+              : 'Искусственный интеллект рассчитал КБЖУ по вашему описанию. Вы можете скорректировать любые значения перед сохранением.'}
           </span>
         </div>
 

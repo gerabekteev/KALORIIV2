@@ -4,6 +4,7 @@ from app.utils.ai_providers.base import (
     AIRateLimitError,
     AIAuthenticationError,
     build_system_prompt,
+    build_text_prompt,
     extract_json_from_text,
     parse_food_result,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "AIRateLimitError",
     "AIAuthenticationError",
     "build_system_prompt",
+    "build_text_prompt",
     "extract_json_from_text",
     "parse_food_result",
     "GeminiProvider",

@@ -10,6 +10,21 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+function computeUpdatedSummary(
+  summary: DailyMealsSummary | null,
+  meals: Meal[]
+): DailyMealsSummary | null {
+  if (!summary) return null
+  return {
+    ...summary,
+    total_calories: Math.round(meals.reduce((sum, m) => sum + (m.calories || 0), 0) * 10) / 10,
+    total_protein: Math.round(meals.reduce((sum, m) => sum + (m.protein || 0), 0) * 10) / 10,
+    total_fat: Math.round(meals.reduce((sum, m) => sum + (m.fat || 0), 0) * 10) / 10,
+    total_carbs: Math.round(meals.reduce((sum, m) => sum + (m.carbs || 0), 0) * 10) / 10,
+    meals,
+  }
+}
+
 interface MealsState {
   meals: Meal[]
   dailySummary: DailyMealsSummary | null
@@ -21,6 +36,7 @@ interface MealsState {
   addMeal: (payload: CreateMealPayload) => Promise<Meal>
   updateMeal: (id: number, payload: UpdateMealPayload) => Promise<Meal>
   deleteMeal: (id: number) => Promise<void>
+  recalculateMeal: (mealId: number, userComment?: string) => Promise<Meal>
   getTotals: () => { calories: number; protein: number; fat: number; carbs: number }
 }
 
@@ -66,10 +82,14 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       
       // If the meal is added for the currently selected date, add to list
       if (newMeal.meal_date === get().selectedDate) {
-        set((state) => ({
-          meals: [newMeal, ...state.meals],
-          isLoading: false,
-        }))
+        set((state) => {
+          const updatedMeals = [newMeal, ...state.meals]
+          return {
+            meals: updatedMeals,
+            dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+            isLoading: false,
+          }
+        })
       } else {
         set({ isLoading: false })
       }
@@ -87,10 +107,14 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const updated = await mealsApi.updateMeal(id, payload)
-      set((state) => ({
-        meals: state.meals.map((m) => (m.id === id ? updated : m)),
-        isLoading: false,
-      }))
+      set((state) => {
+        const updatedMeals = state.meals.map((m) => (m.id === id ? updated : m))
+        return {
+          meals: updatedMeals,
+          dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+          isLoading: false,
+        }
+      })
       return updated
     } catch (err: any) {
       set({
@@ -105,13 +129,39 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       await mealsApi.deleteMeal(id)
-      set((state) => ({
-        meals: state.meals.filter((m) => m.id !== id),
-        isLoading: false,
-      }))
+      set((state) => {
+        const updatedMeals = state.meals.filter((m) => m.id !== id)
+        return {
+          meals: updatedMeals,
+          dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+          isLoading: false,
+        }
+      })
     } catch (err: any) {
       set({
         error: err.message || 'Ошибка удаления',
+        isLoading: false,
+      })
+      throw err
+    }
+  },
+
+  recalculateMeal: async (mealId: number, userComment?: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      const updated = await mealsApi.recalculateMeal(mealId, userComment)
+      set((state) => {
+        const updatedMeals = state.meals.map((m) => (m.id === mealId ? updated : m))
+        return {
+          meals: updatedMeals,
+          dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+          isLoading: false,
+        }
+      })
+      return updated
+    } catch (err: any) {
+      set({
+        error: err.message || 'Ошибка пересчёта блюда через AI',
         isLoading: false,
       })
       throw err

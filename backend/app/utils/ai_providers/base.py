@@ -31,8 +31,35 @@ def build_system_prompt(user_comment: Optional[str] = None) -> str:
         "3. Калории (ккал)\n"
         "4. Белки (г)\n"
         "5. Жиры (г)\n"
-        "6. Углеводы (г)\n"
+        "6. Углеводы (г)\n\n"
+        "ВАЖНО (Распознавание скриншотов и OCR):\n"
+        "Если на изображении представлен скриншот экрана (приложение доставки еды — Яндекс Еда, Самокат, Додо и т.д., таблица пищевой ценности КБЖУ, этикетка продукта, чек, меню или скриншот рецепта) — распознай напечатанный текст, найди точные указанные значения веса в граммах, калорий, белков, жиров и углеводов и верни их в JSON!"
         f"{comment_clause}\n\n"
+        "Ответь СТРОГО в JSON формате:\n"
+        "{\n"
+        '  "name": "название",\n'
+        '  "weight_grams": число,\n'
+        '  "calories": число,\n'
+        '  "protein": число,\n'
+        '  "fat": число,\n'
+        '  "carbs": число,\n'
+        '  "confidence": "high/medium/low"\n'
+        "}"
+    )
+
+
+def build_text_prompt(text: str) -> str:
+    """Build standardized food recognition prompt for text input according to KaloriiAI specifications."""
+    return (
+        "Ты — эксперт-нутрициолог. Пользователь описал свой приём пищи:\n"
+        f'"{text.strip()}"\n\n'
+        "Определи:\n"
+        "1. Название блюда/продукта\n"
+        "2. Примерный вес порции в граммах (если вес или количество указаны в тексте, используй их; иначе оцени реалистичный стандартный вес порции)\n"
+        "3. Калории (ккал)\n"
+        "4. Белки (г)\n"
+        "5. Жиры (г)\n"
+        "6. Углеводы (г)\n\n"
         "Ответь СТРОГО в JSON формате:\n"
         "{\n"
         '  "name": "название",\n'
@@ -120,4 +147,12 @@ class BaseAIProvider(abc.ABC):
         user_comment: Optional[str] = None,
     ) -> FoodAnalysisResult:
         """Send image and prompt to provider API and return structured food analysis."""
+        pass
+
+    @abc.abstractmethod
+    async def analyze_food_text(
+        self,
+        text: str,
+    ) -> FoodAnalysisResult:
+        """Send text description of food to provider API and return structured food analysis."""
         pass

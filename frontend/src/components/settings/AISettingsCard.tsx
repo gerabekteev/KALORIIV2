@@ -25,7 +25,7 @@ export interface AIModelItem {
   enabled: boolean
 }
 
-const DEFAULT_AI_MODELS: AIModelItem[] = [
+export const DEFAULT_AI_MODELS: AIModelItem[] = [
   {
     id: 'gemini-3.1-flash-lite',
     name: 'Gemini 3.1 Flash-Lite (500 RPD)',
@@ -58,14 +58,42 @@ const DEFAULT_AI_MODELS: AIModelItem[] = [
     id: 'gemini-3.7-flash',
     name: 'Gemini 3.7 Flash',
     provider: 'gemini',
-    description: 'Сбалансированный анализ (20 RPD)',
+    description: 'Сбалансированный анализ и высокая скорость (20 RPD)',
     enabled: true,
   },
   {
-    id: 'openrouter-free',
-    name: 'OpenRouter Free Models',
+    id: 'gemini-3.5-flash-lite',
+    name: 'Gemini 3.5 Flash-Lite',
+    provider: 'gemini',
+    description: 'Экономичный и ультрабыстрый отклик',
+    enabled: true,
+  },
+  {
+    id: 'openrouter/auto',
+    name: 'OpenRouter Auto',
     provider: 'openrouter',
-    description: 'Gemma 4 26B/31B Vision, Nemotron Omni (Fallback)',
+    description: 'Умный авто-выбор лучшей доступной модели',
+    enabled: true,
+  },
+  {
+    id: 'google/gemma-4-26b-a4b-it:free',
+    name: 'Gemma 4 26B (Free)',
+    provider: 'openrouter',
+    description: 'Мощная визуальная модель от Google',
+    enabled: true,
+  },
+  {
+    id: 'google/gemma-4-31b-it:free',
+    name: 'Gemma 4 31B (Free)',
+    provider: 'openrouter',
+    description: 'Продвинутая мультимодальная модель Google',
+    enabled: true,
+  },
+  {
+    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    name: 'NVIDIA Omni (Free)',
+    provider: 'openrouter',
+    description: 'Reasoning VLM от NVIDIA с поддержкой vision',
     enabled: true,
   },
 ]
@@ -79,11 +107,23 @@ function loadSavedSettings() {
       const parsed = JSON.parse(saved)
       let initialModels = DEFAULT_AI_MODELS
       if (Array.isArray(parsed.models) && parsed.models.length > 0) {
-        const existingIds = new Set(parsed.models.map((m: any) => m.id))
+        // Map old legacy model IDs if any
+        const mappedExisting = parsed.models.map((m: any) => {
+          if (m.id === 'openrouter-free') {
+            return {
+              ...m,
+              id: 'openrouter/auto',
+              name: 'OpenRouter Auto',
+              description: 'Умный авто-выбор лучшей доступной модели',
+            }
+          }
+          return m
+        })
+        const existingIds = new Set(mappedExisting.map((m: any) => m.id))
         const missingDefaults = DEFAULT_AI_MODELS.filter(
           (m) => !existingIds.has(m.id)
         )
-        initialModels = [...parsed.models, ...missingDefaults]
+        initialModels = [...mappedExisting, ...missingDefaults]
       }
       return {
         models: initialModels,
@@ -210,7 +250,7 @@ export const AISettingsCard: React.FC = () => {
           <span>Статус</span>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
           {models.map((model, index) => {
             const isFirstActive = model.enabled && model.id === activeModelId
 

@@ -20,11 +20,12 @@ DEFAULT_MODEL_CHAIN: List[Tuple[str, str]] = [
     ("gemini", "gemini-3.5-flash"),
     ("gemini", "gemini-3.6-flash"),
     ("gemini", "gemini-3.8-flash"),
-    ("gemini", "gemini-3.7-flash"),
-    ("gemini", "gemini-3.5-flash-lite"),
+    ("openrouter", "openrouter/auto"),
     ("openrouter", "google/gemma-4-26b-a4b-it:free"),
     ("openrouter", "google/gemma-4-31b-it:free"),
     ("openrouter", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"),
+    ("gemini", "gemini-3.7-flash"),
+    ("gemini", "gemini-3.5-flash-lite"),
 ]
 
 
@@ -155,6 +156,85 @@ class AIRouter:
                         await asyncio.sleep(5)
 
         logger.error(f"All AI vision models failed. Errors summary: {errors_collected}")
+        raise AllProvidersFailedError(
+            "Все модели AI в данный момент недоступны. Пожалуйста, введите данные о блюде вручную."
+        )
+
+    async def recognize_food_by_text(
+        self,
+        text: str,
+        custom_gemini_key: Optional[str] = None,
+        custom_openrouter_key: Optional[str] = None,
+        custom_model_chain: Optional[List[Tuple[str, str]]] = None,
+    ) -> Tuple[FoodAnalysisResult, str, str]:
+        """
+        Execute food recognition from text description across the fallback priority chain.
+        Returns (result, provider_name, model_id).
+        Raises AllProvidersFailedError if all models exhaust retries.
+        """
+        errors_collected: List[str] = []
+        chain_to_use = custom_model_chain if custom_model_chain else self.model_chain
+
+        for provider_type, model_id in chain_to_use:
+            provider = self._get_provider_instance(
+                provider_type,
+                model_id,
+                gemini_key=custom_gemini_key,
+                openrouter_key=custom_openrouter_key,
+            )
+            if not provider:
+                continue
+
+            logger.info(f"Attempting food text recognition using {provider_type} / {model_id}...")
+
+            for attempt in range(1, 3):  # 2 attempts per model
+                try:
+                    result = await provider.analyze_food_text(text=text)
+                    logger.info(
+                        f"Successfully recognized food from text using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
+                    )
+                    return result, provider_type, model_id
+
+                except AIAuthenticationError as auth_err:
+                    logger.warning(
+                        f"Authentication failure for {provider_type}/{model_id}: {auth_err}. Skipping retries for this provider."
+                    )
+                    errors_collected.append(f"{provider_type}/{model_id}: {auth_err}")
+                    break  # Skip 2nd attempt if auth failed
+
+                except AIRateLimitError as rate_err:
+                    logger.warning(
+                        f"Rate limit for {provider_type}/{model_id}: {rate_err}. Falling back immediately to next model in chain."
+                    )
+                    errors_collected.append(f"{provider_type}/{model_id}: {rate_err}")
+                    break  # Skip 2nd attempt, fallback immediately
+
+                except AIProviderError as err:
+                    logger.warning(
+                        f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}"
+                    )
+                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+
+                    err_str = str(err).lower()
+                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
+                        logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
+                        break
+
+                    if attempt == 1:
+                        # Wait 2 seconds before retrying the same model for network glitches
+                        logger.info(f"Waiting 2 seconds before retry for {provider_type}/{model_id}...")
+                        await asyncio.sleep(2)
+
+                except Exception as ex:
+                    logger.error(
+                        f"Unexpected error in {provider_type}/{model_id} (attempt {attempt}): {ex}",
+                        exc_info=True,
+                    )
+                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {ex}")
+                    if attempt == 1:
+                        await asyncio.sleep(5)
+
+        logger.error(f"All AI models failed for text recognition. Errors summary: {errors_collected}")
         raise AllProvidersFailedError(
             "Все модели AI в данный момент недоступны. Пожалуйста, введите данные о блюде вручную."
         )

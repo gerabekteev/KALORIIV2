@@ -11,11 +11,19 @@ from app.utils.ai_providers.base import (
     AIRateLimitError,
     AIAuthenticationError,
     build_system_prompt,
+    build_text_prompt,
     extract_json_from_text,
     parse_food_result,
 )
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+OPENROUTER_MODELS = [
+    "openrouter/auto",
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+]
 
 
 def _extract_openrouter_error(resp_text: str) -> str:
@@ -37,51 +45,21 @@ def _extract_openrouter_error(resp_text: str) -> str:
 
 
 class OpenRouterProvider(BaseAIProvider):
-    """OpenRouter provider for OpenAI-compatible multi-modal endpoints."""
+    """OpenRouter provider for OpenAI-compatible multi-modal and text endpoints."""
 
     def __init__(
         self,
         api_key: str,
-        model_id: str = "google/gemma-4-26b-a4b-it:free",
+        model_id: str = "openrouter/auto",
     ):
         super().__init__(api_key=api_key, model_id=model_id, provider_name="openrouter")
 
-    async def analyze_food(
-        self,
-        image_bytes: bytes,
-        mime_type: str = "image/jpeg",
-        user_comment: Optional[str] = None,
-    ) -> FoodAnalysisResult:
-        if not self.api_key:
-            raise AIAuthenticationError("OpenRouter API key is not configured")
-
-        b64_image = base64.b64encode(image_bytes).decode("utf-8")
-        data_uri = f"data:{mime_type};base64,{b64_image}"
-        prompt = build_system_prompt(user_comment)
-
+    async def _send_and_parse(self, payload: Dict[str, Any]) -> FoodAnalysisResult:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "https://kalorii.lopni.fun",
             "X-Title": "KaloriiAI",
             "Content-Type": "application/json",
-        }
-
-        payload: Dict[str, Any] = {
-            "model": self.model_id,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": data_uri},
-                        },
-                    ],
-                }
-            ],
-            "temperature": 0.2,
-            "response_format": {"type": "json_object"},
         }
 
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -96,10 +74,11 @@ class OpenRouterProvider(BaseAIProvider):
         if response.status_code != 200 and "response_format" in payload:
             err_text_low = response.text.lower()
             if any(term in err_text_low for term in ["response_format", "json_object", "schema", "format", "unsupported"]):
-                payload.pop("response_format", None)
+                payload_retry = dict(payload)
+                payload_retry.pop("response_format", None)
                 async with httpx.AsyncClient(timeout=60.0) as client:
                     try:
-                        response = await client.post(OPENROUTER_URL, headers=headers, json=payload)
+                        response = await client.post(OPENROUTER_URL, headers=headers, json=payload_retry)
                     except httpx.TimeoutException:
                         raise AIProviderError(f"OpenRouter ({self.model_id}) timeout exceeded on retry")
                     except httpx.RequestError as e:
@@ -159,3 +138,59 @@ class OpenRouterProvider(BaseAIProvider):
             raise
         except Exception as e:
             raise AIProviderError(f"Failed to parse OpenRouter response: {e}")
+
+    async def analyze_food(
+        self,
+        image_bytes: bytes,
+        mime_type: str = "image/jpeg",
+        user_comment: Optional[str] = None,
+    ) -> FoodAnalysisResult:
+        if not self.api_key:
+            raise AIAuthenticationError("OpenRouter API key is not configured")
+
+        b64_image = base64.b64encode(image_bytes).decode("utf-8")
+        data_uri = f"data:{mime_type};base64,{b64_image}"
+        prompt = build_system_prompt(user_comment)
+
+        payload: Dict[str, Any] = {
+            "model": self.model_id,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": data_uri},
+                        },
+                    ],
+                }
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"},
+        }
+
+        return await self._send_and_parse(payload)
+
+    async def analyze_food_text(
+        self,
+        text: str,
+    ) -> FoodAnalysisResult:
+        if not self.api_key:
+            raise AIAuthenticationError("OpenRouter API key is not configured")
+
+        prompt = build_text_prompt(text)
+
+        payload: Dict[str, Any] = {
+            "model": self.model_id,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"},
+        }
+
+        return await self._send_and_parse(payload)

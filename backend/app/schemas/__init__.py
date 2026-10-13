@@ -15,6 +15,7 @@ from app.schemas.user import (
 from app.schemas.meal import (
     MealCreate,
     MealUpdate,
+    MealRecalculateRequest,
     MealResponse,
     DailyMealsSummary,
 )
@@ -33,6 +34,7 @@ from app.schemas.recipe import (
 from app.schemas.ai import (
     FoodAnalysisResult,
     FoodRecognitionResponse,
+    TextAnalysisRequest,
 )
 from app.schemas.stats import (
     DayStats,
@@ -55,6 +57,7 @@ __all__ = [
     "ProfileCalculateResponse",
     "MealCreate",
     "MealUpdate",
+    "MealRecalculateRequest",
     "MealResponse",
     "DailyMealsSummary",
     "ProductCreate",
@@ -67,6 +70,7 @@ __all__ = [
     "RecipeResponse",
     "FoodAnalysisResult",
     "FoodRecognitionResponse",
+    "TextAnalysisRequest",
     "DayStats",
     "StatsPeriodResponse",
     "WeightHistoryPoint",
