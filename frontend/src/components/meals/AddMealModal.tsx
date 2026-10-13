@@ -31,8 +31,13 @@ import { BarcodeProductResult } from '../../types'
 type ModalMode = 'hub' | 'barcode' | 'ai_photo' | 'text_ai' | 'search' | 'recipes' | 'manual'
 
 export const AddMealModal: React.FC = () => {
-  const { isAddMealOpen, closeAddMeal, openAIResult, addToast } = useUIStore()
-  const { addMeal, selectedDate } = useMealsStore()
+  const { isAddMealOpen, closeAddMeal, addToast } = useUIStore()
+  const {
+    addMeal,
+    selectedDate,
+    startPhotoAIAnalysis,
+    startTextAIAnalysis,
+  } = useMealsStore()
 
   const [mode, setMode] = useState<ModalMode>('hub')
 
@@ -45,12 +50,10 @@ export const AddMealModal: React.FC = () => {
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [aiComment, setAiComment] = useState('')
-  const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
   // AI Text mode state
   const [textDescription, setTextDescription] = useState('')
-  const [isAnalyzingText, setIsAnalyzingText] = useState(false)
 
   // Manual mode state
   const [manualForm, setManualForm] = useState({
@@ -155,53 +158,42 @@ export const AddMealModal: React.FC = () => {
     }
   }
 
-  const handleRecognizePhoto = async () => {
+  const handleRecognizePhoto = () => {
     if (!selectedPhoto) {
       addToast('Пожалуйста, выберите или сделайте фото', 'warning')
       return
     }
 
-    setIsAnalyzingPhoto(true)
-    try {
-      const result = await aiApi.recognizeFood(selectedPhoto, aiComment)
-      closeAddMeal()
-      openAIResult(result, selectedPhoto)
-      setSelectedPhoto(null)
-      setPhotoPreview(null)
-      setAiComment('')
-    } catch (err: any) {
-      addToast(
-        err.message || 'Ошибка распознавания AI. Попробуйте ещё раз или введите вручную.',
-        'error',
-        5000
-      )
-    } finally {
-      setIsAnalyzingPhoto(false)
-    }
+    const photoToUpload = selectedPhoto
+    const commentToSend = aiComment.trim() || undefined
+
+    // Launch background AI recognition
+    startPhotoAIAnalysis(photoToUpload, commentToSend, selectedDate)
+
+    // Reset state & close modal immediately
+    setSelectedPhoto(null)
+    setPhotoPreview(null)
+    setAiComment('')
+    closeAddMeal()
+
+    addToast('Фото отправлено на анализ AI. Блюдо появится в дневнике!', 'info', 3500)
   }
 
-  const handleAnalyzeText = async () => {
+  const handleAnalyzeText = () => {
     const trimmed = textDescription.trim()
     if (!trimmed) {
       addToast('Пожалуйста, введите описание блюда', 'warning')
       return
     }
 
-    setIsAnalyzingText(true)
-    try {
-      const result = await aiApi.analyzeText(trimmed)
-      closeAddMeal()
-      openAIResult(result, null)
-      setTextDescription('')
-    } catch (err: any) {
-      addToast(
-        err.message || 'Ошибка расчёта КБЖУ через AI. Попробуйте уточнить описание.',
-        'error',
-        5000
-      )
-    } finally {
-      setIsAnalyzingText(false)
-    }
+    // Launch background AI recognition
+    startTextAIAnalysis(trimmed, selectedDate)
+
+    // Reset state & close modal immediately
+    setTextDescription('')
+    closeAddMeal()
+
+    addToast('Текст отправлен на расчёт AI. Блюдо появится в дневнике!', 'info', 3500)
   }
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -596,7 +588,6 @@ export const AddMealModal: React.FC = () => {
               className="w-full"
               size="lg"
               disabled={!selectedPhoto}
-              isLoading={isAnalyzingPhoto}
               onClick={handleRecognizePhoto}
               leftIcon={<Sparkles className="w-4 h-4 text-emerald-300" />}
             >
@@ -653,7 +644,6 @@ export const AddMealModal: React.FC = () => {
               className="w-full"
               size="lg"
               disabled={!textDescription.trim()}
-              isLoading={isAnalyzingText}
               onClick={handleAnalyzeText}
               leftIcon={<Sparkles className="w-4 h-4 text-emerald-300" />}
             >

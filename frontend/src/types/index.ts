@@ -54,6 +54,20 @@ export interface Meal {
   created_at?: string
 }
 
+export interface PendingAIMeal {
+  id: string
+  type: 'photo' | 'text'
+  photoFile?: File
+  previewUrl?: string
+  comment?: string
+  textDescription?: string
+  targetDate: string
+  targetTime: string
+  status: 'analyzing' | 'error'
+  errorMessage?: string
+  createdAt: number
+}
+
 export interface CreateMealPayload {
   name: string
   calories: number

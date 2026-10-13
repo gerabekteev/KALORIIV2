@@ -2,9 +2,11 @@ import React from 'react'
 import { UtensilsCrossed, Plus } from 'lucide-react'
 import { Meal } from '../../types'
 import { MealCard } from './MealCard'
+import { PendingMealCard } from './PendingMealCard'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Loading'
 import { useUIStore } from '../../store/uiStore'
+import { useMealsStore } from '../../store/mealsStore'
 
 interface MealListProps {
   meals: Meal[]
@@ -13,6 +15,11 @@ interface MealListProps {
 
 export const MealList: React.FC<MealListProps> = ({ meals, isLoading }) => {
   const { openAddMeal } = useUIStore()
+  const { pendingMeals, selectedDate, retryPendingMeal, dismissPendingMeal } = useMealsStore()
+
+  const pendingMealsForDate = pendingMeals.filter(
+    (item) => item.targetDate === selectedDate
+  )
 
   if (isLoading) {
     return (
@@ -24,7 +31,7 @@ export const MealList: React.FC<MealListProps> = ({ meals, isLoading }) => {
     )
   }
 
-  if (meals.length === 0) {
+  if (meals.length === 0 && pendingMealsForDate.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-[#18181b]/50 border border-neutral-800/80 rounded-2xl text-center">
         <div className="w-14 h-14 rounded-2xl bg-neutral-800/80 flex items-center justify-center text-neutral-500 mb-3 border border-neutral-700/40">
@@ -50,6 +57,17 @@ export const MealList: React.FC<MealListProps> = ({ meals, isLoading }) => {
 
   return (
     <div className="space-y-3">
+      {/* Pending meals currently being processed by AI */}
+      {pendingMealsForDate.map((pending) => (
+        <PendingMealCard
+          key={pending.id}
+          pendingMeal={pending}
+          onRetry={retryPendingMeal}
+          onDismiss={dismissPendingMeal}
+        />
+      ))}
+
+      {/* Confirmed saved meals */}
       {meals.map((meal) => (
         <MealCard key={meal.id} meal={meal} />
       ))}

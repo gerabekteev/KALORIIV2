@@ -1,8 +1,12 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { Utensils, BarChart3, User } from 'lucide-react'
+import { useMealsStore } from '../../store/mealsStore'
 
 export const BottomNav: React.FC = () => {
+  const { pendingMeals } = useMealsStore()
+  const hasAnalyzingMeals = pendingMeals.some((p) => p.status === 'analyzing')
+
   const navItems = [
     {
       to: '/',
@@ -26,6 +30,8 @@ export const BottomNav: React.FC = () => {
       <div className="max-w-md mx-auto flex items-center justify-around h-14">
         {navItems.map((item) => {
           const Icon = item.icon
+          const isTodayTab = item.to === '/'
+
           return (
             <NavLink
               key={item.to}
@@ -51,6 +57,12 @@ export const BottomNav: React.FC = () => {
                         isActive ? 'scale-110 stroke-[2.3]' : 'stroke-[1.8]'
                       }`}
                     />
+                    {isTodayTab && hasAnalyzingMeals && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
+                      </span>
+                    )}
                     {isActive && (
                       <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-400 rounded-full" />
                     )}

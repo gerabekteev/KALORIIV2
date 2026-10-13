@@ -17,6 +17,7 @@ export const TodayPage: React.FC = () => {
     selectedDate,
     isLoading,
     totals,
+    pendingMeals,
     goToPreviousDay,
     goToNextDay,
     goToToday,
@@ -40,6 +41,14 @@ export const TodayPage: React.FC = () => {
   })
 
   const remainingCalories = Math.max(dailyGoalCalories - totals.calories, 0)
+
+  // Pending AI meals calculations
+  const pendingForCurrentDate = pendingMeals.filter((p) => p.targetDate === selectedDate)
+  const pendingAnalyzingCount = pendingForCurrentDate.filter((p) => p.status === 'analyzing').length
+  const totalDisplayCount = meals.length + pendingForCurrentDate.length
+  const otherDatePendingCount = pendingMeals.filter(
+    (p) => p.targetDate !== selectedDate && p.status === 'analyzing'
+  ).length
 
   return (
     <div className="space-y-4">
@@ -76,6 +85,25 @@ export const TodayPage: React.FC = () => {
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Other date pending AI indicator */}
+      {otherDatePendingCount > 0 && (
+        <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-500/30 rounded-xl px-3.5 py-2 text-xs text-emerald-300">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+            <span>
+              AI в фоне анализирует {otherDatePendingCount}{' '}
+              {otherDatePendingCount === 1 ? 'блюдо' : 'блюда'}...
+            </span>
+          </div>
+          <button
+            onClick={goToToday}
+            className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-200 underline cursor-pointer"
+          >
+            К сегодня
+          </button>
+        </div>
+      )}
 
       {/* Daily Progress Card */}
       <Card variant="default" padding="md" className="space-y-5">
@@ -131,9 +159,17 @@ export const TodayPage: React.FC = () => {
             Приёмы пищи
           </h2>
           <p className="text-xs text-neutral-400">
-            {meals.length > 0
-              ? `${meals.length} ${meals.length === 1 ? 'запись' : 'записи'} за день`
-              : 'Дневник питания пуст'}
+            {pendingAnalyzingCount > 0 ? (
+              <span className="text-emerald-400 font-medium inline-flex items-center gap-1">
+                <Sparkles className="w-3 h-3 animate-spin" />
+                {pendingAnalyzingCount} на AI анализе...
+                {meals.length > 0 && ` (${meals.length} сохранено)`}
+              </span>
+            ) : totalDisplayCount > 0 ? (
+              `${totalDisplayCount} ${totalDisplayCount === 1 ? 'запись' : 'записи'} за день`
+            ) : (
+              'Дневник питания пуст'
+            )}
           </p>
         </div>
 
