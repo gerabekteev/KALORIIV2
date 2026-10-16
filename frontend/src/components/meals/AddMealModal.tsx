@@ -441,20 +441,21 @@ export const AddMealModal: React.FC = () => {
               <span className="text-[11px] font-semibold text-neutral-400 block px-0.5">
                 Быстрые способы:
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                 {/* AI Photo */}
                 <button
                   type="button"
                   onClick={() => setMode('ai_photo')}
-                  className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center min-w-0"
+                  className="relative flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-[#1c1d24] to-[#121317] border border-neutral-800/90 hover:border-emerald-500/50 hover:bg-[#1f2029] active:scale-[0.97] transition-all duration-200 cursor-pointer group text-center min-w-0 shadow-[0_4px_16px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.12)] overflow-hidden"
                 >
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
-                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 group-hover:border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.12)] group-hover:shadow-[0_0_22px_rgba(16,185,129,0.28)] flex items-center justify-center mb-2.5 shrink-0 transition-all duration-300 group-hover:scale-105">
+                    <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:text-emerald-300 stroke-[2.2] transition-colors" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight truncate max-w-full">
+                  <span className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight truncate max-w-full">
                     AI Фото
                   </span>
-                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
+                  <span className="text-[10.5px] sm:text-xs text-neutral-400 group-hover:text-neutral-300 font-medium mt-1 truncate max-w-full">
                     Снимок / Ctrl+V
                   </span>
                 </button>
@@ -463,16 +464,17 @@ export const AddMealModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setMode('barcode')}
-                  className="relative flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center shadow-sm min-w-0"
+                  className="relative flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-[#1c1d24] to-[#121317] border border-neutral-800/90 hover:border-emerald-500/50 hover:bg-[#1f2029] active:scale-[0.97] transition-all duration-200 cursor-pointer group text-center min-w-0 shadow-[0_4px_16px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.12)] overflow-hidden"
                 >
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
-                    <Barcode className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 group-hover:border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.12)] group-hover:shadow-[0_0_22px_rgba(16,185,129,0.28)] flex items-center justify-center mb-2.5 shrink-0 transition-all duration-300 group-hover:scale-105">
+                    <Barcode className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:text-emerald-300 stroke-[2.2] transition-colors" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight flex items-center gap-1 truncate max-w-full">
+                  <span className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight truncate max-w-full">
                     Штрихкод
                   </span>
-                  <span className="text-[10px] text-emerald-400 font-semibold mt-0.5 flex items-center gap-0.5 truncate max-w-full">
-                    <ShieldCheck className="w-2.5 h-2.5 shrink-0" /> и ЧЗ
+                  <span className="text-[10.5px] sm:text-xs text-neutral-400 group-hover:text-neutral-300 font-medium mt-1 truncate max-w-full">
+                    EAN / Честный Знак
                   </span>
                 </button>
 
@@ -480,15 +482,16 @@ export const AddMealModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setMode('text_ai')}
-                  className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center min-w-0"
+                  className="relative flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-[#1c1d24] to-[#121317] border border-neutral-800/90 hover:border-emerald-500/50 hover:bg-[#1f2029] active:scale-[0.97] transition-all duration-200 cursor-pointer group text-center min-w-0 shadow-[0_4px_16px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.12)] overflow-hidden"
                 >
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
-                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 group-hover:border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.12)] group-hover:shadow-[0_0_22px_rgba(16,185,129,0.28)] flex items-center justify-center mb-2.5 shrink-0 transition-all duration-300 group-hover:scale-105">
+                    <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:text-emerald-300 stroke-[2.2] transition-colors" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight truncate max-w-full">
+                  <span className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight truncate max-w-full">
                     Текст AI
                   </span>
-                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
+                  <span className="text-[10.5px] sm:text-xs text-neutral-400 group-hover:text-neutral-300 font-medium mt-1 truncate max-w-full">
                     Описать текстом
                   </span>
                 </button>
@@ -497,15 +500,16 @@ export const AddMealModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setMode('voice_ai')}
-                  className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center min-w-0"
+                  className="relative flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-[#1c1d24] to-[#121317] border border-neutral-800/90 hover:border-emerald-500/50 hover:bg-[#1f2029] active:scale-[0.97] transition-all duration-200 cursor-pointer group text-center min-w-0 shadow-[0_4px_16px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.12)] overflow-hidden"
                 >
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
-                    <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 group-hover:border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.12)] group-hover:shadow-[0_0_22px_rgba(16,185,129,0.28)] flex items-center justify-center mb-2.5 shrink-0 transition-all duration-300 group-hover:scale-105">
+                    <Mic className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:text-emerald-300 stroke-[2.2] transition-colors" />
                   </div>
-                  <span className="text-xs font-bold text-white leading-tight truncate max-w-full">
+                  <span className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight truncate max-w-full">
                     Голос AI
                   </span>
-                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
+                  <span className="text-[10.5px] sm:text-xs text-neutral-400 group-hover:text-neutral-300 font-medium mt-1 truncate max-w-full">
                     Сказать голосом
                   </span>
                 </button>

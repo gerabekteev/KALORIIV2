@@ -4,6 +4,8 @@ import {
   Plus,
   Trash2,
   Barcode,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { RecentScannedProductItem, BarcodeProductResult } from '../../types'
 import { barcodeApi } from '../../api/barcode'
@@ -22,6 +24,7 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
 }) => {
   const [items, setItems] = useState<RecentScannedProductItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showAll, setShowAll] = useState(false)
 
   const loadRecentItems = async () => {
     setIsLoading(true)
@@ -75,11 +78,11 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
           <div className="h-4 w-40 bg-neutral-800/80 rounded-md animate-pulse" />
           <div className="h-3 w-14 bg-neutral-800/60 rounded-md animate-pulse" />
         </div>
-        <div className="w-full max-w-full overflow-hidden flex items-stretch gap-2.5 pb-1.5 pt-0.5">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pb-1.5 pt-0.5">
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="w-28 shrink-0 min-w-[112px] p-2.5 rounded-2xl bg-[#161619] border border-neutral-800/60 flex flex-col items-center gap-2 animate-pulse"
+              className="w-full p-2.5 rounded-2xl bg-[#161619] border border-neutral-800/60 flex flex-col items-center gap-2 animate-pulse"
             >
               <div className="w-16 h-16 rounded-xl bg-neutral-800/80" />
               <div className="w-20 h-3 bg-neutral-800/80 rounded" />
@@ -129,14 +132,26 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
           <Barcode className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span className="truncate">Недавно отсканированные:</span>
         </h4>
-        <span className="text-[10px] text-neutral-400 shrink-0 ml-2">
-          {items.length} {pluralizeRu(items.length, ['продукт', 'продукта', 'продуктов'])}
-        </span>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <span className="text-[10px] text-neutral-400">
+            {items.length} {pluralizeRu(items.length, ['продукт', 'продукта', 'продуктов'])}
+          </span>
+          {items.length > 4 && (
+            <button
+              type="button"
+              onClick={() => setShowAll((prev) => !prev)}
+              className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 flex items-center gap-0.5 cursor-pointer transition-colors"
+            >
+              <span>{showAll ? 'Свернуть' : 'Все'}</span>
+              {showAll ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Horizontal scrolling shelf with touch pan containment */}
-      <div className="w-full max-w-full overflow-x-auto overscroll-x-contain touch-pan-x flex items-stretch gap-2.5 pb-1.5 pt-0.5 scrollbar-thin scrollbar-thumb-neutral-800">
-        {items.map((item) => {
+      {/* Responsive grid — mobile adapted without horizontal scrolling */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
+        {(showAll ? items : items.slice(0, 4)).map((item) => {
           const baseWeight = item.package_weight_grams || 100
           const portionCalories = Math.round(
             item.calories_per_100g * (baseWeight / 100)
@@ -146,7 +161,7 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
             <div
               key={item.id}
               onClick={() => handleCardClick(item)}
-              className="group relative flex flex-col items-center w-28 shrink-0 min-w-[112px] p-2.5 rounded-2xl bg-[#1a1a1f] hover:bg-[#22222a] border border-neutral-800/80 hover:border-emerald-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="group relative flex flex-col items-center w-full p-2.5 sm:p-3 rounded-2xl bg-[#1a1a1f] hover:bg-[#22222a] border border-neutral-800/80 hover:border-emerald-500/40 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
             >
               {/* Image preview */}
               <div className="w-16 h-16 rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden flex items-center justify-center mb-2 shrink-0">
@@ -165,14 +180,16 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
               </div>
 
               {/* Title & Calories */}
-              <div className="w-full text-center min-w-0">
-                <span className="text-xs font-semibold text-white block truncate" title={item.name}>
-                  {item.name}
-                </span>
-                <span className="text-[10px] text-emerald-400 font-bold block mt-0.5">
-                  {portionCalories} ккал
-                </span>
-                <span className="text-[9px] text-neutral-400 block truncate">
+              <div className="w-full text-center min-w-0 flex-1 flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-white block truncate" title={item.name}>
+                    {item.name}
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold block mt-0.5">
+                    {portionCalories} ккал
+                  </span>
+                </div>
+                <span className="text-[9px] text-neutral-400 block truncate mt-0.5">
                   пачка {Math.round(baseWeight)}г
                 </span>
               </div>
@@ -180,10 +197,10 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
               {/* Add Button Badge */}
               <button
                 type="button"
-                className="mt-2 w-full py-1 bg-emerald-500/15 group-hover:bg-emerald-500 text-emerald-400 group-hover:text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                className="mt-2 w-full py-1.5 bg-emerald-500/15 group-hover:bg-emerald-500 text-emerald-400 group-hover:text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="Добавить"
               >
-                <Plus className="w-3 h-3 stroke-[2.5]" />
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Добавить</span>
               </button>
 
@@ -191,11 +208,11 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
               <button
                 type="button"
                 onClick={(e) => handleDeleteItem(e, item.product_id)}
-                className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-neutral-400 hover:text-rose-400 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
+                className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-neutral-400 hover:text-rose-400 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer z-10"
                 title="Удалить из недавних"
                 aria-label="Удалить из недавних"
               >
-                <Trash2 className="w-2.5 h-2.5" />
+                <Trash2 className="w-3 h-3" />
               </button>
             </div>
           )
