@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import { statsApi } from '../../api/stats'
 import { getTodayDateString } from '../../store/mealsStore'
+import { calculateWeeklyBank } from '../../utils/calorieBank'
 
 interface WeekStripCalendarProps {
   selectedDate: string
@@ -57,32 +58,14 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
 
   // Elastic Weekly Calorie Bank calculation (GC-02)
   const weeklyBank = useMemo(() => {
-    if (!dailyGoalCalories || dailyGoalCalories <= 0) return null
-
-    // Evaluate days up to today (or all days up to selectedDate if in past)
-    const activeDays = weekDays.filter((d) => d.dateStr <= todayStr)
-    if (activeDays.length === 0) return null
-
-    let totalBudget = 0
-    let totalConsumed = 0
-    let trackedCount = 0
-
-    activeDays.forEach((d) => {
-      const cal = d.dateStr === selectedDate ? currentDayCalories : (weekCaloriesMap[d.dateStr] || 0)
-      if (cal > 0 || d.dateStr === todayStr) {
-        totalBudget += dailyGoalCalories
-        totalConsumed += cal
-        trackedCount++
-      }
+    return calculateWeeklyBank({
+      dailyGoalCalories,
+      weekDateStrings: weekDays.map((d) => d.dateStr),
+      todayStr,
+      selectedDate,
+      currentDayCalories,
+      weekCaloriesMap,
     })
-
-    if (trackedCount === 0) return null
-    const balance = Math.round(totalBudget - totalConsumed)
-    return {
-      balance,
-      isPositive: balance >= 0,
-      trackedCount,
-    }
   }, [dailyGoalCalories, weekDays, todayStr, selectedDate, currentDayCalories, weekCaloriesMap])
 
   useEffect(() => {

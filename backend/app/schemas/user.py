@@ -52,6 +52,7 @@ class UserUpdate(BaseModel):
     daily_protein_goal: Optional[int] = Field(None, ge=10, le=1000)
     daily_fat_goal: Optional[int] = Field(None, ge=10, le=500)
     daily_carbs_goal: Optional[int] = Field(None, ge=10, le=1500)
+    timezone: Optional[str] = Field(None, max_length=50)
 
 
 class UserResponse(BaseModel):
@@ -70,6 +71,7 @@ class UserResponse(BaseModel):
     daily_protein_goal: int
     daily_fat_goal: int
     daily_carbs_goal: int
+    timezone: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
