@@ -10,16 +10,25 @@ import {
   Layers,
   ShieldCheck,
   RotateCcw,
+  ShoppingCart,
+  Send,
+  Scale,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useMealsStore, getTodayDateString } from '../store/mealsStore'
 import { useMealPlanStore } from '../store/mealPlanStore'
 import { useUIStore } from '../store/uiStore'
 import { mealsApi } from '../api/meals'
+import { statsApi } from '../api/stats'
+import { telegramApi } from '../api/telegram'
+import { generateGroceryListFromItems, GroceryItem } from '../utils/groceryList'
 import { PlannedMealItem } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { Modal } from '../components/ui/Modal'
 import { pluralizeRu } from '../utils/pluralize'
 
 function getTomorrowDateString(): string {
@@ -124,6 +133,10 @@ export const MealPlanPage: React.FC = () => {
     }
   }, [planDate, goalCal, goalProt, goalFat, goalCarbs])
 
+  const [isShoppingListOpen, setIsShoppingListOpen] = useState(false)
+  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([])
+  const [isSendingTelegram, setIsSendingTelegram] = useState(false)
+
   const handleFillRemaining = () => {
     const remCal = Math.max(200, goalCal - eatenStats.calories)
     const remProt = Math.max(10, goalProt - eatenStats.protein)
@@ -142,6 +155,81 @@ export const MealPlanPage: React.FC = () => {
     setTargetFat(String(goalFat))
     setTargetCarbs(String(goalCarbs))
     addToast('Подставлена полная дневная норма КБЖУ', 'info', 2000)
+  }
+
+  // Elastic Weekly Calorie Bank balancer (GC-02)
+  const handleBalanceWeek = async () => {
+    try {
+      const stats = await statsApi.getStats('week')
+      const trackedDays = stats?.tracked_days || (stats?.days?.length || 0)
+      const totalCaloriesSoFar = stats?.total_calories || 0
+      const daysInWeek = 7
+      const remainingDays = Math.max(1, daysInWeek - trackedDays)
+      const weeklyBudget = goalCal * 7
+      const remainingBudget = Math.max(300, weeklyBudget - totalCaloriesSoFar)
+      const balancedDaily = Math.round(remainingBudget / remainingDays)
+
+      setTargetCalories(String(balancedDaily))
+      addToast(
+        `Неделя сбалансирована: ${balancedDaily} ккал/день на оставшиеся ${remainingDays} дн.`,
+        'success',
+        3500
+      )
+    } catch {
+      addToast('Не удалось загрузить данные за неделю для балансировки', 'warning')
+    }
+  }
+
+  // Smart Grocery List (GC-01)
+  const handleOpenShoppingList = () => {
+    if (!currentPlan) return
+    const allIngredients: Array<{ name: string; weightGrams?: number }> = []
+    currentPlan.meals.forEach((m) => {
+      if (m.ingredients && m.ingredients.length > 0) {
+        m.ingredients.forEach((ing) => {
+          allIngredients.push({ name: ing.name, weightGrams: ing.weight_grams })
+        })
+      } else {
+        allIngredients.push({ name: m.name, weightGrams: m.weight_grams })
+      }
+    })
+
+    const generated = generateGroceryListFromItems(allIngredients)
+    setGroceryItems(generated)
+    setIsShoppingListOpen(true)
+  }
+
+  const handleToggleGroceryItem = (id: string) => {
+    setGroceryItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item))
+    )
+  }
+
+  const handleSendToTelegram = async () => {
+    if (groceryItems.length === 0) {
+      addToast('Список покупок пуст', 'warning')
+      return
+    }
+
+    setIsSendingTelegram(true)
+    try {
+      const res = await telegramApi.sendShoppingList({
+        items: groceryItems.map((g) => ({
+          name: g.name,
+          total_grams: g.totalGrams,
+          category: g.category,
+          checked: g.checked,
+        })),
+        notes: `План питания на ${planDate}`,
+      })
+      addToast(res.message || 'Список покупок успешно отправлен в Telegram!', 'success', 4000)
+      setIsShoppingListOpen(false)
+    } catch (err: any) {
+      const msg = err?.message || 'Не удалось отправить список в Telegram. Проверьте привязку бота в профиле.'
+      addToast(msg, 'error', 4500)
+    } finally {
+      setIsSendingTelegram(false)
+    }
   }
 
   const handleGenerate = async (onlyUnlocked: boolean) => {
@@ -277,7 +365,16 @@ export const MealPlanPage: React.FC = () => {
             <span className="text-xs font-semibold text-neutral-200">
               3. Целевые КБЖУ для этих блюд:
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={handleBalanceWeek}
+                className="text-[10px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20 cursor-pointer flex items-center gap-1"
+                title="Сбалансировать остаток недельного бюджета калорий"
+              >
+                <Scale className="w-2.5 h-2.5" />
+                <span>Сбалансировать неделю</span>
+              </button>
               <button
                 type="button"
                 onClick={handleFillRemaining}
@@ -416,9 +513,18 @@ export const MealPlanPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] text-neutral-400">
-                Отметьте «Оставить», чтобы закрепить понравившиеся блюда
-              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleOpenShoppingList}
+                  className="gap-1.5 text-xs border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 cursor-pointer"
+                  leftIcon={<ShoppingCart className="w-3.5 h-3.5 text-emerald-400" />}
+                >
+                  Список покупок
+                </Button>
+              </div>
             </div>
           </Card>
 
@@ -534,6 +640,99 @@ export const MealPlanPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Shopping List Modal (GC-01) */}
+      <Modal
+        isOpen={isShoppingListOpen}
+        onClose={() => setIsShoppingListOpen(false)}
+        title="🛒 Список покупок"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-neutral-400 border-b border-neutral-800 pb-2">
+            <span>Ингредиенты из меню на {planDate}</span>
+            <span className="font-semibold text-white">
+              {groceryItems.filter((i) => !i.checked).length} из {groceryItems.length} к покупке
+            </span>
+          </div>
+
+          {/* Grouped by Aisles */}
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            {groceryItems.length === 0 ? (
+              <p className="text-xs text-neutral-500 text-center py-6">
+                В выбранном меню пока нет ингредиентов
+              </p>
+            ) : (
+              Object.entries(
+                groceryItems.reduce((acc, item) => {
+                  const cat = item.category || '🛒 Другое'
+                  if (!acc[cat]) acc[cat] = []
+                  acc[cat].push(item)
+                  return acc
+                }, {} as Record<string, GroceryItem[]>)
+              ).map(([categoryName, items]) => (
+                <div key={categoryName} className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-neutral-300 uppercase tracking-wider block px-1">
+                    {categoryName}
+                  </span>
+                  <div className="bg-[#141417] rounded-xl border border-neutral-800 divide-y divide-neutral-800/60 overflow-hidden">
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => handleToggleGroceryItem(item.id)}
+                        className={`flex items-center justify-between p-2.5 transition-colors cursor-pointer text-xs ${
+                          item.checked ? 'bg-neutral-900/60 opacity-60' : 'hover:bg-neutral-850'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {item.checked ? (
+                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <Square className="w-4 h-4 text-neutral-500 shrink-0" />
+                          )}
+                          <span
+                            className={`font-medium truncate ${
+                              item.checked ? 'line-through text-neutral-500' : 'text-neutral-200'
+                            }`}
+                          >
+                            {item.name}
+                          </span>
+                        </div>
+                        {item.totalGrams > 0 && (
+                          <span className="font-mono text-[11px] text-neutral-400 shrink-0 ml-2">
+                            {item.totalGrams}г
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Send to Telegram & Close Action Buttons */}
+          <div className="pt-2 border-t border-neutral-800 flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-1/3"
+              onClick={() => setIsShoppingListOpen(false)}
+            >
+              Закрыть
+            </Button>
+            <Button
+              type="button"
+              className="w-2/3"
+              isLoading={isSendingTelegram}
+              onClick={handleSendToTelegram}
+              leftIcon={<Send className="w-4 h-4 text-blue-300" />}
+            >
+              Отправить в Telegram
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

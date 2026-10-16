@@ -34,12 +34,25 @@ router = APIRouter(prefix="/auth", tags=["Аутентификация"])
 import os
 
 _auth_rate_records: dict[str, deque] = defaultdict(deque)
+_last_auth_cleanup: float = 0.0
+
+
+def _cleanup_stale_auth_records(now: float, window_seconds: float = 60.0) -> None:
+    global _last_auth_cleanup
+    if now - _last_auth_cleanup < 300.0:
+        return
+    _last_auth_cleanup = now
+    stale_keys = [k for k, dq in _auth_rate_records.items() if not dq or (now - dq[-1] > window_seconds)]
+    for k in stale_keys:
+        _auth_rate_records.pop(k, None)
+
 
 def check_auth_rate_limit(request: Request, max_attempts: int = 10, window_seconds: float = 60.0) -> None:
     if os.environ.get("PYTEST_CURRENT_TEST"):
         return
-    client_ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
     now = time.time()
+    _cleanup_stale_auth_records(now, window_seconds)
+    client_ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
     dq = _auth_rate_records[client_ip]
     while dq and now - dq[0] > window_seconds:
         dq.popleft()
@@ -81,8 +94,8 @@ async def register(request: Request, user_in: UserRegister, db: AsyncSession = D
     await db.commit()
     await db.refresh(user)
 
-    access_token = create_access_token(user.id)
-    refresh_token = create_refresh_token(user.id)
+    access_token = create_access_token(user.id, getattr(user, "token_version", 1))
+    refresh_token = create_refresh_token(user.id, getattr(user, "token_version", 1))
 
     return AuthResponse(
         user=UserResponse.model_validate(user),
@@ -113,8 +126,8 @@ async def login(request: Request, credentials: UserLogin, db: AsyncSession = Dep
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(user.id)
-    refresh_token = create_refresh_token(user.id)
+    access_token = create_access_token(user.id, getattr(user, "token_version", 1))
+    refresh_token = create_refresh_token(user.id, getattr(user, "token_version", 1))
 
     return AuthResponse(
         user=UserResponse.model_validate(user),
@@ -173,15 +186,33 @@ async def refresh_token(
             detail="Пользователь не найден",
         )
 
-    # Issue new access token and rotate refresh token
-    new_access_token = create_access_token(user.id)
-    new_refresh_token = create_refresh_token(user.id)
+    token_ver = payload.get("ver")
+    if token_ver is not None and getattr(user, "token_version", 1) != token_ver:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Сессия была завершена (токен отозван)",
+        )
+
+    # Issue new access token and rotate refresh token with active version
+    new_access_token = create_access_token(user.id, getattr(user, "token_version", 1))
+    new_refresh_token = create_refresh_token(user.id, getattr(user, "token_version", 1))
 
     return Token(
         access_token=new_access_token,
         refresh_token=new_refresh_token,
         token_type="bearer",
     )
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Revoke all active tokens for current user by incrementing token_version."""
+    current_user.token_version = getattr(current_user, "token_version", 1) + 1
+    await db.commit()
+    return {"message": "Успешный выход из системы"}
 
 
 @router.get("/me", response_model=UserResponse)

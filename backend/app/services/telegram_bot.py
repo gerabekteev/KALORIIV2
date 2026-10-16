@@ -1,20 +1,25 @@
 import asyncio
+import html
 import json
 import logging
+import time
 import uuid
+from collections import defaultdict, deque
 from datetime import datetime, date as dt_date
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set
 import httpx
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
 
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.meal import Meal
 from app.services.ai_router import ai_router, AllProvidersFailedError
-from app.routers.ai import resolve_ai_config
+from app.routers.ai import resolve_ai_config, check_ai_rate_limit
 from app.utils.image import process_image
+from app.utils.timezone import get_user_now
 
 logger = logging.getLogger("kalorii.telegram_bot")
 
@@ -31,6 +36,9 @@ class TelegramBotService:
     def __init__(self):
         self._offset: int = 0
         self._running: bool = False
+        self._tasks: Set[asyncio.Task] = set()
+        self._user_locks: Dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
+        self._link_attempts: Dict[int, deque] = defaultdict(deque)
 
     @property
     def token(self) -> str:
@@ -94,6 +102,23 @@ class TelegramBotService:
         except Exception as e:
             logger.debug(f"Failed to edit Telegram message {message_id}: {e}")
 
+    async def answer_callback_query(
+        self,
+        callback_query_id: str,
+        text: Optional[str] = None,
+    ) -> None:
+        """Answers Telegram callback query to immediately remove button loading spinner."""
+        if not self.token or not callback_query_id:
+            return
+        payload: Dict[str, Any] = {"callback_query_id": callback_query_id}
+        if text:
+            payload["text"] = text
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.post(f"{self.base_url}/answerCallbackQuery", json=payload)
+        except Exception as e:
+            logger.debug(f"Failed to answer callback query {callback_query_id}: {e}")
+
     async def download_telegram_file(self, file_id: str) -> Optional[bytes]:
         """Download binary file (photo or voice .ogg) from Telegram servers."""
         try:
@@ -124,8 +149,8 @@ class TelegramBotService:
         goal = user.daily_calories_goal or 2000
         rem = goal - total_cal
         if rem >= 0:
-            return f"📊 За сегодня: <b>{total_cal} / {goal} ккал</b> (осталось <b>{rem} ккал</b>)"
-        return f"📊 За сегодня: <b>{total_cal} / {goal} ккал</b> (превышение на <b>{abs(rem)} ккал</b>)"
+            return f"📊 За день: <b>{total_cal} / {goal} ккал</b> (осталось <b>{rem} ккал</b>)"
+        return f"📊 За день: <b>{total_cal} / {goal} ккал</b> (превышение на <b>{abs(rem)} ккал</b>)"
 
     async def _handle_link_code(
         self,
@@ -134,6 +159,19 @@ class TelegramBotService:
         username: Optional[str],
         code_raw: str,
     ) -> bool:
+        # Rate limit link attempts: max 5 attempts per 15 minutes per chat_id
+        now_ts = time.time()
+        attempts = self._link_attempts[chat_id]
+        while attempts and now_ts - attempts[0] > 900.0:
+            attempts.popleft()
+        if len(attempts) >= 5:
+            await self.send_message(
+                chat_id,
+                "⚠️ <b>Слишком много попыток ввода кода.</b> Пожалуйста, подождите 15 минут перед повтором.",
+            )
+            return False
+        attempts.append(now_ts)
+
         clean_code = code_raw.strip().upper()
         stmt = select(User).where(User.telegram_link_code == clean_code)
         res = await db.execute(stmt)
@@ -166,10 +204,11 @@ class TelegramBotService:
         user.telegram_link_expires_at = None
         await db.commit()
 
+        safe_name = html.escape(str(user.name or user.email))
         await self.send_message(
             chat_id,
             f"✅ <b>Аккаунт успешно привязан к KaloriiAI!</b>\n"
-            f"Профиль: <b>{user.name or user.email}</b> (цель: {user.daily_calories_goal} ккал/день).\n\n"
+            f"Профиль: <b>{safe_name}</b> (цель: {user.daily_calories_goal} ккал/день).\n\n"
             "Теперь просто отправляйте мне:\n"
             "📸 <b>Любое фото еды</b> (можно с подписью-уточнением)\n"
             "💬 <b>Любое текстовое сообщение</b> (например: <i>«Овсянка 200г с бананом и кофе»</i>)\n"
@@ -182,6 +221,10 @@ class TelegramBotService:
             # 1. Handle inline button callback (e.g. Delete Meal)
             if "callback_query" in update:
                 cb = update["callback_query"]
+                cb_id = cb.get("id")
+                if cb_id:
+                    await self.answer_callback_query(cb_id)
+
                 cb_data = cb.get("data", "")
                 msg = cb.get("message", {})
                 chat_id = msg.get("chat", {}).get("id")
@@ -198,13 +241,25 @@ class TelegramBotService:
                         meal = m_res.scalar_one_or_none()
                         if meal:
                             meal_name = meal.name
+                            target_meal_date = meal.meal_date
+                            # Clean up photo file from disk if present
+                            if meal.photo_path:
+                                photo_name = meal.photo_path.replace("/uploads/", "")
+                                file_path = settings.UPLOAD_DIR / photo_name
+                                if file_path.exists():
+                                    try:
+                                        file_path.unlink()
+                                    except Exception:
+                                        pass
+
                             await db.delete(meal)
                             await db.commit()
-                            summary_line = await self._get_daily_summary_line(db, user, dt_date.today())
+                            summary_line = await self._get_daily_summary_line(db, user, target_meal_date)
+                            safe_m_name = html.escape(str(meal_name))
                             await self.edit_message(
                                 chat_id,
                                 message_id,
-                                f"🗑 Запись <b>«{meal_name}»</b> удалена из дневника.\n\n{summary_line}",
+                                f"🗑 Запись <b>«{safe_m_name}»</b> удалена из дневника.\n\n{summary_line}",
                             )
                 return
 
@@ -217,290 +272,334 @@ class TelegramBotService:
             if not chat_id:
                 return
 
+            # Security: ignore non-private group or channel chats
+            if chat.get("type") != "private":
+                logger.debug(f"Ignoring non-private message from chat {chat_id} of type {chat.get('type')}")
+                return
+
             from_user = message.get("from", {})
-            username = from_user.get("username") or from_user.get("first_name")
+            tg_username = from_user.get("username")
+
             text = (message.get("text") or "").strip()
 
-            # 2. Check /start command or direct KLR-XXXXXX link code
-            if text.startswith("/start"):
-                parts = text.split(maxsplit=1)
-                if len(parts) == 2 and parts[1].strip():
-                    await self._handle_link_code(db, chat_id, username, parts[1])
+            # Handle /start or /link command with KLR-XXXXXX code
+            if text.startswith("/start") or text.startswith("/link"):
+                parts = text.split()
+                if len(parts) > 1 and parts[1].strip().upper().startswith("KLR-"):
+                    await self._handle_link_code(db, chat_id, tg_username, parts[1].strip())
                     return
-                await self.send_message(
-                    chat_id,
-                    "👋 Привет! Я бот <b>KaloriiAI</b>.\n\n"
-                    "Чтобы привязать свой аккаунт, откройте раздел <b>Профиль → Telegram-бот</b> на сайте KaloriiAI, "
-                    "нажмите «Подключить Telegram» и перейдите по ссылке (или отправьте мне код вида <code>KLR-123456</code>).",
-                )
+                elif len(parts) == 1:
+                    # Check if already linked
+                    res = await db.execute(select(User).where(User.telegram_chat_id == chat_id))
+                    user = res.scalar_one_or_none()
+                    if user:
+                        safe_u_name = html.escape(str(user.name or user.email))
+                        await self.send_message(
+                            chat_id,
+                            f"👋 Здравствуйте, <b>{safe_u_name}</b>!\n"
+                            "Ваш Telegram уже привязан к KaloriiAI.\n\n"
+                            "📸 Отправьте фото еды\n"
+                            "💬 Напишите текстом, что съели\n"
+                            "🎤 Отправьте голосовое сообщение\n\n"
+                            "И я сразу добавлю блюдо в ваш рацион!",
+                        )
+                    else:
+                        await self.send_message(
+                            chat_id,
+                            "👋 <b>Добро пожаловать в KaloriiAI Bot!</b>\n\n"
+                            "Чтобы логировать приёмы пищи через Telegram, привяжите ваш аккаунт:\n"
+                            "1. Откройте приложение KaloriiAI на сайте\n"
+                            "2. Перейдите во вкладку <b>«Профиль» → «Telegram-бот»</b>\n"
+                            "3. Скопируйте 6-значный код (например, <code>KLR-A1B2C3</code>) и отправьте его сюда сообщением.",
+                        )
+                    return
+
+            # Check if text itself is a link code
+            if text.upper().startswith("KLR-"):
+                await self._handle_link_code(db, chat_id, tg_username, text)
                 return
 
-            if text.upper().startswith("KLR-") and len(text) == 10:
-                await self._handle_link_code(db, chat_id, username, text)
-                return
-
-            # 3. Find linked user
-            u_res = await db.execute(select(User).where(User.telegram_chat_id == chat_id))
-            user = u_res.scalar_one_or_none()
+            # Find linked user
+            res = await db.execute(select(User).where(User.telegram_chat_id == chat_id))
+            user = res.scalar_one_or_none()
             if not user:
                 await self.send_message(
                     chat_id,
-                    "🔒 Ваш Telegram ещё не привязан к аккаунту KaloriiAI.\n"
-                    "Зайдите в <b>Профиль</b> на сайте, получите код привязки <code>KLR-XXXXXX</code> и отправьте его сюда.",
+                    "⚠️ <b>Ваш аккаунт ещё не привязан к KaloriiAI.</b>\n\n"
+                    "Перейдите в раздел <b>Профиль → Telegram-бот</b> на сайте KaloriiAI, скопируйте персональный код привязки и отправьте его сюда.",
                 )
                 return
 
-            if text == "/status" or text == "/today":
-                summary_line = await self._get_daily_summary_line(db, user, dt_date.today())
-                await self.send_message(chat_id, summary_line)
-                return
-
-            if text.startswith("/"):
-                await self.send_message(
-                    chat_id,
-                    "Отправьте мне фото еды, голосовое сообщение или просто напишите текстом, что вы съели — я автоматически посчитаю КБЖУ и добавлю запись в ваш дневник!",
-                )
-                return
-
-            # Resolve user's AI settings & model priority chain
-            custom_gemini, custom_openrouter, custom_chain = resolve_ai_config(current_user=user)
-            now = datetime.now()
-            today_date = now.date()
-            curr_time = now.time().replace(microsecond=0)
-
-            # =========================================================================
-            # СЦЕНАРИЙ 1: Фотография (или изображение документом) + прикреплённый текст
-            # =========================================================================
-            photo_list = message.get("photo")
-            doc = message.get("document")
-            is_image_doc = doc and str(doc.get("mime_type", "")).startswith("image/")
-
-            if photo_list or is_image_doc:
-                status_msg_id = await self.send_message(chat_id, "⏳ <i>Анализирую фото блюда через AI...</i>")
-                file_id = photo_list[-1]["file_id"] if photo_list else doc["file_id"]
-                caption = (message.get("caption") or "").strip() or None
-
-                raw_bytes = await self.download_telegram_file(file_id)
-                if not raw_bytes:
-                    await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось загрузить фотографию с серверов Telegram.")
+            # Acquire per-user lock to prevent concurrent race conditions
+            async with self._user_locks[user.id]:
+                # Check help commands
+                if text in ("/help", "Помощь", "помощь", "инфо"):
+                    await self.send_message(
+                        chat_id,
+                        "Отправьте мне фото еды, голосовое сообщение или просто напишите текстом, что вы съели — я автоматически посчитаю КБЖУ и добавлю запись в ваш дневник!",
+                    )
                     return
 
+                # Rate limit AI requests for this user
                 try:
-                    compressed_bytes, _ = process_image(raw_bytes)
-                    filename = f"{uuid.uuid4().hex}.jpg"
-                    dest_path = settings.UPLOAD_DIR / filename
-                    dest_path.write_bytes(compressed_bytes)
-                    relative_photo_path = f"/uploads/{filename}"
-                except Exception as e:
-                    logger.error(f"Telegram image processing error: {e}")
-                    await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось обработать изображение.")
+                    check_ai_rate_limit(user.id)
+                except HTTPException:
+                    await self.send_message(
+                        chat_id,
+                        "⏳ <b>Слишком много запросов к AI за короткое время.</b>\nПожалуйста, подождите минуту перед следующим анализом.",
+                    )
                     return
 
-                try:
-                    result, prov_used, mod_used = await ai_router.recognize_food(
-                        image_bytes=compressed_bytes,
-                        mime_type="image/jpeg",
+                # Resolve user's AI settings & model priority chain
+                custom_gemini, custom_openrouter, custom_chain = resolve_ai_config(current_user=user)
+                user_now = get_user_now(user)
+                today_date = user_now.date()
+                curr_time = user_now.time().replace(microsecond=0)
+
+                # =========================================================================
+                # СЦЕНАРИЙ 1: Фотография (или изображение документом) + прикреплённый текст
+                # =========================================================================
+                photo_list = message.get("photo")
+                doc = message.get("document")
+                is_image_doc = doc and str(doc.get("mime_type", "")).startswith("image/")
+
+                if photo_list or is_image_doc:
+                    status_msg_id = await self.send_message(chat_id, "⏳ <i>Анализирую фото блюда через AI...</i>")
+                    file_id = photo_list[-1]["file_id"] if photo_list else doc["file_id"]
+                    caption = (message.get("caption") or "").strip() or None
+
+                    raw_bytes = await self.download_telegram_file(file_id)
+                    if not raw_bytes:
+                        await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось загрузить фотографию с серверов Telegram.")
+                        return
+
+                    try:
+                        compressed_bytes, _ = await asyncio.to_thread(process_image, raw_bytes)
+                        filename = f"{uuid.uuid4().hex}.jpg"
+                        dest_path = settings.UPLOAD_DIR / filename
+                        dest_path.write_bytes(compressed_bytes)
+                        relative_photo_path = f"/uploads/{filename}"
+                    except Exception as e:
+                        logger.error(f"Telegram image processing error: {e}")
+                        await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось обработать изображение.")
+                        return
+
+                    try:
+                        result, prov_used, mod_used = await ai_router.recognize_food(
+                            image_bytes=compressed_bytes,
+                            mime_type="image/jpeg",
+                            user_comment=caption,
+                            custom_gemini_key=custom_gemini,
+                            custom_openrouter_key=custom_openrouter,
+                            custom_model_chain=custom_chain,
+                        )
+                    except Exception as e:
+                        if dest_path.exists():
+                            try:
+                                dest_path.unlink()
+                            except Exception:
+                                pass
+                        safe_err = html.escape(str(e))
+                        await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка распознавания AI: {safe_err}")
+                        return
+
+                    meal = Meal(
+                        user_id=user.id,
+                        name=result.name,
+                        calories=round(result.calories, 1),
+                        protein=round(result.protein, 1),
+                        fat=round(result.fat, 1),
+                        carbs=round(result.carbs, 1),
+                        weight_grams=round(result.weight_grams or 0.0, 1),
+                        photo_path=relative_photo_path,
                         user_comment=caption,
-                        custom_gemini_key=custom_gemini,
-                        custom_openrouter_key=custom_openrouter,
-                        custom_model_chain=custom_chain,
+                        ingredients_json=(
+                            json.dumps([i.model_dump() for i in result.ingredients], ensure_ascii=False)
+                            if result.ingredients
+                            else None
+                        ),
+                        ai_raw_response=result.raw_response,
+                        is_manually_edited=False,
+                        meal_date=today_date,
+                        meal_time=curr_time,
                     )
-                except Exception as e:
-                    if dest_path.exists():
-                        dest_path.unlink(missing_ok=True)
-                    await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка распознавания AI: {e}")
-                    return
+                    db.add(meal)
+                    await db.commit()
+                    await db.refresh(meal)
 
-                meal = Meal(
-                    user_id=user.id,
-                    name=result.name,
-                    calories=round(result.calories, 1),
-                    protein=round(result.protein, 1),
-                    fat=round(result.fat, 1),
-                    carbs=round(result.carbs, 1),
-                    weight_grams=round(result.weight_grams or 0.0, 1),
-                    photo_path=relative_photo_path,
-                    user_comment=caption,
-                    ingredients_json=(
-                        json.dumps([i.model_dump() for i in result.ingredients], ensure_ascii=False)
-                        if result.ingredients
-                        else None
-                    ),
-                    ai_raw_response=result.raw_response,
-                    is_manually_edited=False,
-                    meal_date=today_date,
-                    meal_time=curr_time,
-                )
-                db.add(meal)
-                await db.commit()
-                await db.refresh(meal)
+                    summary_line = await self._get_daily_summary_line(db, user, today_date)
+                    ing_lines = ""
+                    if result.ingredients:
+                        ing_str = ", ".join(f"{html.escape(i.name)} ({round(i.weight_grams)}г)" for i in result.ingredients)
+                        ing_lines = f"\n🥗 Состав: <i>{ing_str}</i>"
 
-                summary_line = await self._get_daily_summary_line(db, user, today_date)
-                ing_lines = ""
-                if result.ingredients:
-                    ing_str = ", ".join(f"{i.name} ({round(i.weight_grams)}г)" for i in result.ingredients)
-                    ing_lines = f"\n🥗 Состав: <i>{ing_str}</i>"
-
-                reply_text = (
-                    f"✅ <b>Добавлено в дневник по фото:</b>\n"
-                    f"🍽 <b>{meal.name}</b> ({round(meal.weight_grams or 0)} г)\n"
-                    f"🔥 <b>{round(meal.calories)} ккал</b> • Б: {meal.protein}г | Ж: {meal.fat}г | У: {meal.carbs}г"
-                    f"{ing_lines}\n"
-                    f"{f'💬 Описание: «{caption}»' + chr(10) if caption else ''}\n"
-                    f"{summary_line}"
-                )
-                await self.edit_message(
-                    chat_id,
-                    status_msg_id or 0,
-                    reply_text,
-                    reply_markup={
-                        "inline_keyboard": [[{"text": "🗑 Удалить запись", "callback_data": f"del_meal:{meal.id}"}]]
-                    },
-                )
-                return
-
-            # =========================================================================
-            # СЦЕНАРИЙ 2: Голосовое сообщение (voice / audio) -> Транскрибация в user_comment!
-            # =========================================================================
-            voice = message.get("voice") or message.get("audio")
-            if voice:
-                status_msg_id = await self.send_message(
-                    chat_id, "🎤 <i>Слушаю голосовое сообщение, расшифровываю и считаю КБЖУ...</i>"
-                )
-                file_id = voice.get("file_id")
-                mime_type = voice.get("mime_type") or "audio/ogg"
-
-                audio_bytes = await self.download_telegram_file(file_id)
-                if not audio_bytes:
-                    await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось скачать голосовое сообщение.")
-                    return
-
-                try:
-                    result, prov_used, mod_used = await ai_router.recognize_food_by_voice(
-                        audio_bytes=audio_bytes,
-                        mime_type=mime_type,
-                        custom_gemini_key=custom_gemini,
-                        custom_openrouter_key=custom_openrouter,
-                        custom_model_chain=custom_chain,
+                    safe_meal_name = html.escape(str(meal.name))
+                    safe_caption = html.escape(caption) if caption else ""
+                    reply_text = (
+                        f"✅ <b>Добавлено в дневник по фото:</b>\n"
+                        f"🍽 <b>{safe_meal_name}</b> ({round(meal.weight_grams or 0)} г)\n"
+                        f"🔥 <b>{round(meal.calories)} ккал</b> • Б: {meal.protein}г | Ж: {meal.fat}г | У: {meal.carbs}г"
+                        f"{ing_lines}\n"
+                        f"{f'💬 Описание: «{safe_caption}»' + chr(10) if safe_caption else ''}\n"
+                        f"{summary_line}"
                     )
-                except Exception as e:
-                    await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка распознавания голоса: {e}")
-                    return
-
-                # ВАЖНО: Помещаем транскрибацию в user_comment, чтобы на сайте она отображалась
-                # как описание блюда и её можно было свободно редактировать и переобрабатывать!
-                transcription_text = (result.transcription or result.name).strip()
-
-                meal = Meal(
-                    user_id=user.id,
-                    name=result.name,
-                    calories=round(result.calories, 1),
-                    protein=round(result.protein, 1),
-                    fat=round(result.fat, 1),
-                    carbs=round(result.carbs, 1),
-                    weight_grams=round(result.weight_grams or 0.0, 1),
-                    photo_path=None,
-                    user_comment=transcription_text[:500],
-                    ingredients_json=(
-                        json.dumps([i.model_dump() for i in result.ingredients], ensure_ascii=False)
-                        if result.ingredients
-                        else None
-                    ),
-                    ai_raw_response=result.raw_response,
-                    is_manually_edited=False,
-                    meal_date=today_date,
-                    meal_time=curr_time,
-                )
-                db.add(meal)
-                await db.commit()
-                await db.refresh(meal)
-
-                summary_line = await self._get_daily_summary_line(db, user, today_date)
-                ing_lines = ""
-                if result.ingredients:
-                    ing_str = ", ".join(f"{i.name} ({round(i.weight_grams)}г)" for i in result.ingredients)
-                    ing_lines = f"\n🥗 Состав: <i>{ing_str}</i>"
-
-                reply_text = (
-                    f"✅ <b>Добавлено из голосового сообщения:</b>\n"
-                    f"🎤 Расшифровка: <i>«{transcription_text}»</i>\n\n"
-                    f"🍽 <b>{meal.name}</b> ({round(meal.weight_grams or 0)} г)\n"
-                    f"🔥 <b>{round(meal.calories)} ккал</b> • Б: {meal.protein}г | Ж: {meal.fat}г | У: {meal.carbs}г"
-                    f"{ing_lines}\n"
-                    f"<i>(Текст расшифровки сохранён в описание блюда на сайте — вы можете отредактировать его и пересчитать в любой момент)</i>\n\n"
-                    f"{summary_line}"
-                )
-                await self.edit_message(
-                    chat_id,
-                    status_msg_id or 0,
-                    reply_text,
-                    reply_markup={
-                        "inline_keyboard": [[{"text": "🗑 Удалить запись", "callback_data": f"del_meal:{meal.id}"}]]
-                    },
-                )
-                return
-
-            # =========================================================================
-            # СЦЕНАРИЙ 3: Любое текстовое сообщение (не команда)
-            # =========================================================================
-            if text:
-                status_msg_id = await self.send_message(chat_id, "⏳ <i>Считаю КБЖУ по вашему описанию...</i>")
-                try:
-                    result, prov_used, mod_used = await ai_router.recognize_food_by_text(
-                        text=text,
-                        custom_gemini_key=custom_gemini,
-                        custom_openrouter_key=custom_openrouter,
-                        custom_model_chain=custom_chain,
+                    await self.edit_message(
+                        chat_id,
+                        status_msg_id or 0,
+                        reply_text,
+                        reply_markup={
+                            "inline_keyboard": [[{"text": "🗑 Удалить запись", "callback_data": f"del_meal:{meal.id}"}]]
+                        },
                     )
-                except Exception as e:
-                    await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка расчёта КБЖУ: {e}")
                     return
 
-                meal = Meal(
-                    user_id=user.id,
-                    name=result.name,
-                    calories=round(result.calories, 1),
-                    protein=round(result.protein, 1),
-                    fat=round(result.fat, 1),
-                    carbs=round(result.carbs, 1),
-                    weight_grams=round(result.weight_grams or 0.0, 1),
-                    photo_path=None,
-                    user_comment=text[:500],
-                    ingredients_json=(
-                        json.dumps([i.model_dump() for i in result.ingredients], ensure_ascii=False)
-                        if result.ingredients
-                        else None
-                    ),
-                    ai_raw_response=result.raw_response,
-                    is_manually_edited=False,
-                    meal_date=today_date,
-                    meal_time=curr_time,
-                )
-                db.add(meal)
-                await db.commit()
-                await db.refresh(meal)
+                # =========================================================================
+                # СЦЕНАРИЙ 2: Голосовое сообщение (Voice) или Аудиофайл (Audio)
+                # =========================================================================
+                voice = message.get("voice") or message.get("audio")
+                if voice:
+                    status_msg_id = await self.send_message(chat_id, "⏳ <i>Слушаю голосовое сообщение и распознаю еду через AI...</i>")
+                    file_id = voice["file_id"]
+                    raw_audio = await self.download_telegram_file(file_id)
+                    if not raw_audio:
+                        await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось загрузить голосовое сообщение с серверов Telegram.")
+                        return
 
-                summary_line = await self._get_daily_summary_line(db, user, today_date)
-                ing_lines = ""
-                if result.ingredients:
-                    ing_str = ", ".join(f"{i.name} ({round(i.weight_grams)}г)" for i in result.ingredients)
-                    ing_lines = f"\n🥗 Состав: <i>{ing_str}</i>"
+                    try:
+                        result, prov_used, mod_used = await ai_router.recognize_food_voice(
+                            audio_bytes=raw_audio,
+                            mime_type="audio/ogg",
+                            custom_gemini_key=custom_gemini,
+                            custom_openrouter_key=custom_openrouter,
+                            custom_model_chain=custom_chain,
+                        )
+                    except Exception as e:
+                        safe_err = html.escape(str(e))
+                        await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка распознавания голоса: {safe_err}")
+                        return
 
-                reply_text = (
-                    f"✅ <b>Добавлено в дневник:</b>\n"
-                    f"🍽 <b>{meal.name}</b> ({round(meal.weight_grams or 0)} г)\n"
-                    f"🔥 <b>{round(meal.calories)} ккал</b> • Б: {meal.protein}г | Ж: {meal.fat}г | У: {meal.carbs}г"
-                    f"{ing_lines}\n\n"
-                    f"{summary_line}"
-                )
-                await self.edit_message(
-                    chat_id,
-                    status_msg_id or 0,
-                    reply_text,
-                    reply_markup={
-                        "inline_keyboard": [[{"text": "🗑 Удалить запись", "callback_data": f"del_meal:{meal.id}"}]]
-                    },
-                )
+                    transcription_text = (result.raw_response or result.name or "").strip()
+                    meal = Meal(
+                        user_id=user.id,
+                        name=result.name,
+                        calories=round(result.calories, 1),
+                        protein=round(result.protein, 1),
+                        fat=round(result.fat, 1),
+                        carbs=round(result.carbs, 1),
+                        weight_grams=round(result.weight_grams or 0.0, 1),
+                        photo_path=None,
+                        user_comment=transcription_text[:500] if transcription_text else None,
+                        ingredients_json=(
+                            json.dumps([i.model_dump() for i in result.ingredients], ensure_ascii=False)
+                            if result.ingredients
+                            else None
+                        ),
+                        ai_raw_response=result.raw_response,
+                        is_manually_edited=False,
+                        meal_date=today_date,
+                        meal_time=curr_time,
+                    )
+                    db.add(meal)
+                    await db.commit()
+                    await db.refresh(meal)
+
+                    summary_line = await self._get_daily_summary_line(db, user, today_date)
+                    ing_lines = ""
+                    if result.ingredients:
+                        ing_str = ", ".join(f"{html.escape(i.name)} ({round(i.weight_grams)}г)" for i in result.ingredients)
+                        ing_lines = f"\n🥗 Состав: <i>{ing_str}</i>"
+
+                    safe_meal_name = html.escape(str(meal.name))
+                    safe_transcript = html.escape(str(transcription_text))
+                    reply_text = (
+                        f"✅ <b>Добавлено из голосового сообщения:</b>\n"
+                        f"🎤 Расшифровка: <i>«{safe_transcript}»</i>\n\n"
+                        f"🍽 <b>{safe_meal_name}</b> ({round(meal.weight_grams or 0)} г)\n"
+                        f"🔥 <b>{round(meal.calories)} ккал</b> • Б: {meal.protein}г | Ж: {meal.fat}г | У: {meal.carbs}г"
+                        f"{ing_lines}\n"
+                        f"<i>(Текст расшифровки сохранён в описание блюда на сайте)</i>\n\n"
+                        f"{summary_line}"
+                    )
+                    await self.edit_message(
+                        chat_id,
+                        status_msg_id or 0,
+                        reply_text,
+                        reply_markup={
+                            "inline_keyboard": [[{"text": "🗑 Удалить запись", "callback_data": f"del_meal:{meal.id}"}]]
+                        },
+                    )
+                    return
+
+                # =========================================================================
+                # СЦЕНАРИЙ 3: Любое текстовое сообщение (не команда)
+                # =========================================================================
+                if text:
+                    status_msg_id = await self.send_message(chat_id, "⏳ <i>Считаю КБЖУ по вашему описанию...</i>")
+                    try:
+                        result, prov_used, mod_used = await ai_router.recognize_food_by_text(
+                            text=text,
+                            custom_gemini_key=custom_gemini,
+                            custom_openrouter_key=custom_openrouter,
+                            custom_model_chain=custom_chain,
+                        )
+                    except Exception as e:
+                        safe_err = html.escape(str(e))
+                        await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка расчёта КБЖУ: {safe_err}")
+                        return
+
+                    meal = Meal(
+                        user_id=user.id,
+                        name=result.name,
+                        calories=round(result.calories, 1),
+                        protein=round(result.protein, 1),
+                        fat=round(result.fat, 1),
+                        carbs=round(result.carbs, 1),
+                        weight_grams=round(result.weight_grams or 0.0, 1),
+                        photo_path=None,
+                        user_comment=text[:500],
+                        ingredients_json=(
+                            json.dumps([i.model_dump() for i in result.ingredients], ensure_ascii=False)
+                            if result.ingredients
+                            else None
+                        ),
+                        ai_raw_response=result.raw_response,
+                        is_manually_edited=False,
+                        meal_date=today_date,
+                        meal_time=curr_time,
+                    )
+                    db.add(meal)
+                    await db.commit()
+                    await db.refresh(meal)
+
+                    summary_line = await self._get_daily_summary_line(db, user, today_date)
+                    ing_lines = ""
+                    if result.ingredients:
+                        ing_str = ", ".join(f"{html.escape(i.name)} ({round(i.weight_grams)}г)" for i in result.ingredients)
+                        ing_lines = f"\n🥗 Состав: <i>{ing_str}</i>"
+
+                    safe_meal_name = html.escape(str(meal.name))
+                    safe_user_text = html.escape(text)
+                    reply_text = (
+                        f"✅ <b>Добавлено в дневник:</b>\n"
+                        f"🍽 <b>{safe_meal_name}</b> ({round(meal.weight_grams or 0)} г)\n"
+                        f"🔥 <b>{round(meal.calories)} ккал</b> • Б: {meal.protein}г | Ж: {meal.fat}г | У: {meal.carbs}г"
+                        f"{ing_lines}\n"
+                        f"💬 Описание: «{safe_user_text}»\n\n"
+                        f"{summary_line}"
+                    )
+                    await self.edit_message(
+                        chat_id,
+                        status_msg_id or 0,
+                        reply_text,
+                        reply_markup={
+                            "inline_keyboard": [[{"text": "🗑 Удалить запись", "callback_data": f"del_meal:{meal.id}"}]]
+                        },
+                    )
+
+    async def send_shopping_list_message(self, chat_id: int, message_text: str) -> bool:
+        """Export shopping list generated from MealPlanPage directly to user's Telegram."""
+        msg_id = await self.send_message(chat_id, message_text)
+        return msg_id is not None
 
     async def start_polling(self) -> None:
         """Background long-polling loop started inside FastAPI lifespan if TELEGRAM_BOT_TOKEN is set."""
@@ -522,7 +621,9 @@ class TelegramBotService:
                         data = resp.json()
                         for upd in data.get("result", []):
                             self._offset = max(self._offset, upd["update_id"] + 1)
-                            asyncio.create_task(self.handle_update(upd))
+                            task = asyncio.create_task(self.handle_update(upd))
+                            self._tasks.add(task)
+                            task.add_done_callback(self._tasks.discard)
                     elif resp.status_code in (401, 404):
                         logger.error("Invalid TELEGRAM_BOT_TOKEN; stopping Telegram polling.")
                         break
@@ -536,6 +637,8 @@ class TelegramBotService:
 
     def stop(self) -> None:
         self._running = False
+        for task in list(self._tasks):
+            task.cancel()
 
 
 telegram_bot_service = TelegramBotService()

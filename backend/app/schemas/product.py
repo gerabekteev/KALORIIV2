@@ -1,5 +1,19 @@
+import re
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+
+def _validate_safe_product_image(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return None
+    val = v.strip()
+    if not val:
+        return None
+    if val.startswith(("http://", "https://", "/uploads/")):
+        return val
+    if val.startswith("uploads/"):
+        return f"/{val}"
+    raise ValueError("Недопустимый URL или путь к изображению продукта")
 
 
 class ProductCreate(BaseModel):
@@ -14,6 +28,8 @@ class ProductCreate(BaseModel):
     image_url: Optional[str] = Field(None, max_length=500)
     package_weight_grams: Optional[float] = Field(100.0, ge=0, le=25000)
 
+    _check_img = field_validator("image_url")(classmethod(lambda cls, v: _validate_safe_product_image(v)))
+
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -26,6 +42,8 @@ class ProductUpdate(BaseModel):
     brand: Optional[str] = Field(None, max_length=255)
     image_url: Optional[str] = Field(None, max_length=500)
     package_weight_grams: Optional[float] = Field(None, ge=0, le=25000)
+
+    _check_img = field_validator("image_url")(classmethod(lambda cls, v: _validate_safe_product_image(v)))
 
 
 class ProductResponse(BaseModel):

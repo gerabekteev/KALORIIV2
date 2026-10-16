@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Send, CheckCircle2, Copy, RefreshCw, Unlink, ExternalLink } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
+import { ConfirmModal } from '../ui/ConfirmModal'
 import { telegramApi } from '../../api/telegram'
 import { TelegramStatusResponse } from '../../types'
 import { useUIStore } from '../../store/uiStore'
@@ -11,6 +12,7 @@ export const TelegramBotCard: React.FC = () => {
   const [status, setStatus] = useState<TelegramStatusResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [showUnlinkModal, setShowUnlinkModal] = useState(false)
 
   const loadStatus = async () => {
     try {
@@ -41,7 +43,6 @@ export const TelegramBotCard: React.FC = () => {
   }
 
   const handleUnlink = async () => {
-    if (!window.confirm('Отвязать Telegram-аккаунт от KaloriiAI?')) return
     try {
       const data = await telegramApi.unlink()
       setStatus(data)
@@ -92,11 +93,22 @@ export const TelegramBotCard: React.FC = () => {
             type="button"
             variant="danger"
             size="sm"
-            onClick={handleUnlink}
+            onClick={() => setShowUnlinkModal(true)}
             leftIcon={<Unlink className="w-3.5 h-3.5" />}
           >
             Отвязать
           </Button>
+
+          <ConfirmModal
+            isOpen={showUnlinkModal}
+            onClose={() => setShowUnlinkModal(false)}
+            onConfirm={handleUnlink}
+            title="Отвязать Telegram-аккаунт?"
+            description="Бот перестанет принимать голосовые и текстовые сообщения для вашего дневника питания."
+            confirmText="Да, отвязать"
+            cancelText="Отмена"
+            isDangerous
+          />
         </div>
       ) : (
         <div className="space-y-3">

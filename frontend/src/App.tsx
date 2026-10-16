@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { useMealsStore } from './store/mealsStore'
 import { Layout } from './components/layout/Layout'
 import { TodayPage } from './pages/TodayPage'
 import { StatsPage } from './pages/StatsPage'
@@ -9,6 +10,7 @@ import { MealPlanPage } from './pages/MealPlanPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { PageLoading } from './components/ui/Loading'
+import { ToastContainer } from './components/ui/Toast'
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -45,8 +47,20 @@ export const App: React.FC = () => {
     checkAuth()
   }, [])
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && useAuthStore.getState().isAuthenticated) {
+        useMealsStore.getState().fetchMeals()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
   return (
-    <Routes>
+    <>
+      <ToastContainer />
+      <Routes>
       {/* Public auth routes */}
       <Route
         path="/login"
@@ -83,6 +97,7 @@ export const App: React.FC = () => {
       {/* Fallback route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
 

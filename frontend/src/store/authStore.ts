@@ -24,7 +24,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
 
   login: async (credentials) => {
-    set({ isLoading: true, error: null })
+    set({ error: null })
     try {
       const response = await authApi.login(credentials)
       const accessToken = response.token?.access_token || response.access_token
@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   register: async (payload) => {
-    set({ isLoading: true, error: null })
+    set({ error: null })
     try {
       const response = await authApi.register(payload)
       const accessToken = response.token?.access_token || response.access_token

@@ -18,6 +18,7 @@ export interface ToastItem {
 
 interface UIState {
   isAddMealOpen: boolean
+  addMealPresetTime: string | null
   isEditMealOpen: boolean
   isAIResultOpen: boolean
   editingMeal: Meal | null
@@ -26,7 +27,7 @@ interface UIState {
 
   toasts: ToastItem[]
 
-  openAddMeal: () => void
+  openAddMeal: (presetTime?: string | null) => void
   closeAddMeal: () => void
 
   openEditMeal: (meal: Meal) => void
@@ -46,6 +47,7 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   isAddMealOpen: false,
+  addMealPresetTime: null,
   isEditMealOpen: false,
   isAIResultOpen: false,
   editingMeal: null,
@@ -54,8 +56,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   toasts: [],
 
-  openAddMeal: () => set({ isAddMealOpen: true }),
-  closeAddMeal: () => set({ isAddMealOpen: false }),
+  openAddMeal: (presetTime = null) =>
+    set({ isAddMealOpen: true, addMealPresetTime: presetTime }),
+  closeAddMeal: () => set({ isAddMealOpen: false, addMealPresetTime: null }),
 
   openEditMeal: (meal: Meal) => set({ isEditMealOpen: true, editingMeal: meal }),
   closeEditMeal: () => set({ isEditMealOpen: false, editingMeal: null }),

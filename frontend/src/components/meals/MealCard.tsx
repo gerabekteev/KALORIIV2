@@ -22,6 +22,7 @@ import { useUIStore } from '../../store/uiStore'
 import { useMealsStore, getTodayDateString } from '../../store/mealsStore'
 import { recipesApi } from '../../api/recipes'
 import { Button } from '../ui/Button'
+import { haptics } from '../../utils/haptics'
 
 interface MealCardProps {
   meal: Meal
@@ -49,13 +50,21 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const [commentText, setCommentText] = useState(meal.user_comment || '')
   const [isRecalculating, setIsRecalculating] = useState(false)
 
-  // Swipe gesture state
+  // Swipe gesture state & rubber-band physics (UX-04)
   const [swipeOffset, setSwipeOffset] = useState(0)
   const touchStartXRef = useRef(0)
   const touchStartYRef = useRef(0)
   const isSwipingRef = useRef(false)
   const isVerticalScrollRef = useRef(false)
   const didSwipeRef = useRef(false)
+  const hasCrossedThresholdRef = useRef(false)
+
+  const applyRubberBand = (dx: number): number => {
+    const threshold = 60
+    const abs = Math.abs(dx)
+    if (abs <= threshold) return dx
+    return Math.sign(dx) * (threshold + (abs - threshold) * 0.28)
+  }
 
   // Close menu on click outside
   useEffect(() => {
@@ -207,12 +216,13 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }
 
-  // Touch handlers for swipe actions
+  // Touch handlers for swipe actions with rubber-band physics & haptic ticks
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX
     touchStartYRef.current = e.touches[0].clientY
     isSwipingRef.current = false
     isVerticalScrollRef.current = false
+    hasCrossedThresholdRef.current = false
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -226,9 +236,19 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       return
     }
 
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
       isSwipingRef.current = true
-      setSwipeOffset(Math.max(-90, Math.min(90, dx)))
+      const rubberOffset = applyRubberBand(dx)
+      setSwipeOffset(rubberOffset)
+
+      const crossed = Math.abs(rubberOffset) >= 60
+      if (crossed && !hasCrossedThresholdRef.current) {
+        haptics.threshold()
+        hasCrossedThresholdRef.current = true
+      } else if (!crossed && hasCrossedThresholdRef.current) {
+        haptics.release()
+        hasCrossedThresholdRef.current = false
+      }
     }
   }
 
@@ -237,17 +257,27 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       didSwipeRef.current = true
       if (swipeOffset < -60) {
         // Swiped Left -> Delete with undo
-        if (navigator.vibrate) navigator.vibrate(35)
+        haptics.warning()
         deleteMealWithUndo(meal.id)
       } else if (swipeOffset > 60) {
         // Swiped Right -> Repeat / Copy
-        if (navigator.vibrate) navigator.vibrate(35)
+        haptics.success()
         handleCopyMeal()
+      } else {
+        haptics.release()
       }
     }
     setSwipeOffset(0)
     isSwipingRef.current = false
     isVerticalScrollRef.current = false
+    hasCrossedThresholdRef.current = false
+  }
+
+  const handleTouchCancel = () => {
+    setSwipeOffset(0)
+    isSwipingRef.current = false
+    isVerticalScrollRef.current = false
+    hasCrossedThresholdRef.current = false
   }
 
   const handleCardClick = () => {
@@ -268,17 +298,23 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
         {/* Swipe Action Background Indicators */}
         <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none rounded-2xl bg-neutral-900 border border-neutral-800">
           <div
-            className={`flex items-center gap-1.5 text-xs font-semibold text-emerald-400 transition-opacity ${
-              swipeOffset > 30 ? 'opacity-100' : 'opacity-0'
+            className={`flex items-center gap-1.5 text-xs font-semibold text-emerald-400 transition-all ${
+              swipeOffset > 20 ? 'opacity-100' : 'opacity-0'
             }`}
+            style={{
+              transform: `scale(${Math.min(1.15, Math.max(0.85, 0.85 + (Math.max(0, swipeOffset) / 80) * 0.3))})`,
+            }}
           >
             <Copy className="w-4 h-4" />
             <span>Повторить</span>
           </div>
           <div
-            className={`flex items-center gap-1.5 text-xs font-semibold text-rose-400 transition-opacity ${
-              swipeOffset < -30 ? 'opacity-100' : 'opacity-0'
+            className={`flex items-center gap-1.5 text-xs font-semibold text-rose-400 transition-all ${
+              swipeOffset < -20 ? 'opacity-100' : 'opacity-0'
             }`}
+            style={{
+              transform: `scale(${Math.min(1.15, Math.max(0.85, 0.85 + (Math.max(0, -swipeOffset) / 80) * 0.3))})`,
+            }}
           >
             <span>Удалить</span>
             <Trash2 className="w-4 h-4" />
@@ -292,6 +328,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
           style={{
             transform: `translateX(${swipeOffset}px)`,
             transition: isSwipingRef.current ? 'none' : 'transform 0.2s ease-out',
@@ -517,14 +554,16 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   <button
                     type="button"
                     onClick={() => setIsIngredientsOpen(!isIngredientsOpen)}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between py-1 px-1 -mx-1 rounded-lg hover:bg-neutral-800/40 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
                   >
+                    <span className="flex items-center gap-1.5">
+                      <span>Состав ({meal.ingredients?.length})</span>
+                    </span>
                     {isIngredientsOpen ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
+                      <ChevronUp className="w-4 h-4 text-neutral-400" />
                     ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className="w-4 h-4 text-neutral-400" />
                     )}
-                    <span>Состав ({meal.ingredients?.length})</span>
                   </button>
 
                   {isIngredientsOpen && (
@@ -532,13 +571,13 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                       {meal.ingredients?.map((ing, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between text-xs py-1 border-b border-neutral-800/60 last:border-0 gap-2"
+                          className="flex items-center justify-between text-xs py-1.5 border-b border-neutral-800/60 last:border-0 gap-2"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-neutral-200 truncate text-[11px]">
+                            <p className="font-medium text-neutral-200 truncate text-[12px]">
                               {ing.name}
                             </p>
-                            <p className="text-[10px] text-neutral-500">
+                            <p className="text-[10px] text-neutral-400 mt-0.5">
                               {Math.round(ing.calories)} ккал • Б:{ing.protein} Ж:{ing.fat} У:{ing.carbs}
                             </p>
                           </div>
@@ -547,18 +586,18 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             <button
                               type="button"
                               onClick={() => handleAdjustIngredientWeight(idx, -25)}
-                              className="w-6 h-6 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95"
+                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-sm cursor-pointer active:scale-95 touch-manipulation"
                               title="-25г"
                             >
                               -
                             </button>
-                            <span className="w-9 text-center font-mono text-[11px] text-white">
+                            <span className="w-10 text-center font-mono text-xs text-white">
                               {ing.weight_grams}г
                             </span>
                             <button
                               type="button"
                               onClick={() => handleAdjustIngredientWeight(idx, 25)}
-                              className="w-6 h-6 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95"
+                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-sm cursor-pointer active:scale-95 touch-manipulation"
                               title="+25г"
                             >
                               +
@@ -566,10 +605,10 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             <button
                               type="button"
                               onClick={() => handleRemoveIngredient(idx)}
-                              className="p-1 text-neutral-500 hover:text-rose-400 rounded transition-colors cursor-pointer ml-0.5"
+                              className="w-8 h-8 rounded-lg text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer ml-1.5 active:scale-95 touch-manipulation"
                               title="Удалить ингредиент"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>

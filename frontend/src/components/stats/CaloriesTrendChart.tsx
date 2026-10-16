@@ -22,17 +22,66 @@ export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) 
     )
   }
 
-  const chartData = data.map((d) => {
-    const parts = d.date.split('-').map(Number)
-    const dateObj = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
-    return {
-      ...d,
-      shortDate: dateObj.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'short',
-      }),
+  const isAggregatedByMonth = data.length > 31
+
+  const chartData = React.useMemo(() => {
+    if (!isAggregatedByMonth) {
+      return data.map((d) => {
+        const parts = d.date.split('-').map(Number)
+        const dateObj =
+          parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
+        return {
+          ...d,
+          shortDate: dateObj.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'short',
+          }),
+        }
+      })
     }
-  })
+
+    // Group by YYYY-MM
+    const monthsMap = new Map<
+      string,
+      { totalCal: number; totalProt: number; totalFat: number; totalCarbs: number; count: number; dateObj: Date }
+    >()
+    data.forEach((d) => {
+      const parts = d.date.split('-').map(Number)
+      const dateObj =
+        parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
+      const key = `${dateObj.getFullYear()}-${dateObj.getMonth()}`
+      const existing = monthsMap.get(key)
+      if (existing) {
+        existing.totalCal += d.calories
+        existing.totalProt += d.protein
+        existing.totalFat += d.fat
+        existing.totalCarbs += d.carbs
+        existing.count += 1
+      } else {
+        monthsMap.set(key, {
+          totalCal: d.calories,
+          totalProt: d.protein,
+          totalFat: d.fat,
+          totalCarbs: d.carbs,
+          count: 1,
+          dateObj,
+        })
+      }
+    })
+
+    return Array.from(monthsMap.values()).map((m) => {
+      const avgCal = Math.round(m.totalCal / m.count)
+      const formattedMonth = m.dateObj.toLocaleDateString('ru-RU', { month: 'short' })
+      return {
+        date: m.dateObj.toISOString().slice(0, 7),
+        calories: avgCal,
+        protein: Math.round((m.totalProt / m.count) * 10) / 10,
+        fat: Math.round((m.totalFat / m.count) * 10) / 10,
+        carbs: Math.round((m.totalCarbs / m.count) * 10) / 10,
+        shortDate: formattedMonth,
+      }
+    })
+  }, [data, isAggregatedByMonth])
 
   return (
     <div className="w-full h-56 pt-2">

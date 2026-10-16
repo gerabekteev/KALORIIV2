@@ -292,46 +292,97 @@ export const EditMealModal: React.FC = () => {
               {ingredients.map((ing, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 bg-[#141417] p-2 rounded-xl border border-neutral-800 text-xs"
+                  className="bg-[#141417] p-2.5 rounded-xl border border-neutral-800 text-xs space-y-2"
                 >
-                  <input
-                    type="text"
-                    value={ing.name}
-                    onChange={(e) => handleIngredientChange(idx, 'name', e.target.value)}
-                    placeholder="Ингредиент"
-                    className="flex-1 min-w-0 bg-transparent text-white placeholder-neutral-500 outline-none"
-                  />
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-2">
                     <input
-                      type="number"
-                      min="0"
-                      value={ing.weight_grams || ''}
-                      onChange={(e) =>
-                        handleIngredientChange(idx, 'weight_grams', Number(e.target.value) || 0)
-                      }
-                      placeholder="г"
-                      className="w-12 text-center bg-neutral-800 text-white rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                      type="text"
+                      value={ing.name}
+                      onChange={(e) => handleIngredientChange(idx, 'name', e.target.value)}
+                      placeholder="Ингредиент"
+                      className="flex-1 min-w-0 bg-transparent text-white placeholder-neutral-500 outline-none text-xs font-medium"
                     />
-                    <span className="text-neutral-500 text-[10px]">г</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={ing.calories || ''}
-                      onChange={(e) =>
-                        handleIngredientChange(idx, 'calories', Number(e.target.value) || 0)
-                      }
-                      placeholder="ккал"
-                      className="w-12 text-center bg-neutral-800 text-emerald-400 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
-                    />
-                    <span className="text-neutral-500 text-[10px]">ккал</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveIngredient(idx)}
-                      className="p-1 text-neutral-500 hover:text-rose-400 rounded transition-colors cursor-pointer ml-1"
-                      title="Удалить"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <input
+                        type="number"
+                        min="0"
+                        value={ing.weight_grams || ''}
+                        onChange={(e) =>
+                          handleIngredientChange(idx, 'weight_grams', Number(e.target.value) || 0)
+                        }
+                        placeholder="г"
+                        className="w-12 text-center bg-neutral-800 text-white rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                      />
+                      <span className="text-neutral-500 text-[10px]">г</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={ing.calories || ''}
+                        onChange={(e) =>
+                          handleIngredientChange(idx, 'calories', Number(e.target.value) || 0)
+                        }
+                        placeholder="ккал"
+                        className="w-14 text-center bg-neutral-800 text-emerald-400 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                      />
+                      <span className="text-neutral-500 text-[10px]">ккал</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(idx)}
+                        className="p-1 text-neutral-500 hover:text-rose-400 rounded transition-colors cursor-pointer ml-1"
+                        title="Удалить"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Ingredient macros inputs (Б, Ж, У) */}
+                  <div className="flex items-center gap-3 pt-1 border-t border-neutral-850/60 text-[11px] text-neutral-400">
+                    <div className="flex items-center gap-1">
+                      <span className="text-blue-400 font-medium">Б:</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={ing.protein || ''}
+                        onChange={(e) =>
+                          handleIngredientChange(idx, 'protein', Number(e.target.value) || 0)
+                        }
+                        placeholder="0"
+                        className="w-12 text-center bg-neutral-800/90 text-blue-300 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                      />
+                      <span>г</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-400 font-medium">Ж:</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={ing.fat || ''}
+                        onChange={(e) =>
+                          handleIngredientChange(idx, 'fat', Number(e.target.value) || 0)
+                        }
+                        placeholder="0"
+                        className="w-12 text-center bg-neutral-800/90 text-amber-300 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                      />
+                      <span>г</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-purple-400 font-medium">У:</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={ing.carbs || ''}
+                        onChange={(e) =>
+                          handleIngredientChange(idx, 'carbs', Number(e.target.value) || 0)
+                        }
+                        placeholder="0"
+                        className="w-12 text-center bg-neutral-800/90 text-purple-300 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                      />
+                      <span>г</span>
+                    </div>
                   </div>
                 </div>
               ))}

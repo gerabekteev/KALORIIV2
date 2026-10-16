@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Flame, Target, Award, TrendingUp, BarChart2, PieChart, Scale } from 'lucide-react'
+import { Flame, Target, Award, TrendingUp, BarChart2, PieChart, Scale, AlertCircle } from 'lucide-react'
 import { useStats } from '../hooks/useStats'
 import { useAuthStore } from '../store/authStore'
 import { PeriodSelector, PeriodType } from '../components/stats/PeriodSelector'
@@ -9,12 +9,13 @@ import { MacrosPieChart } from '../components/stats/MacrosPieChart'
 import { WeightTrendChart } from '../components/stats/WeightTrendChart'
 import { ProgressRings } from '../components/stats/ProgressRings'
 import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 import { PageLoading } from '../components/ui/Loading'
 import { pluralizeRu } from '../utils/pluralize'
 
 export const StatsPage: React.FC = () => {
   const { user } = useAuthStore()
-  const { period, setPeriod, stats, weightLogs, isLoading } = useStats('week')
+  const { period, setPeriod, stats, weightLogs, isLoading, error, refetch } = useStats('week')
   const [chartTab, setChartTab] = useState<'bar' | 'trend'>('bar')
 
   const targetCalories = user?.daily_calories_goal || 2000
@@ -36,6 +37,33 @@ export const StatsPage: React.FC = () => {
 
   if (isLoading) {
     return <PageLoading message="Загрузка статистики..." />
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-xl font-bold tracking-tight text-white my-0">
+          Статистика питания
+        </h1>
+        <Card variant="default" padding="md" className="border-rose-500/30 bg-rose-950/20 text-center space-y-3 py-8">
+          <div className="w-10 h-10 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Не удалось загрузить статистику</p>
+            <p className="text-xs text-rose-300 mt-1">{error}</p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => refetch()}
+            className="mx-auto"
+          >
+            Повторить загрузку
+          </Button>
+        </Card>
+      </div>
+    )
   }
 
   return (

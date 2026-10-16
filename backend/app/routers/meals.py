@@ -23,6 +23,7 @@ from app.schemas.meal import (
 from app.services.auth import get_current_user
 from app.services.ai_router import ai_router, AllProvidersFailedError
 from app.routers.ai import check_ai_rate_limit, _parse_custom_ai_models, resolve_ai_config
+from app.utils.timezone import resolve_client_date, get_user_now
 
 router = APIRouter(prefix="/meals", tags=["Приёмы пищи"])
 logger = logging.getLogger("kalorii.meals")
@@ -31,11 +32,25 @@ logger = logging.getLogger("kalorii.meals")
 @router.get("", response_model=DailyMealsSummary)
 async def get_meals_by_date(
     date: Optional[dt_date] = Query(None, description="Дата в формате YYYY-MM-DD"),
+    x_client_date: Optional[dt_date] = Header(None, alias="X-Client-Date"),
+    x_client_timezone: Optional[str] = Header(None, alias="X-Client-Timezone"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get all meals for a specific date, including daily nutrition summary."""
-    target_date = date or dt_date.today()
+    if x_client_timezone and getattr(current_user, "timezone", None) != x_client_timezone:
+        try:
+            current_user.timezone = x_client_timezone
+            await db.commit()
+        except Exception:
+            pass
+
+    target_date = resolve_client_date(
+        explicit_date=date,
+        x_client_date=x_client_date,
+        user=current_user,
+        tz_header=x_client_timezone,
+    )
 
     query = (
         select(Meal)
@@ -72,13 +87,17 @@ async def get_meals_by_date(
 @router.post("", response_model=MealResponse, status_code=status.HTTP_201_CREATED)
 async def create_meal(
     meal_in: MealCreate,
+    x_client_date: Optional[dt_date] = Header(None, alias="X-Client-Date"),
+    x_client_timezone: Optional[str] = Header(None, alias="X-Client-Timezone"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Add a new meal record."""
-    now = datetime.now()
-    meal_date = meal_in.meal_date or now.date()
-    meal_time = meal_in.meal_time or now.time().replace(microsecond=0)
+    user_now = get_user_now(current_user, x_client_timezone)
+    meal_date = meal_in.meal_date or resolve_client_date(
+        x_client_date=x_client_date, user=current_user, tz_header=x_client_timezone
+    )
+    meal_time = meal_in.meal_time or user_now.time().replace(microsecond=0)
 
     ingredients_json = (
         json.dumps([i.model_dump() for i in meal_in.ingredients], ensure_ascii=False)
@@ -381,6 +400,8 @@ async def recalculate_meal(
 async def copy_meal(
     meal_id: int,
     copy_in: Optional[MealCopyRequest] = None,
+    x_client_date: Optional[dt_date] = Header(None, alias="X-Client-Date"),
+    x_client_timezone: Optional[str] = Header(None, alias="X-Client-Timezone"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -395,8 +416,11 @@ async def copy_meal(
             detail="Приём пищи не найден",
         )
 
-    target_date = (copy_in.target_date if copy_in and copy_in.target_date else None) or dt_date.today()
-    target_time = (copy_in.target_time if copy_in and copy_in.target_time else None) or datetime.now().time().replace(microsecond=0)
+    user_now = get_user_now(current_user, x_client_timezone)
+    target_date = (copy_in.target_date if copy_in and copy_in.target_date else None) or resolve_client_date(
+        x_client_date=x_client_date, user=current_user, tz_header=x_client_timezone
+    )
+    target_time = (copy_in.target_time if copy_in and copy_in.target_time else None) or user_now.time().replace(microsecond=0)
 
     new_meal = Meal(
         user_id=current_user.id,

@@ -2,7 +2,6 @@ import React from 'react'
 import { Outlet } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { Header } from './Header'
-import { ToastContainer } from '../ui/Toast'
 import { AddMealModal } from '../meals/AddMealModal'
 import { EditMealModal } from '../meals/EditMealModal'
 import { AIResultModal } from '../meals/AIResultModal'
@@ -10,9 +9,6 @@ import { AIResultModal } from '../meals/AIResultModal'
 export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-neutral-100 flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-white">
-      {/* Toast Notification Mount */}
-      <ToastContainer />
-
       {/* Main Page Header */}
       <Header />
 

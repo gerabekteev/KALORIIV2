@@ -4,7 +4,7 @@ import logging
 import urllib.parse
 from typing import Optional, Dict, Any, Tuple
 import httpx
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import HTTPException, status
@@ -244,14 +244,24 @@ async def lookup_barcode_product(
 
     existing_product: Optional[Product] = None
     if not force_refresh:
-        # 1. Search local DB
-        stmt = select(Product).where(Product.barcode.in_(search_codes)).limit(1)
+        # 1. Search local DB with user isolation
+        stmt = (
+            select(Product)
+            .where(
+                and_(
+                    Product.barcode.in_(search_codes),
+                    or_(Product.is_custom.is_(False), Product.created_by_user_id == user_id),
+                )
+            )
+            .order_by(Product.is_custom.desc())
+            .limit(1)
+        )
         res = await db.execute(stmt)
         existing_product = res.scalar_one_or_none()
 
         if existing_product:
             # Record in user scanned history
-            await record_user_scan(db, user_id, existing_product.id, clean_code)
+            await record_user_scan(db, user_id, existing_product.id, clean_code, is_honest_sign=is_honest_sign)
             return BarcodeProductResult(
                 product_id=existing_product.id,
                 name=existing_product.name,
@@ -336,11 +346,21 @@ async def lookup_barcode_product(
 
     # If force_refresh was True but OFF didn't find anything, fall back to existing DB product
     if force_refresh:
-        stmt = select(Product).where(Product.barcode.in_(search_codes)).limit(1)
+        stmt = (
+            select(Product)
+            .where(
+                and_(
+                    Product.barcode.in_(search_codes),
+                    or_(Product.is_custom.is_(False), Product.created_by_user_id == user_id),
+                )
+            )
+            .order_by(Product.is_custom.desc())
+            .limit(1)
+        )
         res = await db.execute(stmt)
         fallback_prod = res.scalar_one_or_none()
         if fallback_prod:
-            await record_user_scan(db, user_id, fallback_prod.id, clean_code)
+            await record_user_scan(db, user_id, fallback_prod.id, clean_code, is_honest_sign=is_honest_sign)
             return BarcodeProductResult(
                 product_id=fallback_prod.id,
                 name=fallback_prod.name,
@@ -364,6 +384,7 @@ async def record_user_scan(
     user_id: int,
     product_id: int,
     barcode: str,
+    is_honest_sign: bool = False,
 ) -> None:
     """Upserts a record into user_scanned_products with guaranteed rollback on failure."""
     try:
@@ -383,12 +404,15 @@ async def record_user_scan(
             record.last_scanned_at = func.now()
             if safe_barcode and not record.barcode:
                 record.barcode = safe_barcode
+            if is_honest_sign:
+                record.is_honest_sign = True
         else:
             record = UserScannedProduct(
                 user_id=user_id,
                 product_id=product_id,
                 barcode=safe_barcode,
                 scan_count=1,
+                is_honest_sign=is_honest_sign,
             )
             db.add(record)
 
@@ -436,27 +460,46 @@ async def update_barcode_product(
             detail="Запрещено редактировать базовые системные продукты",
         )
 
-    product.name = name.strip()
-    if brand is not None:
-        product.brand = brand.strip() if brand else None
-    product.calories_per_100g = round(float(calories_per_100g), 1)
-    product.protein_per_100g = round(float(protein_per_100g), 1)
-    product.fat_per_100g = round(float(fat_per_100g), 1)
-    product.carbs_per_100g = round(float(carbs_per_100g), 1)
-    if package_weight_grams is not None:
-        product.package_weight_grams = max(1.0, round(float(package_weight_grams), 1))
-    if image_url is not None:
-        clean_img = image_url.strip()
-        if clean_img and not (
-            clean_img.startswith("/uploads/")
-            or clean_img.startswith("https://images.openfoodfacts.org/")
-            or clean_img.startswith("https://static.openfoodfacts.org/")
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Недопустимый источник изображения продукта",
-            )
-        product.image_url = clean_img if clean_img else None
+    clean_img = image_url.strip() if image_url else None
+    if clean_img and not (
+        clean_img.startswith("/uploads/")
+        or clean_img.startswith("https://images.openfoodfacts.org/")
+        or clean_img.startswith("https://static.openfoodfacts.org/")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Недопустимый источник изображения продукта",
+        )
+
+    if not product.is_custom:
+        # Fork personal copy to prevent IDOR modification of global product catalog
+        product = Product(
+            name=name.strip(),
+            brand=brand.strip() if brand else product.brand,
+            barcode=product.barcode,
+            calories_per_100g=round(float(calories_per_100g), 1),
+            protein_per_100g=round(float(protein_per_100g), 1),
+            fat_per_100g=round(float(fat_per_100g), 1),
+            carbs_per_100g=round(float(carbs_per_100g), 1),
+            package_weight_grams=max(1.0, round(float(package_weight_grams), 1)) if package_weight_grams is not None else (product.package_weight_grams or 100.0),
+            image_url=clean_img or product.image_url,
+            category=product.category or "Пользовательские",
+            is_custom=True,
+            created_by_user_id=user_id,
+        )
+        db.add(product)
+    else:
+        product.name = name.strip()
+        if brand is not None:
+            product.brand = brand.strip() if brand else None
+        product.calories_per_100g = round(float(calories_per_100g), 1)
+        product.protein_per_100g = round(float(protein_per_100g), 1)
+        product.fat_per_100g = round(float(fat_per_100g), 1)
+        product.carbs_per_100g = round(float(carbs_per_100g), 1)
+        if package_weight_grams is not None:
+            product.package_weight_grams = max(1.0, round(float(package_weight_grams), 1))
+        if image_url is not None:
+            product.image_url = clean_img if clean_img else None
 
     try:
         await db.commit()

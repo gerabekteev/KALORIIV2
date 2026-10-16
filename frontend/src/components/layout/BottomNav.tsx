@@ -86,7 +86,7 @@ export const BottomNav: React.FC = () => {
         {/* Central Action: Добавить еду */}
         <button
           type="button"
-          onClick={openAddMeal}
+          onClick={() => openAddMeal()}
           className="flex flex-col items-center justify-center flex-1 py-1 px-1 cursor-pointer group active:scale-95 transition-transform"
           title="Добавить еду в дневник"
         >

@@ -1,6 +1,8 @@
+import html
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
+from collections import defaultdict
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
+from app.schemas.telegram import ShoppingListRequest
 from app.services.auth import get_current_user
+from app.services.telegram_bot import telegram_bot_service
 
 router = APIRouter(prefix="/telegram", tags=["Telegram Бот"])
 
@@ -94,3 +98,67 @@ async def unlink_telegram_account(
         is_linked=False,
         bot_username=bot_user,
     )
+
+
+@router.post("/send-shopping-list")
+async def send_shopping_list(
+    payload: ShoppingListRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Send formatted grocery shopping list from daily menu plan directly to user's Telegram chat.
+    Requires user to have linked their Telegram bot account.
+    """
+    if not current_user.telegram_chat_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Telegram-бот не привязан к вашему профилю. Сгенерируйте код в настройках профиля и отправьте его боту.",
+        )
+
+    if not telegram_bot_service.token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Сервис Telegram-бота временно не настроен на сервере.",
+        )
+
+    items_to_send = [item for item in payload.items if not item.checked]
+    if not items_to_send:
+        items_to_send = payload.items
+
+    categories = defaultdict(list)
+    for item in items_to_send:
+        cat = item.category or "🛒 Прочие продукты"
+        categories[cat].append(item)
+
+    lines = [
+        "🛒 <b>Ваш список покупок KaloriiAI</b>\n",
+    ]
+
+    for cat_name, items in categories.items():
+        lines.append(f"<b>{html.escape(cat_name)}:</b>")
+        for it in items:
+            weight_str = f" — {round(it.total_grams)}г" if it.total_grams > 0 else ""
+            lines.append(f"  ▫️ {html.escape(it.name)}{weight_str}")
+        lines.append("")
+
+    if payload.notes and payload.notes.strip():
+        lines.append(f"📝 <i>Заметка: {html.escape(payload.notes.strip())}</i>\n")
+
+    lines.append("<i>Приятных покупок и вкусного рациона! 🍏</i>")
+    text = "\n".join(lines)
+
+    msg_id = await telegram_bot_service.send_message(
+        chat_id=current_user.telegram_chat_id,
+        text=text,
+    )
+
+    if not msg_id:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Не удалось доставить сообщение в Telegram. Убедитесь, что бот не заблокирован в вашем чате.",
+        )
+
+    return {
+        "success": True,
+        "message": "Список покупок успешно отправлен в Telegram-бот!",
+    }

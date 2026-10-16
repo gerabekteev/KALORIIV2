@@ -17,21 +17,29 @@ export const RegisterPage: React.FC = () => {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string
+    email?: string
+    password?: string
+    confirmPassword?: string
+  }>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !email || !password) {
-      addToast('Заполните обязательные поля', 'warning')
+    const errors: typeof fieldErrors = {}
+
+    if (!name.trim()) errors.name = 'Введите ваше имя'
+    if (!email.trim()) errors.email = 'Введите email'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Некорректный формат email'
+    if (!password) errors.password = 'Введите пароль'
+    else if (password.length < 6) errors.password = 'Пароль должен быть не менее 6 символов'
+    if (password !== confirmPassword) errors.confirmPassword = 'Пароли не совпадают'
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       return
     }
-    if (password.length < 6) {
-      addToast('Пароль должен быть не менее 6 символов', 'warning')
-      return
-    }
-    if (password !== confirmPassword) {
-      addToast('Пароли не совпадают', 'warning')
-      return
-    }
+    setFieldErrors({})
 
     setIsLoading(true)
     try {
@@ -68,12 +76,16 @@ export const RegisterPage: React.FC = () => {
 
         {/* Register Form Card */}
         <Card variant="default" padding="lg">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <Input
               label="Ваше имя *"
-              placeholder="Бектемир"
+              placeholder="Введите ваше имя"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              error={fieldErrors.name}
+              onChange={(e) => {
+                setName(e.target.value)
+                if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined }))
+              }}
               leftIcon={<User className="w-4 h-4" />}
               required
             />
@@ -83,7 +95,11 @@ export const RegisterPage: React.FC = () => {
               type="email"
               placeholder="name@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              error={fieldErrors.email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }))
+              }}
               leftIcon={<Mail className="w-4 h-4" />}
               autoComplete="email"
               required
@@ -94,7 +110,11 @@ export const RegisterPage: React.FC = () => {
               type="password"
               placeholder="Минимум 6 символов"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              error={fieldErrors.password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }))
+              }}
               leftIcon={<Lock className="w-4 h-4" />}
               autoComplete="new-password"
               required
@@ -105,7 +125,11 @@ export const RegisterPage: React.FC = () => {
               type="password"
               placeholder="••••••••"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={fieldErrors.confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value)
+                if (fieldErrors.confirmPassword) setFieldErrors((p) => ({ ...p, confirmPassword: undefined }))
+              }}
               leftIcon={<Lock className="w-4 h-4" />}
               autoComplete="new-password"
               required

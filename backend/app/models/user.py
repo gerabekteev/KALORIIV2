@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from typing import TYPE_CHECKING, List, Optional
-from sqlalchemy import String, Float, Integer, DateTime, Date, ForeignKey, func
+from sqlalchemy import String, Float, Integer, DateTime, Date, ForeignKey, func, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -42,11 +42,15 @@ class User(Base):
 
     # Telegram integration
     telegram_chat_id: Mapped[Optional[int]] = mapped_column(
-        Integer, unique=True, index=True, nullable=True
+        BigInteger, unique=True, index=True, nullable=True
     )
     telegram_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     telegram_link_code: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
     telegram_link_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Timezone & Session Security
+    timezone: Mapped[str] = mapped_column(String(64), default="Europe/Moscow", nullable=False)
+    token_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)

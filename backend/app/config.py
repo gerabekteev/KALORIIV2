@@ -48,13 +48,17 @@ class Settings(BaseSettings):
     @classmethod
     def validate_jwt_secret(cls, v: str) -> str:
         clean = (v or "").strip()
-        if len(clean) < 32:
+        if clean in _INSECURE_DEFAULT_SECRETS or len(clean) < 32:
+            import os
+            is_test = bool(os.environ.get("PYTEST_CURRENT_TEST"))
+            is_debug = os.environ.get("DEBUG", "false").lower() in ("true", "1")
+            if not is_debug and not is_test:
+                raise ValueError(
+                    "CRITICAL SECURITY ERROR: Небезопасный или короткий JWT_SECRET в продакшене! "
+                    "Задайте уникальный ключ (openssl rand -hex 32) в файле .env."
+                )
             logging.getLogger("kalorii.config").warning(
-                "JWT_SECRET короче 32 символов! Настоятельно рекомендуется задать криптостойкий ключ (openssl rand -hex 32)."
-            )
-        if clean in _INSECURE_DEFAULT_SECRETS:
-            logging.getLogger("kalorii.config").warning(
-                "ВНИМАНИЕ: Используется публично известный дефолтный JWT_SECRET! Замените JWT_SECRET в файле .env на уникальный ключ."
+                "ВНИМАНИЕ: Используется тестовый/дефолтный JWT_SECRET! В продакшене задайте уникальный ключ в .env."
             )
         return clean
 
@@ -72,8 +76,8 @@ class Settings(BaseSettings):
 
     # Telegram Bot Integration
     TELEGRAM_BOT_TOKEN: str = Field(
-        default="8974113702:AAFQI_QJC5YF6ITIxPiG4xx91b4yI7YuyGU",
-        description="Telegram Bot token from @BotFather for logging meals via Telegram",
+        default="",
+        description="Telegram Bot token from @BotFather (must be configured via .env)",
     )
     TELEGRAM_BOT_USERNAME: str = Field(
         default="KaloriiV2bot",

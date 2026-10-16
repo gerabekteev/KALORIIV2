@@ -125,68 +125,84 @@ class AIRouter:
         if not chain_to_use:
             raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
 
-        for provider_type, model_id in chain_to_use:
-            provider = self._get_provider_instance(
-                provider_type,
-                model_id,
-                gemini_key=custom_gemini_key,
-                openrouter_key=custom_openrouter_key,
+        try:
+            async with asyncio.timeout(55.0):
+                for provider_type, model_id in chain_to_use:
+                    provider = self._get_provider_instance(
+                        provider_type,
+                        model_id,
+                        gemini_key=custom_gemini_key,
+                        openrouter_key=custom_openrouter_key,
+                    )
+                    if not provider:
+                        continue
+
+                    logger.info(f"Attempting food recognition using {provider_type} / {model_id}...")
+
+                    for attempt in range(1, 3):  # 2 attempts per model
+                        try:
+                            async with asyncio.timeout(20.0):
+                                result = await provider.analyze_food(
+                                    image_bytes=image_bytes,
+                                    mime_type=mime_type,
+                                    user_comment=user_comment,
+                                )
+                            logger.info(
+                                f"Successfully recognized food using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
+                            )
+                            return result, provider_type, model_id
+
+                        except (asyncio.TimeoutError, TimeoutError):
+                            logger.warning(
+                                f"Timeout (20s) for {provider_type}/{model_id} (attempt {attempt}). Moving to next attempt/provider."
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): timeout >20s")
+                            break
+
+                        except AIAuthenticationError as auth_err:
+                            logger.warning(
+                                f"Authentication failure for {provider_type}/{model_id}: {auth_err}. Skipping retries for this provider."
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id}: {auth_err}")
+                            break  # Skip 2nd attempt if auth failed
+
+                        except AIRateLimitError as rate_err:
+                            logger.warning(
+                                f"Rate limit for {provider_type}/{model_id}: {rate_err}. Falling back immediately to next model in chain."
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id}: {rate_err}")
+                            break  # Skip 2nd attempt, fallback immediately
+
+                        except AIProviderError as err:
+                            logger.warning(
+                                f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}"
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+
+                            err_str = str(err).lower()
+                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
+                                logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
+                                break
+
+                            if attempt == 1:
+                                # Wait 2 seconds before retrying the same model for network glitches
+                                logger.info(f"Waiting 2 seconds before retry for {provider_type}/{model_id}...")
+                                await asyncio.sleep(2)
+
+                        except Exception as ex:
+                            logger.error(
+                                f"Unexpected error in {provider_type}/{model_id} (attempt {attempt}): {ex}",
+                                exc_info=True,
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {ex}")
+                            if attempt == 1:
+                                await asyncio.sleep(5)
+
+        except (asyncio.TimeoutError, TimeoutError):
+            logger.error(f"Overall AI cascade timeout exceeded (55.0s). Errors: {errors_collected}")
+            raise AllProvidersFailedError(
+                "Превышено общее время ожидания распознавания блюда (55 сек). Пожалуйста, введите данные вручную или повторите попытку."
             )
-            if not provider:
-                continue
-
-            logger.info(f"Attempting food recognition using {provider_type} / {model_id}...")
-
-            for attempt in range(1, 3):  # 2 attempts per model
-                try:
-                    result = await provider.analyze_food(
-                        image_bytes=image_bytes,
-                        mime_type=mime_type,
-                        user_comment=user_comment,
-                    )
-                    logger.info(
-                        f"Successfully recognized food using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
-                    )
-                    return result, provider_type, model_id
-
-                except AIAuthenticationError as auth_err:
-                    logger.warning(
-                        f"Authentication failure for {provider_type}/{model_id}: {auth_err}. Skipping retries for this provider."
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id}: {auth_err}")
-                    break  # Skip 2nd attempt if auth failed
-
-                except AIRateLimitError as rate_err:
-                    logger.warning(
-                        f"Rate limit for {provider_type}/{model_id}: {rate_err}. Falling back immediately to next model in chain."
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id}: {rate_err}")
-                    break  # Skip 2nd attempt, fallback immediately
-
-                except AIProviderError as err:
-                    logger.warning(
-                        f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}"
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
-
-                    err_str = str(err).lower()
-                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
-                        logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
-                        break
-
-                    if attempt == 1:
-                        # Wait 2 seconds before retrying the same model for network glitches
-                        logger.info(f"Waiting 2 seconds before retry for {provider_type}/{model_id}...")
-                        await asyncio.sleep(2)
-
-                except Exception as ex:
-                    logger.error(
-                        f"Unexpected error in {provider_type}/{model_id} (attempt {attempt}): {ex}",
-                        exc_info=True,
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {ex}")
-                    if attempt == 1:
-                        await asyncio.sleep(5)
 
         logger.error(f"All AI vision models failed. Errors summary: {errors_collected}")
         raise AllProvidersFailedError(
@@ -210,64 +226,80 @@ class AIRouter:
         if not chain_to_use:
             raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
 
-        for provider_type, model_id in chain_to_use:
-            provider = self._get_provider_instance(
-                provider_type,
-                model_id,
-                gemini_key=custom_gemini_key,
-                openrouter_key=custom_openrouter_key,
+        try:
+            async with asyncio.timeout(55.0):
+                for provider_type, model_id in chain_to_use:
+                    provider = self._get_provider_instance(
+                        provider_type,
+                        model_id,
+                        gemini_key=custom_gemini_key,
+                        openrouter_key=custom_openrouter_key,
+                    )
+                    if not provider:
+                        continue
+
+                    logger.info(f"Attempting food text recognition using {provider_type} / {model_id}...")
+
+                    for attempt in range(1, 3):  # 2 attempts per model
+                        try:
+                            async with asyncio.timeout(20.0):
+                                result = await provider.analyze_food_text(text=text)
+                            logger.info(
+                                f"Successfully recognized food from text using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
+                            )
+                            return result, provider_type, model_id
+
+                        except (asyncio.TimeoutError, TimeoutError):
+                            logger.warning(
+                                f"Timeout (20s) for {provider_type}/{model_id} (attempt {attempt}). Moving to next attempt/provider."
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): timeout >20s")
+                            break
+
+                        except AIAuthenticationError as auth_err:
+                            logger.warning(
+                                f"Authentication failure for {provider_type}/{model_id}: {auth_err}. Skipping retries for this provider."
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id}: {auth_err}")
+                            break  # Skip 2nd attempt if auth failed
+
+                        except AIRateLimitError as rate_err:
+                            logger.warning(
+                                f"Rate limit for {provider_type}/{model_id}: {rate_err}. Falling back immediately to next model in chain."
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id}: {rate_err}")
+                            break  # Skip 2nd attempt, fallback immediately
+
+                        except AIProviderError as err:
+                            logger.warning(
+                                f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}"
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+
+                            err_str = str(err).lower()
+                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
+                                logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
+                                break
+
+                            if attempt == 1:
+                                # Wait 2 seconds before retrying the same model for network glitches
+                                logger.info(f"Waiting 2 seconds before retry for {provider_type}/{model_id}...")
+                                await asyncio.sleep(2)
+
+                        except Exception as ex:
+                            logger.error(
+                                f"Unexpected error in {provider_type}/{model_id} (attempt {attempt}): {ex}",
+                                exc_info=True,
+                            )
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {ex}")
+                            if attempt == 1:
+                                await asyncio.sleep(5)
+
+        except (asyncio.TimeoutError, TimeoutError):
+            logger.error(f"Overall AI cascade timeout exceeded for text (55.0s). Errors: {errors_collected}")
+            raise AllProvidersFailedError(
+                "Превышено общее время ожидания распознавания текста (55 сек). Пожалуйста, введите данные вручную или повторите попытку."
             )
-            if not provider:
-                continue
-
-            logger.info(f"Attempting food text recognition using {provider_type} / {model_id}...")
-
-            for attempt in range(1, 3):  # 2 attempts per model
-                try:
-                    result = await provider.analyze_food_text(text=text)
-                    logger.info(
-                        f"Successfully recognized food from text using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
-                    )
-                    return result, provider_type, model_id
-
-                except AIAuthenticationError as auth_err:
-                    logger.warning(
-                        f"Authentication failure for {provider_type}/{model_id}: {auth_err}. Skipping retries for this provider."
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id}: {auth_err}")
-                    break  # Skip 2nd attempt if auth failed
-
-                except AIRateLimitError as rate_err:
-                    logger.warning(
-                        f"Rate limit for {provider_type}/{model_id}: {rate_err}. Falling back immediately to next model in chain."
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id}: {rate_err}")
-                    break  # Skip 2nd attempt, fallback immediately
-
-                except AIProviderError as err:
-                    logger.warning(
-                        f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}"
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
-
-                    err_str = str(err).lower()
-                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
-                        logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
-                        break
-
-                    if attempt == 1:
-                        # Wait 2 seconds before retrying the same model for network glitches
-                        logger.info(f"Waiting 2 seconds before retry for {provider_type}/{model_id}...")
-                        await asyncio.sleep(2)
-
-                except Exception as ex:
-                    logger.error(
-                        f"Unexpected error in {provider_type}/{model_id} (attempt {attempt}): {ex}",
-                        exc_info=True,
-                    )
-                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {ex}")
-                    if attempt == 1:
-                        await asyncio.sleep(5)
 
         logger.error(f"All AI models failed for text recognition. Errors summary: {errors_collected}")
         raise AllProvidersFailedError(
@@ -291,44 +323,57 @@ class AIRouter:
         if not chain_to_use:
             raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
 
-        for provider_type, model_id in chain_to_use:
-            provider = self._get_provider_instance(
-                provider_type,
-                model_id,
-                gemini_key=custom_gemini_key,
-                openrouter_key=custom_openrouter_key,
+        try:
+            async with asyncio.timeout(55.0):
+                for provider_type, model_id in chain_to_use:
+                    provider = self._get_provider_instance(
+                        provider_type,
+                        model_id,
+                        gemini_key=custom_gemini_key,
+                        openrouter_key=custom_openrouter_key,
+                    )
+                    if not provider:
+                        continue
+
+                    logger.info(f"Attempting voice food recognition using {provider_type} / {model_id}...")
+
+                    for attempt in range(1, 3):
+                        try:
+                            async with asyncio.timeout(20.0):
+                                result = await provider.analyze_food_voice(
+                                    audio_bytes=audio_bytes,
+                                    mime_type=mime_type,
+                                )
+                            logger.info(
+                                f"Successfully recognized voice food using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
+                            )
+                            return result, provider_type, model_id
+                        except (asyncio.TimeoutError, TimeoutError):
+                            logger.warning(f"Timeout (20s) on voice {provider_type}/{model_id} (attempt {attempt}).")
+                            errors_collected.append(f"{provider_type}/{model_id}: timeout")
+                            break
+                        except (AIAuthenticationError, AIRateLimitError) as err:
+                            logger.warning(f"Failover on {provider_type}/{model_id}: {err}")
+                            errors_collected.append(f"{provider_type}/{model_id}: {err}")
+                            break
+                        except AIProviderError as err:
+                            logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+                            err_str = str(err).lower()
+                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "audio", "modality", "resource_exhausted"]):
+                                break
+                            if attempt == 1:
+                                await asyncio.sleep(2)
+                        except Exception as ex:
+                            logger.error(f"Unexpected error in {provider_type}/{model_id}: {ex}", exc_info=True)
+                            errors_collected.append(f"{provider_type}/{model_id}: {ex}")
+                            break
+
+        except (asyncio.TimeoutError, TimeoutError):
+            logger.error(f"Overall AI cascade timeout exceeded for voice (55.0s). Errors: {errors_collected}")
+            raise AllProvidersFailedError(
+                "Превышено время ожидания ответа AI при распознавании голоса (55 сек). Попробуйте описать текстом."
             )
-            if not provider:
-                continue
-
-            logger.info(f"Attempting voice food recognition using {provider_type} / {model_id}...")
-
-            for attempt in range(1, 3):
-                try:
-                    result = await provider.analyze_food_voice(
-                        audio_bytes=audio_bytes,
-                        mime_type=mime_type,
-                    )
-                    logger.info(
-                        f"Successfully recognized voice food using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
-                    )
-                    return result, provider_type, model_id
-                except (AIAuthenticationError, AIRateLimitError) as err:
-                    logger.warning(f"Failover on {provider_type}/{model_id}: {err}")
-                    errors_collected.append(f"{provider_type}/{model_id}: {err}")
-                    break
-                except AIProviderError as err:
-                    logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
-                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
-                    err_str = str(err).lower()
-                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "audio", "modality", "resource_exhausted"]):
-                        break
-                    if attempt == 1:
-                        await asyncio.sleep(2)
-                except Exception as ex:
-                    logger.error(f"Unexpected error in {provider_type}/{model_id}: {ex}", exc_info=True)
-                    errors_collected.append(f"{provider_type}/{model_id}: {ex}")
-                    break
 
         logger.error(f"All AI models failed for voice recognition: {errors_collected}")
         raise AllProvidersFailedError(
@@ -353,45 +398,58 @@ class AIRouter:
         if not chain_to_use:
             raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
 
-        for provider_type, model_id in chain_to_use:
-            provider = self._get_provider_instance(
-                provider_type,
-                model_id,
-                gemini_key=custom_gemini_key,
-                openrouter_key=custom_openrouter_key,
+        try:
+            async with asyncio.timeout(55.0):
+                for provider_type, model_id in chain_to_use:
+                    provider = self._get_provider_instance(
+                        provider_type,
+                        model_id,
+                        gemini_key=custom_gemini_key,
+                        openrouter_key=custom_openrouter_key,
+                    )
+                    if not provider:
+                        continue
+
+                    logger.info(f"Attempting meal plan generation using {provider_type} / {model_id}...")
+
+                    for attempt in range(1, 3):
+                        try:
+                            async with asyncio.timeout(20.0):
+                                meals_list = await provider.generate_meal_plan(
+                                    prompt=prompt,
+                                    expected_count=expected_count,
+                                    max_calories=max_calories,
+                                )
+                            logger.info(
+                                f"Successfully generated {len(meals_list)} meals using {provider_type}/{model_id}"
+                            )
+                            return meals_list, provider_type, model_id
+                        except (asyncio.TimeoutError, TimeoutError):
+                            logger.warning(f"Timeout (20s) on plan {provider_type}/{model_id} (attempt {attempt}).")
+                            errors_collected.append(f"{provider_type}/{model_id}: timeout")
+                            break
+                        except (AIAuthenticationError, AIRateLimitError) as err:
+                            logger.warning(f"Failover on {provider_type}/{model_id}: {err}")
+                            errors_collected.append(f"{provider_type}/{model_id}: {err}")
+                            break
+                        except AIProviderError as err:
+                            logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
+                            errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+                            err_str = str(err).lower()
+                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "resource_exhausted"]):
+                                break
+                            if attempt == 1:
+                                await asyncio.sleep(2)
+                        except Exception as ex:
+                            logger.error(f"Unexpected error in {provider_type}/{model_id}: {ex}", exc_info=True)
+                            errors_collected.append(f"{provider_type}/{model_id}: {ex}")
+                            break
+
+        except (asyncio.TimeoutError, TimeoutError):
+            logger.error(f"Overall AI cascade timeout exceeded for meal plan (55.0s). Errors: {errors_collected}")
+            raise AllProvidersFailedError(
+                "Превышено время ожидания составления меню (55 сек). Пожалуйста, повторите попытку."
             )
-            if not provider:
-                continue
-
-            logger.info(f"Attempting meal plan generation using {provider_type} / {model_id}...")
-
-            for attempt in range(1, 3):
-                try:
-                    meals_list = await provider.generate_meal_plan(
-                        prompt=prompt,
-                        expected_count=expected_count,
-                        max_calories=max_calories,
-                    )
-                    logger.info(
-                        f"Successfully generated {len(meals_list)} meals using {provider_type}/{model_id}"
-                    )
-                    return meals_list, provider_type, model_id
-                except (AIAuthenticationError, AIRateLimitError) as err:
-                    logger.warning(f"Failover on {provider_type}/{model_id}: {err}")
-                    errors_collected.append(f"{provider_type}/{model_id}: {err}")
-                    break
-                except AIProviderError as err:
-                    logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
-                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
-                    err_str = str(err).lower()
-                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "resource_exhausted"]):
-                        break
-                    if attempt == 1:
-                        await asyncio.sleep(2)
-                except Exception as ex:
-                    logger.error(f"Unexpected error in {provider_type}/{model_id}: {ex}", exc_info=True)
-                    errors_collected.append(f"{provider_type}/{model_id}: {ex}")
-                    break
 
         logger.error(f"All AI models failed for meal plan generation: {errors_collected}")
         raise AllProvidersFailedError(

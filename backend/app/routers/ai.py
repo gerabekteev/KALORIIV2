@@ -12,6 +12,7 @@ from app.schemas.ai import FoodRecognitionResponse, TextAnalysisRequest
 from app.services.auth import get_current_user
 from app.services.ai_router import ai_router, AllProvidersFailedError, MODEL_METADATA_CATALOG
 from app.utils.image import save_uploaded_file
+from app.utils.security import decrypt_api_key
 
 logger = logging.getLogger("kalorii.ai_router")
 router = APIRouter(prefix="/ai", tags=["AI Распознавание"])
@@ -155,12 +156,12 @@ def resolve_ai_config(
                 # Fallback for Gemini key if not provided via header
                 if not resolved_gemini:
                     gem_key = user_data.get("gemini_api_key") or user_data.get("geminiApiKey")
-                    resolved_gemini = _sanitize_api_key(gem_key)
+                    resolved_gemini = _sanitize_api_key(decrypt_api_key(gem_key))
 
                 # Fallback for OpenRouter key if not provided via header
                 if not resolved_openrouter:
                     open_key = user_data.get("openrouter_api_key") or user_data.get("openrouterApiKey")
-                    resolved_openrouter = _sanitize_api_key(open_key)
+                    resolved_openrouter = _sanitize_api_key(decrypt_api_key(open_key))
 
                 # Fallback for custom model chain if x_ai_models header wasn't provided
                 if custom_chain is None and "models" in user_data and isinstance(user_data["models"], list):

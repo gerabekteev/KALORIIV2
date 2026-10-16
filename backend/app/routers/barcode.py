@@ -196,7 +196,6 @@ async def scan_barcode_image_endpoint(
                         pass
             target_prod = existing_prod
         else:
-            is_private_scan = detected_code is None
             new_prod = Product(
                 name=name,
                 barcode=detected_code,
@@ -207,7 +206,7 @@ async def scan_barcode_image_endpoint(
                 package_weight_grams=grams,
                 image_url=relative_url_path,
                 category="Скан",
-                is_custom=is_private_scan,
+                is_custom=True,
                 created_by_user_id=current_user.id,
             )
             db.add(new_prod)

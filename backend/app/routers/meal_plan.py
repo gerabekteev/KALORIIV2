@@ -22,6 +22,7 @@ from app.schemas.ai import (
 from app.services.auth import get_current_user
 from app.services.ai_router import ai_router, AllProvidersFailedError
 from app.utils.ai_providers.base import build_meal_plan_prompt
+from app.utils.timezone import resolve_client_date
 from app.routers.ai import check_ai_rate_limit, resolve_ai_config
 
 logger = logging.getLogger("kalorii.meal_plan")
@@ -95,11 +96,12 @@ async def _collect_user_food_hints(db: AsyncSession, user_id: int) -> Optional[s
 @router.get("", response_model=Optional[MealPlanResponse])
 async def get_meal_plan(
     date: Optional[dt_date] = Query(None, description="Дата плана YYYY-MM-DD"),
+    x_client_date: Optional[str] = Header(None, alias="X-Client-Date"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve saved generated meal plan for a specific date (returns null if none exists yet)."""
-    target_date = date or dt_date.today()
+    target_date = resolve_client_date(date, x_client_date, current_user)
     stmt = select(MealPlan).where(
         and_(
             MealPlan.user_id == current_user.id,
@@ -141,6 +143,16 @@ async def generate_meal_plan_endpoint(
         locked_prot = sum(m.protein for m in locked)
         locked_fat = sum(m.fat for m in locked)
         locked_carbs = sum(m.carbs for m in locked)
+
+        if locked_cal >= req.target_calories:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Калорийность закреплённых блюд ({round(locked_cal)} ккал) уже превышает или равна "
+                    f"целевому бюджету ({round(req.target_calories)} ккал). "
+                    "Снимите закрепление с части блюд или увеличьте норму калорий."
+                ),
+            )
 
         remaining_cal = max(100.0, req.target_calories - locked_cal)
         remaining_prot = max(5.0, req.target_protein - locked_prot)

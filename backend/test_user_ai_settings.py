@@ -101,8 +101,10 @@ async def test_user_ai_settings_lifecycle_and_effects():
         assert saved_data["models"][0]["id"] == "openrouter/auto"
         assert saved_data["models"][1]["id"] == "gemini-3.8-flash"
         assert saved_data["models"][2]["enabled"] is False
-        assert saved_data["gemini_api_key"] == "user1-gemini-secret-key"
-        assert saved_data["openrouter_api_key"] == "user1-openrouter-secret-key"
+        assert saved_data["has_gemini_key"] is True
+        assert saved_data["has_openrouter_key"] is True
+        assert "..." in saved_data["gemini_api_key"]
+        assert "..." in saved_data["openrouter_api_key"]
 
         # -------------------------------------------------------------
         # 4. GET /api/profile/ai-settings to verify persistence
@@ -115,8 +117,10 @@ async def test_user_ai_settings_lifecycle_and_effects():
         assert persisted["models"][1]["id"] == "gemini-3.8-flash"
         assert persisted["models"][2]["id"] == "gemini-3.1-flash-lite"
         assert persisted["models"][2]["enabled"] is False
-        assert persisted["gemini_api_key"] == "user1-gemini-secret-key"
-        assert persisted["openrouter_api_key"] == "user1-openrouter-secret-key"
+        assert persisted["has_gemini_key"] is True
+        assert persisted["has_openrouter_key"] is True
+        assert "..." in persisted["gemini_api_key"]
+        assert "..." in persisted["openrouter_api_key"]
 
         # -------------------------------------------------------------
         # 5. Test saved settings effect on POST /api/ai/analyze-text

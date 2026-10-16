@@ -33,7 +33,7 @@ import { BarcodeProductResult } from '../../types'
 type ModalMode = 'hub' | 'barcode' | 'ai_photo' | 'text_ai' | 'voice_ai' | 'search' | 'recipes' | 'manual'
 
 export const AddMealModal: React.FC = () => {
-  const { isAddMealOpen, closeAddMeal, addToast } = useUIStore()
+  const { isAddMealOpen, closeAddMeal, addToast, addMealPresetTime } = useUIStore()
   const {
     addMeal,
     selectedDate,
@@ -91,13 +91,23 @@ export const AddMealModal: React.FC = () => {
       setIsPortionModalOpen(false)
       setIsRecording(false)
       setRecordingSeconds(0)
+      const timePreset = addMealPresetTime || new Date().toTimeString().slice(0, 5)
+      setManualForm({
+        name: '',
+        calories: '',
+        protein: '',
+        fat: '',
+        carbs: '',
+        weight_grams: '',
+        meal_time: timePreset,
+      })
     } else {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop()
       }
       setIsRecording(false)
     }
-  }, [isAddMealOpen])
+  }, [isAddMealOpen, addMealPresetTime])
 
   useEffect(() => {
     let interval: any
@@ -206,7 +216,12 @@ export const AddMealModal: React.FC = () => {
     const commentToSend = aiComment.trim() || undefined
 
     // Launch background AI recognition
-    startPhotoAIAnalysis(photoToUpload, commentToSend, selectedDate)
+    startPhotoAIAnalysis(
+      photoToUpload,
+      commentToSend,
+      selectedDate,
+      addMealPresetTime || undefined
+    )
 
     // Reset state & close modal immediately
     setSelectedPhoto(null)
@@ -225,7 +240,7 @@ export const AddMealModal: React.FC = () => {
     }
 
     // Launch background AI recognition
-    startTextAIAnalysis(trimmed, selectedDate)
+    startTextAIAnalysis(trimmed, selectedDate, addMealPresetTime || undefined)
 
     // Reset state & close modal immediately
     setTextDescription('')
@@ -250,7 +265,7 @@ export const AddMealModal: React.FC = () => {
           type: recorder.mimeType || 'audio/webm',
         })
         if (audioBlob.size > 0) {
-          startVoiceAIAnalysis(audioBlob, selectedDate)
+          startVoiceAIAnalysis(audioBlob, selectedDate, addMealPresetTime || undefined)
           closeAddMeal()
           addToast(
             'Голосовое сообщение отправлено в AI! Расшифровка сохранится в описание блюда.',
@@ -292,7 +307,7 @@ export const AddMealModal: React.FC = () => {
         fat: Number(manualForm.fat) || 0,
         carbs: Number(manualForm.carbs) || 0,
         weight_grams: manualForm.weight_grams ? Number(manualForm.weight_grams) : undefined,
-        meal_time: manualForm.meal_time || new Date().toTimeString().slice(0, 5),
+        meal_time: manualForm.meal_time || addMealPresetTime || new Date().toTimeString().slice(0, 5),
         meal_date: selectedDate,
         is_manually_edited: true,
       })
@@ -305,7 +320,7 @@ export const AddMealModal: React.FC = () => {
         fat: '',
         carbs: '',
         weight_grams: '',
-        meal_time: new Date().toTimeString().slice(0, 5),
+        meal_time: addMealPresetTime || new Date().toTimeString().slice(0, 5),
       })
     } catch {
       addToast('Ошибка сохранения', 'error')
@@ -314,23 +329,28 @@ export const AddMealModal: React.FC = () => {
     }
   }
 
-  const handleSelectProduct = async (productData: {
-    name: string
-    calories: number
-    protein: number
-    fat: number
-    carbs: number
-    weight_grams: number
-  }) => {
+  const handleSelectProduct = async (
+    productData: {
+      name: string
+      calories: number
+      protein: number
+      fat: number
+      carbs: number
+      weight_grams: number
+    },
+    keepOpen = false
+  ) => {
     try {
       await addMeal({
         ...productData,
-        meal_time: new Date().toTimeString().slice(0, 5),
+        meal_time: addMealPresetTime || new Date().toTimeString().slice(0, 5),
         meal_date: selectedDate,
         is_manually_edited: false,
       })
       addToast(`Добавлено: ${productData.name}`, 'success')
-      closeAddMeal()
+      if (!keepOpen) {
+        closeAddMeal()
+      }
     } catch {
       addToast('Ошибка добавления продукта', 'error')
     }
@@ -347,7 +367,7 @@ export const AddMealModal: React.FC = () => {
     try {
       await addMeal({
         ...recipeData,
-        meal_time: new Date().toTimeString().slice(0, 5),
+        meal_time: addMealPresetTime || new Date().toTimeString().slice(0, 5),
         meal_date: selectedDate,
         is_manually_edited: false,
       })
@@ -378,6 +398,7 @@ export const AddMealModal: React.FC = () => {
         title={mode === 'hub' ? 'Добавить еду' : modeTitles[mode]}
         maxWidth="md"
       >
+        <div className="min-h-[420px] flex flex-col">
         {/* Back navigation header when inside a submode */}
         {mode !== 'hub' && (
           <div className="flex items-center justify-between mb-4 pb-2 border-b border-neutral-800/80">
@@ -922,6 +943,7 @@ export const AddMealModal: React.FC = () => {
             </Button>
           </form>
         )}
+        </div>
       </Modal>
 
       {/* Barcode Portion Modal (with x0.5 - x5 Multipliers & Photo) */}

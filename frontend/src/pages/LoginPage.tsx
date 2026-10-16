@@ -15,13 +15,20 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) {
-      addToast('Заполните все поля', 'warning')
+    const errors: { email?: string; password?: string } = {}
+    if (!email.trim()) errors.email = 'Введите email'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Некорректный формат email'
+    if (!password) errors.password = 'Введите пароль'
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       return
     }
+    setFieldErrors({})
 
     setIsLoading(true)
     try {
@@ -58,13 +65,17 @@ export const LoginPage: React.FC = () => {
 
         {/* Login Form Card */}
         <Card variant="default" padding="lg">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <Input
               label="Email"
               type="email"
               placeholder="name@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              error={fieldErrors.email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }))
+              }}
               leftIcon={<Mail className="w-4 h-4" />}
               autoComplete="email"
               required
@@ -75,7 +86,11 @@ export const LoginPage: React.FC = () => {
               type="password"
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              error={fieldErrors.password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }))
+              }}
               leftIcon={<Lock className="w-4 h-4" />}
               autoComplete="current-password"
               required

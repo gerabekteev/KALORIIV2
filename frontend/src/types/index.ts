@@ -127,6 +127,10 @@ export interface Product {
   category?: string | null
   is_custom: boolean
   created_by_user_id?: number | null
+  package_weight_grams?: number | null
+  barcode?: string | null
+  brand?: string | null
+  image_url?: string | null
 }
 
 export interface CreateProductPayload {

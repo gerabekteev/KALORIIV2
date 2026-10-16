@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Plus, Camera, Sparkles, RotateCcw } from 'lucide-react'
 import { useMeals } from '../hooks/useMeals'
 import { useAuthStore } from '../store/authStore'
@@ -25,6 +25,12 @@ export const TodayPage: React.FC = () => {
   } = useMeals()
 
   const { previousDayMeals, copyMealToDate, copyMultipleMealsToDate } = useMealsStore()
+
+  const [weeklyBank, setWeeklyBank] = useState<{
+    balance: number
+    isPositive: boolean
+    trackedCount: number
+  } | null>(null)
 
   const dailyGoalCalories = user?.daily_calories_goal || 2000
   const dailyGoalProtein = user?.daily_protein_goal || 140
@@ -57,6 +63,7 @@ export const TodayPage: React.FC = () => {
         onSelectDate={setSelectedDate}
         currentDayCalories={totals.calories}
         dailyGoalCalories={dailyGoalCalories}
+        onWeeklyBankChange={setWeeklyBank}
       />
 
       {/* Other date pending AI indicator */}
@@ -143,6 +150,19 @@ export const TodayPage: React.FC = () => {
             />
           </div>
         </div>
+
+        {/* Weekly Bank Supportive Status (GC-02) */}
+        {totals.calories > dailyGoalCalories && weeklyBank && weeklyBank.isPositive && (
+          <div className="mt-3 pt-2.5 border-t border-neutral-800/80 flex items-center justify-between text-xs text-emerald-400">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>🛡️</span>
+              <span>Превышение покрыто банком недели</span>
+            </span>
+            <span className="font-semibold text-emerald-300">
+              +{weeklyBank.balance} ккал в запасе
+            </span>
+          </div>
+        )}
       </Card>
 
       {/* Quick Repeat Widget from Previous Day (FEAT-02) */}
@@ -209,7 +229,7 @@ export const TodayPage: React.FC = () => {
         </div>
 
         <button
-          onClick={openAddMeal}
+          onClick={() => openAddMeal()}
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 rounded-xl border border-emerald-500/30 transition-all cursor-pointer active:scale-95 min-h-[40px]"
         >
           <Camera className="w-4 h-4" />

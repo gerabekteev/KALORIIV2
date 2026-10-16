@@ -57,19 +57,19 @@ def create_token(data: Dict[str, Any], expires_delta: timedelta, token_type: str
     return encoded_jwt
 
 
-def create_access_token(user_id: int) -> str:
-    """Create a short-lived access token."""
+def create_access_token(user_id: int, token_version: int = 1) -> str:
+    """Create a short-lived access token with versioning."""
     return create_token(
-        data={"sub": str(user_id)},
+        data={"sub": str(user_id), "ver": token_version},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         token_type="access",
     )
 
 
-def create_refresh_token(user_id: int) -> str:
-    """Create a long-lived refresh token."""
+def create_refresh_token(user_id: int, token_version: int = 1) -> str:
+    """Create a long-lived refresh token with versioning."""
     return create_token(
-        data={"sub": str(user_id)},
+        data={"sub": str(user_id), "ver": token_version},
         expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         token_type="refresh",
     )
@@ -137,6 +137,14 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Пользователь не найден",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_ver = payload.get("ver")
+    if token_ver is not None and getattr(user, "token_version", 1) != token_ver:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Сессия была завершена (токен отозван)",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

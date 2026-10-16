@@ -28,19 +28,72 @@ export const CaloriesBarChart: React.FC<CaloriesBarChartProps> = ({
     )
   }
 
-  // Format short date for X axis: "13 окт"
-  const chartData = data.map((d) => {
-    const parts = d.date.split('-').map(Number)
-    const dateObj = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
-    const formattedDate = dateObj.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-    })
-    return {
-      ...d,
-      shortDate: formattedDate,
+  // If dataset has more than 31 days (e.g. 365 days / Year view), aggregate into months
+  const isAggregatedByMonth = data.length > 31
+
+  const chartData = React.useMemo(() => {
+    if (!isAggregatedByMonth) {
+      return data.map((d) => {
+        const parts = d.date.split('-').map(Number)
+        const dateObj =
+          parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
+        const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'short',
+        })
+        return {
+          ...d,
+          shortDate: formattedDate,
+          isMonthAverage: false,
+          monthTotal: 0,
+        }
+      })
     }
-  })
+
+    // Group by YYYY-MM
+    const monthsMap = new Map<
+      string,
+      { totalCal: number; totalProt: number; totalFat: number; totalCarbs: number; count: number; dateObj: Date }
+    >()
+    data.forEach((d) => {
+      const parts = d.date.split('-').map(Number)
+      const dateObj =
+        parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(d.date)
+      const key = `${dateObj.getFullYear()}-${dateObj.getMonth()}`
+      const existing = monthsMap.get(key)
+      if (existing) {
+        existing.totalCal += d.calories
+        existing.totalProt += d.protein
+        existing.totalFat += d.fat
+        existing.totalCarbs += d.carbs
+        existing.count += 1
+      } else {
+        monthsMap.set(key, {
+          totalCal: d.calories,
+          totalProt: d.protein,
+          totalFat: d.fat,
+          totalCarbs: d.carbs,
+          count: 1,
+          dateObj,
+        })
+      }
+    })
+
+    return Array.from(monthsMap.values()).map((m) => {
+      const avgCal = Math.round(m.totalCal / m.count)
+      const formattedMonth = m.dateObj.toLocaleDateString('ru-RU', { month: 'short' })
+      return {
+        date: m.dateObj.toISOString().slice(0, 7),
+        calories: avgCal,
+        protein: Math.round((m.totalProt / m.count) * 10) / 10,
+        fat: Math.round((m.totalFat / m.count) * 10) / 10,
+        carbs: Math.round((m.totalCarbs / m.count) * 10) / 10,
+        shortDate: formattedMonth,
+        isMonthAverage: true,
+        monthTotal: Math.round(m.totalCal),
+      }
+    })
+  }, [data, isAggregatedByMonth])
 
   return (
     <div className="w-full h-56 pt-2">
@@ -65,13 +118,20 @@ export const CaloriesBarChart: React.FC<CaloriesBarChartProps> = ({
           <Tooltip
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
-                const item = payload[0].payload as StatsDayData & { shortDate: string }
+                const item = payload[0].payload as any
                 return (
                   <div className="bg-[#1c1c20] border border-neutral-700/80 p-2.5 rounded-xl shadow-xl text-xs space-y-1">
-                    <p className="font-semibold text-white">{item.shortDate}</p>
-                    <p className="text-emerald-400 font-bold">
-                      {item.calories} ккал
+                    <p className="font-semibold text-white">
+                      {item.shortDate} {item.isMonthAverage ? '(среднее в день)' : ''}
                     </p>
+                    <p className="text-emerald-400 font-bold">
+                      {item.calories} ккал{item.isMonthAverage ? ' / день' : ''}
+                    </p>
+                    {Boolean(item.monthTotal) && (
+                      <p className="text-neutral-400 text-[10px]">
+                        Всего за месяц: {item.monthTotal.toLocaleString('ru-RU')} ккал
+                      </p>
+                    )}
                     {targetCalories > 0 && (
                       <p className="text-neutral-400 text-[10px]">
                         Цель: {targetCalories} ккал ({Math.round((item.calories / targetCalories) * 100)}%)

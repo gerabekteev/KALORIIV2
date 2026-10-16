@@ -12,6 +12,7 @@ import { Recipe } from '../../types'
 import { recipesApi } from '../../api/recipes'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Loading'
+import { ConfirmModal } from '../ui/ConfirmModal'
 import { useUIStore } from '../../store/uiStore'
 import { CreateRecipeModal } from './CreateRecipeModal'
 
@@ -23,6 +24,14 @@ interface RecipeListProps {
     fat: number
     carbs: number
     weight_grams: number
+    ingredients?: Array<{
+      name: string
+      weight_grams: number
+      calories: number
+      protein: number
+      fat: number
+      carbs: number
+    }>
   }) => void
 }
 
@@ -38,6 +47,7 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
   // Expanded portion selector for a specific recipe
   const [expandedRecipeId, setExpandedRecipeId] = useState<number | null>(null)
   const [portionWeight, setPortionWeight] = useState<string>('100')
+  const [recipeToDelete, setRecipeToDelete] = useState<{ id: number; name: string } | null>(null)
 
   const fetchRecipes = React.useCallback(async () => {
     setIsLoading(true)
@@ -74,16 +84,16 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
     }
   }
 
-  const handleDeleteRecipe = async (e: React.MouseEvent, id: number, name: string) => {
-    e.stopPropagation()
-    if (!window.confirm(`Удалить рецепт "${name}"?`)) return
-
+  const confirmDelete = async () => {
+    if (!recipeToDelete) return
     try {
-      await recipesApi.deleteRecipe(id)
-      setRecipes((prev) => prev.filter((r) => r.id !== id))
-      addToast(`Рецепт "${name}" удалён`, 'info')
+      await recipesApi.deleteRecipe(recipeToDelete.id)
+      setRecipes((prev) => prev.filter((r) => r.id !== recipeToDelete.id))
+      addToast(`Рецепт "${recipeToDelete.name}" удалён`, 'info')
     } catch {
       addToast('Не удалось удалить рецепт', 'error')
+    } finally {
+      setRecipeToDelete(null)
     }
   }
 
@@ -102,6 +112,21 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
     })
   }, [recipes, searchQuery, filterFavorite])
 
+  const buildIngredients = (recipe: Recipe, ratio: number) => {
+    if (!recipe.items || recipe.items.length === 0) return undefined
+    return recipe.items.map((it) => {
+      const ingRatio = (it.weight_grams * ratio) / 100.0
+      return {
+        name: it.product?.name || 'Ингредиент',
+        weight_grams: Math.round(it.weight_grams * ratio),
+        calories: Math.round((it.product?.calories_per_100g || 0) * ingRatio),
+        protein: Math.round((it.product?.protein_per_100g || 0) * ingRatio * 10) / 10,
+        fat: Math.round((it.product?.fat_per_100g || 0) * ingRatio * 10) / 10,
+        carbs: Math.round((it.product?.carbs_per_100g || 0) * ingRatio * 10) / 10,
+      }
+    })
+  }
+
   const handleQuickLogFullPortion = (recipe: Recipe) => {
     const weight = recipe.total_weight_grams || 100
     onSelectRecipe({
@@ -111,6 +136,7 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
       fat: Math.round(recipe.total_fat * 10) / 10,
       carbs: Math.round(recipe.total_carbs * 10) / 10,
       weight_grams: Math.round(weight),
+      ingredients: buildIngredients(recipe, 1.0),
     })
   }
 
@@ -131,6 +157,7 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
       fat: Math.round(recipe.total_fat * ratio * 10) / 10,
       carbs: Math.round(recipe.total_carbs * ratio * 10) / 10,
       weight_grams: Math.round(targetWeight),
+      ingredients: buildIngredients(recipe, ratio),
     })
   }
 
@@ -314,13 +341,14 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
 
                       <button
                         type="button"
-                        onClick={(e) =>
-                          handleDeleteRecipe(e, recipe.id, recipe.name)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setRecipeToDelete({ id: recipe.id, name: recipe.name })
+                        }}
                         className="text-neutral-500 hover:text-red-400 p-1 rounded transition-colors cursor-pointer"
                         title="Удалить рецепт"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -401,6 +429,18 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onRecipeCreated={handleRecipeCreated}
+      />
+
+      {/* Confirmation modal for recipe deletion */}
+      <ConfirmModal
+        isOpen={!!recipeToDelete}
+        onClose={() => setRecipeToDelete(null)}
+        onConfirm={confirmDelete}
+        title={`Удалить рецепт "${recipeToDelete?.name}"?`}
+        description="Рецепт будет навсегда удалён из вашей кулинарной книги."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        isDangerous
       />
     </div>
   )

@@ -145,3 +145,7 @@ class UserAISettingsResponse(BaseModel):
     openrouter_api_key: Optional[str] = None
     geminiApiKey: Optional[str] = None
     openrouterApiKey: Optional[str] = None
+    has_gemini_key: bool = False
+    has_openrouter_key: bool = False
+    gemini_key_masked: Optional[str] = None
+    openrouter_key_masked: Optional[str] = None

@@ -391,7 +391,8 @@ async def test_barcode_product_override_and_refresh():
         recent_res = await client.get("/api/barcode/recent", headers=headers)
         assert recent_res.status_code == 200
         shelf_items = recent_res.json()
-        matched = [item for item in shelf_items if item["product_id"] == prod_id]
+        target_prod_id = updated_data.get("product_id") or updated_data.get("id") or prod_id
+        matched = [item for item in shelf_items if item["product_id"] == target_prod_id]
         assert len(matched) == 1
         assert matched[0]["name"] == "Творог 9% Правильный"
         assert matched[0]["calories_per_100g"] == 157.0

@@ -1,3 +1,4 @@
+import asyncio
 import io
 import uuid
 from pathlib import Path
@@ -101,15 +102,14 @@ async def save_uploaded_file(file: UploadFile) -> Tuple[Path, str]:
             detail=f"Размер файла превышает лимит {settings.MAX_UPLOAD_SIZE_BYTES // (1024*1024)} МБ",
         )
 
-    # Process and compress
-    compressed_bytes, _ = process_image(content)
+    # Process and compress in thread pool to prevent blocking event loop
+    compressed_bytes, _ = await asyncio.to_thread(process_image, content)
 
     # Unique filename
     filename = f"{uuid.uuid4().hex}.jpg"
     dest_path = settings.UPLOAD_DIR / filename
 
-    with open(dest_path, "wb") as f:
-        f.write(compressed_bytes)
+    await asyncio.to_thread(dest_path.write_bytes, compressed_bytes)
 
     # Return relative URL path for frontend serving (e.g. /uploads/filename.jpg)
     relative_path = f"/uploads/{filename}"

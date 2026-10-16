@@ -22,11 +22,14 @@ export const ToastContainer: React.FC = () => {
   }
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[999] w-[90%] max-w-md flex flex-col gap-2 pointer-events-none">
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-[999] w-[92%] max-w-md flex flex-col gap-2 pointer-events-none"
+      style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-top-3 ${
+          className={`pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-3 ${
             borderColors[toast.type]
           }`}
         >
@@ -44,14 +47,14 @@ export const ToastContainer: React.FC = () => {
                   toast.action?.onClick()
                   removeToast(toast.id)
                 }}
-                className="px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg transition-colors cursor-pointer border border-emerald-500/40"
+                className="min-h-[36px] px-3.5 py-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 active:scale-95 bg-emerald-500/25 hover:bg-emerald-500/35 rounded-xl transition-all cursor-pointer border border-emerald-500/50 shadow-sm"
               >
                 {toast.action.label}
               </button>
             )}
             <button
               onClick={() => removeToast(toast.id)}
-              className="p-1 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>

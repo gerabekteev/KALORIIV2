@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
+import { ConfirmModal } from '../ui/ConfirmModal'
 import { useUIStore } from '../../store/uiStore'
 import { profileApi, AIModelItem } from '../../api/profile'
 
@@ -146,6 +147,7 @@ export const AISettingsCard: React.FC = () => {
   const [showGeminiKey, setShowGeminiKey] = useState(false)
   const [showOpenrouterKey, setShowOpenrouterKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showResetModal, setShowResetModal] = useState(false)
 
   // 1. Initial mounting: fast load from localStorage done, now fetch from backend
   useEffect(() => {
@@ -294,7 +296,6 @@ export const AISettingsCard: React.FC = () => {
 
   // Reset to defaults and sync with backend
   const handleReset = async () => {
-    if (!window.confirm('Сбросить порядок моделей и ключи к настройкам по умолчанию?')) return
     setModels(DEFAULT_AI_MODELS)
     setGeminiKey('')
     setOpenrouterKey('')
@@ -318,7 +319,7 @@ export const AISettingsCard: React.FC = () => {
         </div>
         <button
           type="button"
-          onClick={handleReset}
+          onClick={() => setShowResetModal(true)}
           className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
           title="Сбросить порядок по умолчанию"
         >
@@ -326,6 +327,17 @@ export const AISettingsCard: React.FC = () => {
           <span>По умолчанию</span>
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleReset}
+        title="Сбросить настройки AI?"
+        description="Порядок моделей и ключи будут возвращены к рекомендованным настройкам по умолчанию."
+        confirmText="Сбросить"
+        cancelText="Отмена"
+        isDangerous
+      />
 
       <p className="text-xs text-neutral-400 leading-relaxed">
         Управляйте цепочкой fallback-распознавания блюд. Приоритет определяется

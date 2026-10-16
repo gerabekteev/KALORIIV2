@@ -8,6 +8,9 @@ interface WeekStripCalendarProps {
   onSelectDate: (date: string) => void
   currentDayCalories: number
   dailyGoalCalories: number
+  onWeeklyBankChange?: (
+    bank: { balance: number; isPositive: boolean; trackedCount: number } | null
+  ) => void
 }
 
 // Helper to compute Monday (start of week) from any YYYY-MM-DD
@@ -31,6 +34,7 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
   onSelectDate,
   currentDayCalories,
   dailyGoalCalories,
+  onWeeklyBankChange,
 }) => {
   const todayStr = useMemo(() => getTodayDateString(), [])
   const [weekCaloriesMap, setWeekCaloriesMap] = useState<Record<string, number>>({})
@@ -50,6 +54,42 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
 
   const mondayStr = weekDays[0].dateStr
   const sundayStr = weekDays[6].dateStr
+
+  // Elastic Weekly Calorie Bank calculation (GC-02)
+  const weeklyBank = useMemo(() => {
+    if (!dailyGoalCalories || dailyGoalCalories <= 0) return null
+
+    // Evaluate days up to today (or all days up to selectedDate if in past)
+    const activeDays = weekDays.filter((d) => d.dateStr <= todayStr)
+    if (activeDays.length === 0) return null
+
+    let totalBudget = 0
+    let totalConsumed = 0
+    let trackedCount = 0
+
+    activeDays.forEach((d) => {
+      const cal = d.dateStr === selectedDate ? currentDayCalories : (weekCaloriesMap[d.dateStr] || 0)
+      if (cal > 0 || d.dateStr === todayStr) {
+        totalBudget += dailyGoalCalories
+        totalConsumed += cal
+        trackedCount++
+      }
+    })
+
+    if (trackedCount === 0) return null
+    const balance = Math.round(totalBudget - totalConsumed)
+    return {
+      balance,
+      isPositive: balance >= 0,
+      trackedCount,
+    }
+  }, [dailyGoalCalories, weekDays, todayStr, selectedDate, currentDayCalories, weekCaloriesMap])
+
+  useEffect(() => {
+    if (onWeeklyBankChange) {
+      onWeeklyBankChange(weeklyBank)
+    }
+  }, [weeklyBank, onWeeklyBankChange])
 
   // Fetch stats for the 7 days when week changes
   useEffect(() => {
@@ -237,6 +277,25 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
           )
         })}
       </div>
+
+      {/* Elastic Weekly Calorie Bank Badge (GC-02) */}
+      {weeklyBank && (
+        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#141417] border border-neutral-800/80 text-[11px]">
+          <span className="text-neutral-400 flex items-center gap-1.5 font-medium">
+            <span>🏦</span>
+            <span>Банк недели ({weeklyBank.trackedCount} дн.):</span>
+          </span>
+          {weeklyBank.isPositive ? (
+            <span className="font-semibold text-emerald-400">
+              +{weeklyBank.balance} ккал в запасе
+            </span>
+          ) : (
+            <span className="font-semibold text-amber-400">
+              {weeklyBank.balance} ккал (дефицит)
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

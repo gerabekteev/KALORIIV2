@@ -8,14 +8,17 @@ import { Button } from '../ui/Button'
 import { useUIStore } from '../../store/uiStore'
 
 interface ProductSearchProps {
-  onSelectProduct: (product: {
-    name: string
-    calories: number
-    protein: number
-    fat: number
-    carbs: number
-    weight_grams: number
-  }) => void
+  onSelectProduct: (
+    product: {
+      name: string
+      calories: number
+      protein: number
+      fat: number
+      carbs: number
+      weight_grams: number
+    },
+    keepOpen?: boolean
+  ) => void
 }
 
 export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct }) => {
@@ -59,20 +62,24 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
     }
   }, [query])
 
-  const handleConfirmPortion = () => {
+  const handleConfirmPortion = (keepOpen = false) => {
     if (!selectedProduct) return
     const parsedGrams = parseFloat(grams)
     const safeGrams = !isNaN(parsedGrams) && parsedGrams > 0 ? parsedGrams : 100
     const ratio = safeGrams / 100
-    onSelectProduct({
-      name: selectedProduct.name,
-      calories: Math.round(selectedProduct.calories_per_100g * ratio),
-      protein: Math.round(selectedProduct.protein_per_100g * ratio * 10) / 10,
-      fat: Math.round(selectedProduct.fat_per_100g * ratio * 10) / 10,
-      carbs: Math.round(selectedProduct.carbs_per_100g * ratio * 10) / 10,
-      weight_grams: safeGrams,
-    })
+    onSelectProduct(
+      {
+        name: selectedProduct.name,
+        calories: Math.round(selectedProduct.calories_per_100g * ratio),
+        protein: Math.round(selectedProduct.protein_per_100g * ratio * 10) / 10,
+        fat: Math.round(selectedProduct.fat_per_100g * ratio * 10) / 10,
+        carbs: Math.round(selectedProduct.carbs_per_100g * ratio * 10) / 10,
+        weight_grams: safeGrams,
+      },
+      keepOpen
+    )
     setSelectedProduct(null)
+    setGrams('100')
   }
 
   const handleStartCreate = (defaultName = '') => {
@@ -139,6 +146,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Search className="w-4 h-4" />}
+            autoFocus
           />
         </div>
         <button
@@ -258,6 +266,43 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             </button>
           </div>
 
+          {/* Quick portion chips */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] text-neutral-400 font-medium">Быстрый выбор порции:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[50, 100, 150, 200].map((chipGrams) => (
+                <button
+                  key={chipGrams}
+                  type="button"
+                  onClick={() => setGrams(String(chipGrams))}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    grams === String(chipGrams)
+                      ? 'bg-emerald-500 text-white font-semibold shadow-sm'
+                      : 'bg-neutral-900 border border-neutral-700/80 text-neutral-300 hover:bg-neutral-800'
+                  }`}
+                >
+                  {chipGrams}г
+                </button>
+              ))}
+              {Boolean(
+                selectedProduct.package_weight_grams &&
+                  ![50, 100, 150, 200].includes(selectedProduct.package_weight_grams)
+              ) && (
+                <button
+                  type="button"
+                  onClick={() => setGrams(String(selectedProduct.package_weight_grams))}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    grams === String(selectedProduct.package_weight_grams)
+                      ? 'bg-emerald-500 text-white font-semibold shadow-sm'
+                      : 'bg-neutral-900 border border-neutral-700/80 text-neutral-300 hover:bg-neutral-800'
+                  }`}
+                >
+                  Упаковка ({selectedProduct.package_weight_grams}г)
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             <div className="w-1/2">
               <label className="text-[11px] text-neutral-400 block mb-1">
@@ -286,13 +331,25 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             </div>
           </div>
 
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={handleConfirmPortion}
-          >
-            Добавить в приём пищи
-          </Button>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => handleConfirmPortion(true)}
+              className="text-xs font-medium"
+            >
+              + Добавить ещё
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleConfirmPortion(false)}
+              className="text-xs font-medium"
+            >
+              В дневник
+            </Button>
+          </div>
         </div>
       )}
 

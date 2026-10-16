@@ -38,6 +38,13 @@ export async function apiClient<T>(
   if (!headers['X-Client-Date']) {
     headers['X-Client-Date'] = localDateStr
   }
+  if (!headers['X-Client-Timezone']) {
+    try {
+      headers['X-Client-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow'
+    } catch {
+      headers['X-Client-Timezone'] = 'Europe/Moscow'
+    }
+  }
 
   if (token && !headers['Authorization']) {
     headers['Authorization'] = `Bearer ${token}`

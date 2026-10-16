@@ -587,33 +587,12 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
         }
       }}
     >
-      {/* Header bar */}
-      <div className="flex items-center justify-between gap-2 border-b border-neutral-800 pb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-            <ScanLine className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-white truncate">Сканер штрихкодов</h3>
-            <p className="text-[11px] text-neutral-400 flex items-center gap-1 truncate">
-              <span>EAN-13, EAN-8</span>
-              <span>•</span>
-              <span className="text-emerald-400 flex items-center gap-0.5 truncate">
-                <ShieldCheck className="w-3 h-3 shrink-0" /> Честный Знак
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleClose}
-          className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
-          title="Закрыть"
-          aria-label="Закрыть"
-        >
-          <X className="w-4 h-4" />
-        </button>
+      {/* Format info banner */}
+      <div className="flex items-center justify-between text-[11px] text-neutral-400 px-1 pb-1">
+        <span>Штрихкоды: EAN-13, EAN-8, UPC</span>
+        <span className="text-emerald-400 flex items-center gap-1 font-medium">
+          <ShieldCheck className="w-3.5 h-3.5" /> Честный Знак
+        </span>
       </div>
 
       {/* Sub-tabs: Camera | Screenshot | Manual */}

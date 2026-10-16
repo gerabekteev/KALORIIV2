@@ -31,7 +31,7 @@ class MealCreate(BaseModel):
     weight_grams: Optional[float] = Field(0.0, ge=0, le=25000)
     photo_path: Optional[str] = Field(None, max_length=500)
     user_comment: Optional[str] = Field(None, max_length=500)
-    ai_raw_response: Optional[str] = None
+    ai_raw_response: Optional[str] = Field(None, max_length=10000)
     is_manually_edited: bool = False
     meal_date: Optional[date] = None
     meal_time: Optional[time] = None

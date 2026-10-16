@@ -1,4 +1,5 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -9,8 +10,19 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, leftIcon, rightIcon, className = '', id, ...props }, ref) => {
+  ({ label, error, helperText, leftIcon, rightIcon, className = '', id, type, onWheel, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined)
+    const isPassword = type === 'password'
+    const [showPassword, setShowPassword] = useState(false)
+
+    const effectiveType = isPassword ? (showPassword ? 'text' : 'password') : type
+
+    const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+      if (type === 'number') {
+        (e.target as HTMLElement).blur()
+      }
+      onWheel?.(e)
+    }
 
     return (
       <div className="w-full text-left space-y-1.5">
@@ -28,18 +40,30 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            type={effectiveType}
+            onWheel={handleWheel}
             className={`w-full bg-[#18181b] border text-neutral-100 placeholder-neutral-500 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 disabled:opacity-50 disabled:bg-neutral-900 ${
               leftIcon ? 'pl-10' : ''
-            } ${rightIcon ? 'pr-10' : ''} ${
+            } ${rightIcon || isPassword ? 'pr-10' : ''} ${
               error ? 'border-red-500/80 focus:border-red-500 focus:ring-red-500/30' : 'border-neutral-800 hover:border-neutral-700'
             } ${className}`}
             {...props}
           />
-          {rightIcon && (
+          {isPassword && !rightIcon ? (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 flex items-center text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer focus:outline-none"
+              tabIndex={-1}
+              aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          ) : rightIcon ? (
             <div className="absolute right-3 flex items-center text-neutral-400">
               {rightIcon}
             </div>
-          )}
+          ) : null}
         </div>
         {error ? (
           <p className="text-xs text-red-400 font-medium pl-0.5">{error}</p>

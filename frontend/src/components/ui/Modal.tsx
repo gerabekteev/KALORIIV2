@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
 
+const modalStack: Array<() => void> = []
+
 export interface ModalProps {
   isOpen: boolean
   onClose: () => void
@@ -19,15 +21,26 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = 'md',
 }) => {
   useEffect(() => {
+    if (!isOpen) return
+    modalStack.push(onClose)
+    document.body.style.overflow = 'hidden'
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        const topClose = modalStack[modalStack.length - 1]
+        if (topClose === onClose) {
+          onClose()
+        }
+      }
     }
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-      window.addEventListener('keydown', handleKeyDown)
-    }
+
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.body.style.overflow = ''
+      const idx = modalStack.lastIndexOf(onClose)
+      if (idx !== -1) modalStack.splice(idx, 1)
+      if (modalStack.length === 0) {
+        document.body.style.overflow = ''
+      }
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [isOpen, onClose])
@@ -53,16 +66,26 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Dialog / Mobile Bottom Sheet */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#1a1a1e] border border-neutral-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col z-10 transition-transform duration-200 ease-out`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#1a1a1e] border border-neutral-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90dvh] flex flex-col z-10 transition-transform duration-200 ease-out`}
+        style={{
+          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
+        }}
         role="dialog"
         aria-modal="true"
       >
         {/* Mobile handle indicator */}
-        <div className="w-12 h-1.5 bg-neutral-700/60 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full flex items-center justify-center py-2.5 sm:hidden shrink-0 cursor-pointer focus:outline-none"
+          aria-label="Смахнуть вниз"
+        >
+          <span className="w-12 h-1.5 bg-neutral-700/80 rounded-full" />
+        </button>
 
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-neutral-800/80 shrink-0">
+          <div className="flex items-center justify-between px-4 sm:px-6 pt-1 sm:pt-4 pb-3 border-b border-neutral-800/80 shrink-0">
             <div>
               {title && <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>}
               {description && (
