@@ -12,6 +12,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base, AsyncSessionLocal
 from app.routers import auth, meals, products, recipes, stats, profile, ai, barcode
+from app.utils.image import cleanup_orphan_uploads
 from scripts.seed_products import seed_products
 
 # Logging setup
@@ -36,13 +37,14 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE products ADD COLUMN brand VARCHAR(255)",
             "ALTER TABLE products ADD COLUMN image_url VARCHAR(500)",
             "ALTER TABLE products ADD COLUMN package_weight_grams FLOAT DEFAULT 100.0",
+            "ALTER TABLE meals ADD COLUMN ingredients_json TEXT",
         ]:
             try:
                 await conn.execute(text(alter_sql))
             except Exception:
                 pass
 
-    # Seed products if empty
+    # Seed products if empty and clean orphan uploads
     async with AsyncSessionLocal() as session:
         try:
             seeded = await seed_products(session)
@@ -50,6 +52,13 @@ async def lifespan(app: FastAPI):
                 logger.info(f"Initialized database with {seeded} seed products.")
         except Exception as e:
             logger.error(f"Error seeding database: {e}", exc_info=True)
+
+        try:
+            cleaned = await cleanup_orphan_uploads(session, max_age_hours=24)
+            if cleaned > 0:
+                logger.info(f"Cleaned up {cleaned} orphan upload files.")
+        except Exception as e:
+            logger.debug(f"Error during orphan uploads cleanup: {e}")
 
     logger.info("KaloriiAI backend ready.")
     yield

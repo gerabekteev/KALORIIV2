@@ -7,6 +7,7 @@ import httpx
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi import HTTPException, status
 from app.models.product import Product
 from app.models.scanned_product import UserScannedProduct
 from app.schemas.barcode import BarcodeProductResult
@@ -423,6 +424,17 @@ async def update_barcode_product(
     product = res.scalar_one_or_none()
     if not product:
         return None
+
+    if product.is_custom and product.created_by_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав для редактирования этого продукта",
+        )
+    if not product.is_custom and not product.barcode:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Запрещено редактировать базовые системные продукты",
+        )
 
     product.name = name.strip()
     if brand is not None:

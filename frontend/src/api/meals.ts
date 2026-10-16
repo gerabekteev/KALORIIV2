@@ -38,4 +38,14 @@ export const mealsApi = {
       headers,
     })
   },
+
+  async copyMeal(mealId: number, targetDate?: string, targetTime?: string): Promise<Meal> {
+    return apiClient<Meal>(`/meals/${mealId}/copy`, {
+      method: 'POST',
+      body: JSON.stringify({
+        target_date: targetDate || null,
+        target_time: targetTime || null,
+      }),
+    })
+  },
 }

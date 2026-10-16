@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { RecentScannedProductItem, BarcodeProductResult } from '../../types'
 import { barcodeApi } from '../../api/barcode'
+import { pluralizeRu } from '../../utils/pluralize'
 
 interface RecentScannedShelfProps {
   onSelectProduct: (product: BarcodeProductResult) => void
@@ -129,7 +130,7 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
           <span className="truncate">Недавно отсканированные:</span>
         </h4>
         <span className="text-[10px] text-neutral-400 shrink-0 ml-2">
-          {items.length} {items.length === 1 ? 'продукт' : 'продуктов'}
+          {items.length} {pluralizeRu(items.length, ['продукт', 'продукта', 'продуктов'])}
         </span>
       </div>
 

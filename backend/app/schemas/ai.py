@@ -2,6 +2,15 @@ from typing import Optional, Literal, List
 from pydantic import BaseModel, Field, field_validator, ConfigDict, AliasChoices
 
 
+class MealIngredientItem(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    weight_grams: float = Field(..., ge=0)
+    calories: float = Field(..., ge=0)
+    protein: float = Field(..., ge=0)
+    fat: float = Field(..., ge=0)
+    carbs: float = Field(..., ge=0)
+
+
 class FoodAnalysisResult(BaseModel):
     name: str = Field(..., description="Food or dish name")
     weight_grams: float = Field(..., ge=0, description="Estimated weight in grams")
@@ -12,6 +21,8 @@ class FoodAnalysisResult(BaseModel):
     confidence: Literal["high", "medium", "low"] = Field(
         "medium", description="Confidence level of recognition"
     )
+    raw_response: Optional[str] = None
+    ingredients: List[MealIngredientItem] = Field(default_factory=list)
 
 
 class FoodRecognitionResponse(BaseModel):
@@ -26,6 +37,7 @@ class FoodRecognitionResponse(BaseModel):
     provider_used: Optional[str] = None
     model_used: Optional[str] = None
     raw_response: Optional[str] = None
+    ingredients: List[MealIngredientItem] = Field(default_factory=list)
 
 
 class TextAnalysisRequest(BaseModel):

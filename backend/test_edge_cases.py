@@ -55,7 +55,7 @@ async def test_edge_cases():
         # 3. Refresh token without body, using Bearer header (frontend flow)
         ref_header_res = await client.post(
             "/api/auth/refresh",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {refresh_token}"},
         )
         assert ref_header_res.status_code == 200, f"Bearer refresh failed: {ref_header_res.text}"
         assert "access_token" in ref_header_res.json()

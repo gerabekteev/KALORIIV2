@@ -50,20 +50,6 @@ export const DEFAULT_AI_MODELS: AIModelItem[] = [
     enabled: true,
   },
   {
-    id: 'gemini-3.7-flash',
-    name: 'Gemini 3.7 Flash',
-    provider: 'gemini',
-    description: 'Сбалансированный анализ и высокая скорость (20 RPD)',
-    enabled: true,
-  },
-  {
-    id: 'gemini-3.5-flash-lite',
-    name: 'Gemini 3.5 Flash-Lite',
-    provider: 'gemini',
-    description: 'Экономичный и ультрабыстрый отклик',
-    enabled: true,
-  },
-  {
     id: 'openrouter/auto',
     name: 'OpenRouter Auto',
     provider: 'openrouter',
@@ -89,6 +75,20 @@ export const DEFAULT_AI_MODELS: AIModelItem[] = [
     name: 'NVIDIA Omni (Free)',
     provider: 'openrouter',
     description: 'Reasoning VLM от NVIDIA с поддержкой vision',
+    enabled: true,
+  },
+  {
+    id: 'gemini-3.7-flash',
+    name: 'Gemini 3.7 Flash',
+    provider: 'gemini',
+    description: 'Сбалансированный анализ и высокая скорость (20 RPD)',
+    enabled: true,
+  },
+  {
+    id: 'gemini-3.5-flash-lite',
+    name: 'Gemini 3.5 Flash-Lite',
+    provider: 'gemini',
+    description: 'Экономичный и ультрабыстрый отклик',
     enabled: true,
   },
 ]
@@ -400,7 +400,7 @@ export const AISettingsCard: React.FC = () => {
                         {model.name}
                       </span>
                       <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
                           model.provider === 'gemini'
                             ? 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
                             : 'bg-purple-500/10 text-purple-300 border border-purple-500/20'

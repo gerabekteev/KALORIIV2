@@ -41,6 +41,9 @@ async def search_products(
 
     if category:
         conditions.append(Product.category == category)
+    else:
+        # Exclude technical 'Рецепты' category products from general search unless explicitly requested
+        conditions.append(or_(Product.category.is_(None), Product.category != "Рецепты"))
 
     query = (
         select(Product)
@@ -69,6 +72,10 @@ async def create_custom_product(
         fat_per_100g=round(product_in.fat_per_100g, 1),
         carbs_per_100g=round(product_in.carbs_per_100g, 1),
         category=product_in.category,
+        barcode=product_in.barcode.strip() if product_in.barcode else None,
+        brand=product_in.brand.strip() if product_in.brand else None,
+        image_url=product_in.image_url.strip() if product_in.image_url else None,
+        package_weight_grams=round(product_in.package_weight_grams or 100.0, 1),
         is_custom=True,
         created_by_user_id=current_user.id,
     )

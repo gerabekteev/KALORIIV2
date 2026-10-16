@@ -86,6 +86,8 @@ async def update_barcode_product_endpoint(
             package_weight_grams=payload.package_weight_grams,
             image_url=payload.image_url,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating barcode product {product_id}: {e}", exc_info=True)
         raise HTTPException(
@@ -137,7 +139,8 @@ async def scan_barcode_image_endpoint(
         ocr_comment = (
             "Внимательно определи на этой упаковке: 1) Название продукта и бренд. "
             "2) Если виден штрихкод или QR/DataMatrix Честный Знак — прочитай цифры. "
-            "3) Таблицу КБЖУ на 100 грамм и массу нетто упаковки в граммах."
+            "3) Таблицу КБЖУ СТРОГО на 100 грамм продукта (калории, белки, жиры, углеводы на 100г) "
+            "и массу нетто упаковки в граммах в поле weight_grams (по умолчанию 100)."
         )
 
         analysis_result, provider_name, model_name = await ai_router.recognize_food(
@@ -155,9 +158,10 @@ async def scan_barcode_image_endpoint(
         # Check if AI detected any barcode sequence in name or raw response
         detected_code = None
         is_honest = False
+        raw_resp = getattr(analysis_result, "raw_response", "") or ""
         candidates = re.findall(
             r"\b\d{8,14}\b",
-            f"{analysis_result.name or ''} {analysis_result.raw_response or ''}"
+            f"{analysis_result.name or ''} {raw_resp}"
         )
         for cand in candidates:
             c_code, c_honest = parse_and_normalize_barcode(cand)
@@ -166,36 +170,51 @@ async def scan_barcode_image_endpoint(
                 is_honest = c_honest
                 break
 
-        # Create product in DB
-        new_prod = Product(
-            name=name,
-            barcode=detected_code,
-            calories_per_100g=round(float(analysis_result.calories or 0), 1),
-            protein_per_100g=round(float(analysis_result.protein or 0), 1),
-            fat_per_100g=round(float(analysis_result.fat or 0), 1),
-            carbs_per_100g=round(float(analysis_result.carbs or 0), 1),
-            package_weight_grams=grams,
-            image_url=relative_url_path,
-            category="Скан",
-            is_custom=False,
-        )
-        db.add(new_prod)
-        await db.commit()
-        await db.refresh(new_prod)
+        # Check if product already exists by detected_code to avoid duplicates
+        existing_prod = None
+        if detected_code:
+            stmt = select(Product).where(Product.barcode == detected_code).limit(1)
+            res = await db.execute(stmt)
+            existing_prod = res.scalar_one_or_none()
 
-        await record_user_scan(db, current_user.id, new_prod.id, barcode=detected_code or "")
+        if existing_prod:
+            if not existing_prod.image_url:
+                existing_prod.image_url = relative_url_path
+            target_prod = existing_prod
+            await db.commit()
+            await db.refresh(target_prod)
+        else:
+            # Create product in DB
+            new_prod = Product(
+                name=name,
+                barcode=detected_code,
+                calories_per_100g=round(float(analysis_result.calories or 0), 1),
+                protein_per_100g=round(float(analysis_result.protein or 0), 1),
+                fat_per_100g=round(float(analysis_result.fat or 0), 1),
+                carbs_per_100g=round(float(analysis_result.carbs or 0), 1),
+                package_weight_grams=grams,
+                image_url=relative_url_path,
+                category="Скан",
+                is_custom=False,
+            )
+            db.add(new_prod)
+            await db.commit()
+            await db.refresh(new_prod)
+            target_prod = new_prod
+
+        await record_user_scan(db, current_user.id, target_prod.id, barcode=detected_code or "")
 
         product_result = BarcodeProductResult(
-            product_id=new_prod.id,
-            name=new_prod.name,
-            brand=None,
+            product_id=target_prod.id,
+            name=target_prod.name,
+            brand=target_prod.brand,
             barcode=detected_code or "",
-            calories_per_100g=new_prod.calories_per_100g,
-            protein_per_100g=new_prod.protein_per_100g,
-            fat_per_100g=new_prod.fat_per_100g,
-            carbs_per_100g=new_prod.carbs_per_100g,
-            package_weight_grams=grams,
-            image_url=relative_url_path,
+            calories_per_100g=target_prod.calories_per_100g,
+            protein_per_100g=target_prod.protein_per_100g,
+            fat_per_100g=target_prod.fat_per_100g,
+            carbs_per_100g=target_prod.carbs_per_100g,
+            package_weight_grams=target_prod.package_weight_grams or grams,
+            image_url=target_prod.image_url or relative_url_path,
             source="ai_vision",
             is_honest_sign=is_honest,
         )

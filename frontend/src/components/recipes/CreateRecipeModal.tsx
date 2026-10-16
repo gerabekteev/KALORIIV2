@@ -351,7 +351,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                   </div>
 
                   {searchResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-[#202025] border border-neutral-700 rounded-xl max-h-40 overflow-y-auto z-20 shadow-xl">
+                    <div className="mt-2 bg-[#202025] border border-neutral-700 rounded-xl max-h-44 overflow-y-auto shadow-lg">
                       {searchResults.map((p) => (
                         <button
                           key={p.id}

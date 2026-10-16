@@ -36,6 +36,15 @@ export interface AuthResponse {
   token_type?: string
 }
 
+export interface MealIngredient {
+  name: string
+  weight_grams: number
+  calories: number
+  protein: number
+  fat: number
+  carbs: number
+}
+
 export interface Meal {
   id: number
   user_id?: number
@@ -48,6 +57,7 @@ export interface Meal {
   photo_path?: string | null
   user_comment?: string | null
   ai_raw_response?: string | null
+  ingredients?: MealIngredient[]
   is_manually_edited?: boolean
   meal_date: string // YYYY-MM-DD
   meal_time: string // HH:MM or HH:MM:SS
@@ -78,6 +88,7 @@ export interface CreateMealPayload {
   photo_path?: string | null
   user_comment?: string | null
   ai_raw_response?: string | null
+  ingredients?: MealIngredient[]
   is_manually_edited?: boolean
   meal_date?: string
   meal_time?: string
@@ -132,6 +143,17 @@ export interface RecipeItem {
   product_id: number
   weight_grams: number
   product?: Product
+}
+
+export interface CreateRecipePayload {
+  name: string
+  description?: string | null
+  items?: Array<{ product_id: number; weight_grams: number }>
+  total_calories?: number
+  total_protein?: number
+  total_fat?: number
+  total_carbs?: number
+  total_weight_grams?: number
 }
 
 export interface Recipe {
@@ -213,6 +235,7 @@ export interface AIRecognitionResult {
   provider_used?: string | null
   model_used?: string | null
   raw_response?: string | null
+  ingredients?: MealIngredient[]
 }
 
 export interface DayStats {

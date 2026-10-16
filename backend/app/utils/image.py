@@ -105,3 +105,51 @@ async def save_uploaded_file(file: UploadFile) -> Tuple[Path, str]:
     # Return relative URL path for frontend serving (e.g. /uploads/filename.jpg)
     relative_path = f"/uploads/{filename}"
     return dest_path, relative_path
+
+
+async def cleanup_orphan_uploads(db, max_age_hours: int = 24) -> int:
+    """
+    Remove files in settings.UPLOAD_DIR older than max_age_hours that are not referenced
+    by any Meal.photo_path or Product.image_url.
+    """
+    import time
+    from sqlalchemy import select
+    from app.models.meal import Meal
+    from app.models.product import Product
+
+    try:
+        upload_dir = settings.UPLOAD_DIR
+        if not upload_dir.exists():
+            return 0
+
+        # Query all referenced photo paths
+        meal_photos = await db.execute(select(Meal.photo_path).where(Meal.photo_path.is_not(None)))
+        referenced_paths = set(p for p in meal_photos.scalars().all() if p)
+
+        product_images = await db.execute(select(Product.image_url).where(Product.image_url.is_not(None)))
+        referenced_paths.update(p for p in product_images.scalars().all() if p)
+
+        now = time.time()
+        max_age_seconds = max_age_hours * 3600
+        deleted_count = 0
+
+        for file_path in upload_dir.iterdir():
+            if not file_path.is_file():
+                continue
+            if file_path.name.startswith("."):
+                continue
+            relative_url = f"/uploads/{file_path.name}"
+            if relative_url in referenced_paths:
+                continue
+
+            try:
+                mtime = file_path.stat().st_mtime
+                if now - mtime > max_age_seconds:
+                    file_path.unlink()
+                    deleted_count += 1
+            except Exception:
+                pass
+
+        return deleted_count
+    except Exception:
+        return 0

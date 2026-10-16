@@ -3,11 +3,17 @@ import { Meal, AIRecognitionResult } from '../types'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 export interface ToastItem {
   id: string
   message: string
   type: ToastType
   duration?: number
+  action?: ToastAction
 }
 
 interface UIState {
@@ -29,7 +35,12 @@ interface UIState {
   openAIResult: (result: AIRecognitionResult, photoFile?: File | null) => void
   closeAIResult: () => void
 
-  addToast: (message: string, type?: ToastType, duration?: number) => void
+  addToast: (
+    message: string,
+    type?: ToastType,
+    duration?: number,
+    action?: ToastAction
+  ) => void
   removeToast: (id: string) => void
 }
 
@@ -54,15 +65,23 @@ export const useUIStore = create<UIState>((set) => ({
   closeAIResult: () =>
     set({ isAIResultOpen: false, aiResultData: null, aiPhotoFile: null }),
 
-  addToast: (message: string, type: ToastType = 'info', duration = 3000) => {
+  addToast: (
+    message: string,
+    type: ToastType = 'info',
+    duration = 3000,
+    action?: ToastAction
+  ) => {
     set((state) => {
-      // 1. Deduplication: if an active toast with the same message already exists, ignore
-      if (state.toasts.some((t) => t.message === message)) {
+      // 1. Deduplication: if an active toast with the same message exists, replace it if action is present, otherwise ignore
+      let currentToasts = state.toasts
+      if (action) {
+        currentToasts = currentToasts.filter((t) => t.message !== message)
+      } else if (currentToasts.some((t) => t.message === message)) {
         return state
       }
 
       // 2. Limit capacity: keep at most 2 existing toasts so there are never more than 3 on screen
-      const current = state.toasts.length >= 3 ? state.toasts.slice(-2) : state.toasts
+      const current = currentToasts.length >= 3 ? currentToasts.slice(-2) : currentToasts
       const id = Math.random().toString(36).substring(2, 9)
 
       if (duration > 0) {
@@ -74,7 +93,7 @@ export const useUIStore = create<UIState>((set) => ({
       }
 
       return {
-        toasts: [...current, { id, message, type, duration }],
+        toasts: [...current, { id, message, type, duration, action }],
       }
     })
   },

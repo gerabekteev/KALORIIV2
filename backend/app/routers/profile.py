@@ -53,6 +53,7 @@ async def update_profile(
 
     # If current weight was updated, also add/update today's entry in weight_log
     if weight_changed:
+        current_user.current_weight_kg = round(float(current_user.current_weight_kg), 1)
         today = date.today()
         existing_log_res = await db.execute(
             select(WeightLog).where(
@@ -186,8 +187,17 @@ async def log_weight(
         )
         db.add(log_entry)
 
-    # If log is for today or future, update current_weight_kg
-    if target_date >= date.today():
+    # If target_date is today/future or the most recent entry in weight_log, update current_weight_kg
+    newer_res = await db.execute(
+        select(WeightLog.id).where(
+            and_(
+                WeightLog.user_id == current_user.id,
+                WeightLog.log_date > target_date,
+            )
+        ).limit(1)
+    )
+    has_newer = newer_res.scalar_one_or_none() is not None
+    if not has_newer or target_date >= date.today():
         current_user.current_weight_kg = round(weight_in.weight_kg, 1)
 
     try:

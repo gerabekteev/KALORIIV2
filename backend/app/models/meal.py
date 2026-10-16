@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, date, time
 from typing import TYPE_CHECKING, Optional
 from sqlalchemy import String, Float, Integer, Boolean, DateTime, Date, Time, Text, ForeignKey, func
@@ -25,6 +26,7 @@ class Meal(Base):
     photo_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     user_comment: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     ai_raw_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ingredients_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_manually_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     meal_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
@@ -33,3 +35,22 @@ class Meal(Base):
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="meals")
+
+    @property
+    def ingredients(self) -> list:
+        if not self.ingredients_json:
+            return []
+        try:
+            data = json.loads(self.ingredients_json)
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    @ingredients.setter
+    def ingredients(self, value) -> None:
+        if value is None:
+            self.ingredients_json = None
+        elif isinstance(value, str):
+            self.ingredients_json = value
+        else:
+            self.ingredients_json = json.dumps(value, ensure_ascii=False)

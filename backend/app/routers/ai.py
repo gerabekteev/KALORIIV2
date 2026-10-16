@@ -229,7 +229,8 @@ async def recognize_food_endpoint(
             photo_path=relative_url_path,
             provider_used=provider_name,
             model_used=model_id,
-            raw_response=None,
+            raw_response=result.raw_response,
+            ingredients=result.ingredients,
         )
 
     except HTTPException:
@@ -316,5 +317,6 @@ async def analyze_food_text_endpoint(
         photo_path=None,
         provider_used=provider_name,
         model_used=model_id,
-        raw_response=None,
+        raw_response=result.raw_response,
+        ingredients=result.ingredients,
     )

@@ -2,6 +2,8 @@ from datetime import datetime, date, time
 from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.schemas.ai import MealIngredientItem
+
 
 class MealCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -16,6 +18,7 @@ class MealCreate(BaseModel):
     is_manually_edited: bool = False
     meal_date: Optional[date] = None
     meal_time: Optional[time] = None
+    ingredients: List[MealIngredientItem] = Field(default_factory=list)
 
 
 class MealUpdate(BaseModel):
@@ -30,6 +33,12 @@ class MealUpdate(BaseModel):
     is_manually_edited: Optional[bool] = True
     meal_date: Optional[date] = None
     meal_time: Optional[time] = None
+    ingredients: Optional[List[MealIngredientItem]] = None
+
+
+class MealCopyRequest(BaseModel):
+    target_date: Optional[date] = None
+    target_time: Optional[time] = None
 
 
 class MealRecalculateRequest(BaseModel):
@@ -54,6 +63,7 @@ class MealResponse(BaseModel):
     meal_date: date
     meal_time: time
     created_at: datetime
+    ingredients: List[MealIngredientItem] = Field(default_factory=list)
 
 
 class DailyMealsSummary(BaseModel):

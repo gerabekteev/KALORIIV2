@@ -170,7 +170,7 @@ async def test_ai_analyze_text_and_meal_recalculate():
             assert updated_meal["carbs"] == 42.0
             assert updated_meal["weight_grams"] == 250.0
             assert updated_meal["user_comment"] == "Добавил 30г сливочного масла и 40г сыра"
-            assert updated_meal["is_manually_edited"] is True
+            assert updated_meal["is_manually_edited"] is False
             raw = json.loads(updated_meal["ai_raw_response"])
             assert raw["provider"] == "gemini"
             assert raw["model"] == "gemini-3.5-flash"
@@ -229,7 +229,7 @@ async def test_ai_analyze_text_and_meal_recalculate():
             assert updated_photo_meal["name"] == "Салат с оливковым маслом и фетой"
             assert updated_photo_meal["calories"] == 290.0
             assert updated_photo_meal["user_comment"] == "Заправил оливковым маслом и добавил сыр фета"
-            assert updated_photo_meal["is_manually_edited"] is True
+            assert updated_photo_meal["is_manually_edited"] is False
 
             # Verify that recognize_food was called with the image bytes from disk
             mock_recalc_food.assert_called_once()

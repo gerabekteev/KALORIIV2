@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import { getAIHeaders } from './ai'
 import {
   BarcodeProductResult,
   RecentScannedProductItem,
@@ -31,6 +32,7 @@ export const barcodeApi = {
     return apiClient<BarcodeScanImageResponse>('/barcode/scan-image', {
       method: 'POST',
       body: formData,
+      headers: getAIHeaders(),
     })
   },
 

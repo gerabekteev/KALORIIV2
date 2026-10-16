@@ -53,10 +53,10 @@ export const ProfilePage: React.FC = () => {
       setGender(user.gender || 'male')
       setActivity(user.activity_level || 'moderate')
 
-      setGoalCalories(user.daily_calories_goal?.toString() || '2200')
+      setGoalCalories(user.daily_calories_goal?.toString() || '2000')
       setGoalProtein(user.daily_protein_goal?.toString() || '140')
-      setGoalFat(user.daily_fat_goal?.toString() || '73')
-      setGoalCarbs(user.daily_carbs_goal?.toString() || '275')
+      setGoalFat(user.daily_fat_goal?.toString() || '70')
+      setGoalCarbs(user.daily_carbs_goal?.toString() || '250')
     }
   }, [user])
 
@@ -72,10 +72,11 @@ export const ProfilePage: React.FC = () => {
     }
 
     setIsCalculating(true)
+    const targetW = parseFloat(targetWeight)
+    const goal = targetW && targetW - w < -0.5 ? 'lose_weight' : targetW && targetW - w > 0.5 ? 'gain_weight' : 'maintain'
+
     try {
       // First try server calculation
-      const targetW = parseFloat(targetWeight)
-      const goal = targetW && targetW < w ? 'lose_weight' : targetW && targetW > w ? 'gain_weight' : 'maintain'
       const calculated = await profileApi.calculateGoals({
         gender,
         height_cm: h,
@@ -93,7 +94,7 @@ export const ProfilePage: React.FC = () => {
       setGoalCarbs(calculated.daily_carbs_goal.toString())
       addToast('Норма КБЖУ рассчитана по формуле Mifflin-St Jeor', 'success')
     } catch {
-      // Fallback calculation directly in frontend
+      // Fallback calculation directly in frontend exactly matching backend nutrition.py
       let bmr = 10 * w + 6.25 * h - 5 * a
       if (gender === 'male') {
         bmr += 5
@@ -109,23 +110,34 @@ export const ProfilePage: React.FC = () => {
         very_active: 1.9,
       }
 
-      const tdee = bmr * (activityMultipliers[activity] || 1.55)
+      const tdee = bmr * (activityMultipliers[activity] || 1.2)
 
       // Adjust for weight target
-      let targetKcal = tdee
-      const targetW = parseFloat(targetWeight)
-      if (targetW && targetW < w) {
-        targetKcal -= 400 // deficit
-      } else if (targetW && targetW > w) {
-        targetKcal += 350 // surplus
+      let goalMultiplier = 1.0
+      if (goal === 'lose_weight') {
+        goalMultiplier = 0.82
+      } else if (goal === 'gain_weight') {
+        goalMultiplier = 1.15
       }
 
-      const finalCalories = Math.max(Math.round(targetKcal), 1200)
-      const finalProtein = Math.round(w * 1.8) // 1.8g per kg
-      const finalFat = Math.round(w * 0.9)     // 0.9g per kg
-      const finalCarbs = Math.round(Math.max((finalCalories - finalProtein * 4 - finalFat * 9) / 4, 50))
+      const targetCaloriesVal = Math.max(1200, Math.round(tdee * goalMultiplier))
 
-      setGoalCalories(finalCalories.toString())
+      let proteinGPerKg = 1.6
+      let fatRatio = 0.30
+      if (goal === 'lose_weight') {
+        proteinGPerKg = 2.0
+        fatRatio = 0.25
+      } else if (goal === 'gain_weight') {
+        proteinGPerKg = 1.9
+        fatRatio = 0.25
+      }
+
+      const finalProtein = Math.max(50, Math.round(w * proteinGPerKg))
+      const finalFat = Math.max(Math.round(w * 0.7), Math.round((targetCaloriesVal * fatRatio) / 9.0))
+      const remainingCal = Math.max(0, targetCaloriesVal - finalProtein * 4 - finalFat * 9)
+      const finalCarbs = Math.round(remainingCal / 4.0)
+
+      setGoalCalories(targetCaloriesVal.toString())
       setGoalProtein(finalProtein.toString())
       setGoalFat(finalFat.toString())
       setGoalCarbs(finalCarbs.toString())

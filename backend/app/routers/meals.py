@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from datetime import date as dt_date, datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, Body, status
@@ -9,9 +10,11 @@ from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.models.meal import Meal
+from app.models.product import Product
 from app.schemas.meal import (
     MealCreate,
     MealUpdate,
+    MealCopyRequest,
     MealRecalculateRequest,
     MealResponse,
     DailyMealsSummary,
@@ -75,6 +78,12 @@ async def create_meal(
     meal_date = meal_in.meal_date or now.date()
     meal_time = meal_in.meal_time or now.time().replace(microsecond=0)
 
+    ingredients_json = (
+        json.dumps([i.model_dump() for i in meal_in.ingredients], ensure_ascii=False)
+        if meal_in.ingredients
+        else None
+    )
+
     meal = Meal(
         user_id=current_user.id,
         name=meal_in.name,
@@ -85,6 +94,7 @@ async def create_meal(
         weight_grams=round(meal_in.weight_grams or 0.0, 1),
         photo_path=meal_in.photo_path,
         user_comment=meal_in.user_comment,
+        ingredients_json=ingredients_json,
         ai_raw_response=meal_in.ai_raw_response,
         is_manually_edited=meal_in.is_manually_edited,
         meal_date=meal_date,
@@ -142,11 +152,23 @@ async def update_meal(
         )
 
     update_data = meal_in.model_dump(exclude_unset=True)
+    nullable_fields = {"user_comment", "photo_path"}
     for field, value in update_data.items():
+        if field == "ingredients":
+            continue
         if value is not None:
             if isinstance(value, float):
                 value = round(value, 1)
             setattr(meal, field, value)
+        elif field in nullable_fields:
+            setattr(meal, field, None)
+
+    if meal_in.ingredients is not None:
+        meal.ingredients_json = (
+            json.dumps([i.model_dump() for i in meal_in.ingredients], ensure_ascii=False)
+            if meal_in.ingredients
+            else None
+        )
 
     # Flag as manually edited if user changed values
     meal.is_manually_edited = True
@@ -181,15 +203,20 @@ async def delete_meal(
             detail="Приём пищи не найден",
         )
 
-    # Clean up uploaded photo if exists
+    file_to_unlink = None
     if meal.photo_path and meal.photo_path.startswith("/uploads/"):
-        filename = meal.photo_path.replace("/uploads/", "")
-        photo_file = settings.UPLOAD_DIR / filename
-        if photo_file.exists():
-            try:
-                photo_file.unlink()
-            except Exception:
-                pass
+        safe_name = Path(meal.photo_path).name
+        upload_root = settings.UPLOAD_DIR.resolve()
+        photo_file = (upload_root / safe_name).resolve()
+        if photo_file.parent == upload_root and photo_file.is_file():
+            other_meals = await db.execute(
+                select(Meal.id).where(and_(Meal.id != meal.id, Meal.photo_path == meal.photo_path)).limit(1)
+            )
+            linked_products = await db.execute(
+                select(Product.id).where(Product.image_url == meal.photo_path).limit(1)
+            )
+            if not other_meals.scalar_one_or_none() and not linked_products.scalar_one_or_none():
+                file_to_unlink = photo_file
 
     try:
         await db.delete(meal)
@@ -200,6 +227,13 @@ async def delete_meal(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при удалении приёма пищи: {e}",
         )
+
+    if file_to_unlink:
+        try:
+            file_to_unlink.unlink()
+        except Exception:
+            pass
+
     return None
 
 
@@ -306,7 +340,12 @@ async def recalculate_meal(
     meal.fat = round(ai_result.fat, 1)
     meal.carbs = round(ai_result.carbs, 1)
     meal.weight_grams = round(ai_result.weight_grams, 1)
-    meal.is_manually_edited = True
+    meal.is_manually_edited = False
+    meal.ingredients_json = (
+        json.dumps([i.model_dump() for i in ai_result.ingredients], ensure_ascii=False)
+        if ai_result.ingredients
+        else None
+    )
     meal.ai_raw_response = json.dumps(
         {
             "provider": prov_used,
@@ -327,3 +366,54 @@ async def recalculate_meal(
         )
 
     return MealResponse.model_validate(meal)
+
+
+@router.post("/{meal_id}/copy", response_model=MealResponse, status_code=status.HTTP_201_CREATED)
+async def copy_meal(
+    meal_id: int,
+    copy_in: Optional[MealCopyRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Copy an existing meal to the target date/time (default today)."""
+    result = await db.execute(
+        select(Meal).where(and_(Meal.id == meal_id, Meal.user_id == current_user.id))
+    )
+    source_meal = result.scalar_one_or_none()
+    if not source_meal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Приём пищи не найден",
+        )
+
+    target_date = (copy_in.target_date if copy_in and copy_in.target_date else None) or dt_date.today()
+    target_time = (copy_in.target_time if copy_in and copy_in.target_time else None) or datetime.now().time().replace(microsecond=0)
+
+    new_meal = Meal(
+        user_id=current_user.id,
+        name=source_meal.name,
+        calories=source_meal.calories,
+        protein=source_meal.protein,
+        fat=source_meal.fat,
+        carbs=source_meal.carbs,
+        weight_grams=source_meal.weight_grams,
+        photo_path=source_meal.photo_path,
+        user_comment=source_meal.user_comment,
+        ingredients_json=source_meal.ingredients_json,
+        ai_raw_response=source_meal.ai_raw_response,
+        is_manually_edited=source_meal.is_manually_edited,
+        meal_date=target_date,
+        meal_time=target_time,
+    )
+    db.add(new_meal)
+    try:
+        await db.commit()
+        await db.refresh(new_meal)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при копировании приёма пищи: {e}",
+        )
+
+    return MealResponse.model_validate(new_meal)

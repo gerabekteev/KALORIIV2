@@ -10,13 +10,14 @@ import { WeightTrendChart } from '../components/stats/WeightTrendChart'
 import { ProgressRings } from '../components/stats/ProgressRings'
 import { Card } from '../components/ui/Card'
 import { PageLoading } from '../components/ui/Loading'
+import { pluralizeRu } from '../utils/pluralize'
 
 export const StatsPage: React.FC = () => {
   const { user } = useAuthStore()
   const { period, setPeriod, stats, weightLogs, isLoading } = useStats('week')
   const [chartTab, setChartTab] = useState<'bar' | 'trend'>('bar')
 
-  const targetCalories = user?.daily_calories_goal || 2200
+  const targetCalories = user?.daily_calories_goal || 2000
 
   // Calculate averages & totals from backend StatsPeriodResponse
   const daysTracked = stats?.tracked_days ?? (stats?.days?.length || 0)
@@ -27,6 +28,11 @@ export const StatsPage: React.FC = () => {
   const totalProtein = stats?.macro_distribution?.protein_grams ?? (stats?.days?.reduce((acc, d) => acc + d.protein, 0) || 0)
   const totalFat = stats?.macro_distribution?.fat_grams ?? (stats?.days?.reduce((acc, d) => acc + d.fat, 0) || 0)
   const totalCarbs = stats?.macro_distribution?.carbs_grams ?? (stats?.days?.reduce((acc, d) => acc + d.carbs, 0) || 0)
+
+  const totalCal = Math.round(stats?.total_calories || 0)
+  const formattedTotalCal = totalCal >= 10000
+    ? `${(totalCal / 1000).toFixed(1)}k`
+    : totalCal.toLocaleString('ru-RU')
 
   if (isLoading) {
     return <PageLoading message="Загрузка статистики..." />
@@ -41,7 +47,7 @@ export const StatsPage: React.FC = () => {
             Статистика питания
           </h1>
           <span className="text-xs text-neutral-400">
-            {daysTracked} {daysTracked === 1 ? 'день' : 'дней'} в отчете
+            {daysTracked} {pluralizeRu(daysTracked, ['день', 'дня', 'дней'])} в отчете
           </span>
         </div>
 
@@ -79,7 +85,7 @@ export const StatsPage: React.FC = () => {
           </div>
           <span className="text-xs text-neutral-400 block">Всего</span>
           <span className="text-sm font-bold text-white">
-            {Math.round((stats?.total_calories || 0) / 1000)}k <span className="text-[10px] text-neutral-400 font-normal">ккал</span>
+            {formattedTotalCal} <span className="text-[10px] text-neutral-400 font-normal">ккал</span>
           </span>
         </Card>
       </div>

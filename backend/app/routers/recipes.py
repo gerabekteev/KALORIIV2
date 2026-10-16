@@ -1,7 +1,7 @@
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
@@ -18,8 +18,8 @@ from app.services.auth import get_current_user
 router = APIRouter(prefix="/recipes", tags=["Рецепты"])
 
 
-async def calculate_recipe_totals(items_data: list, db: AsyncSession):
-    """Calculate total weight and macros from recipe items."""
+async def calculate_recipe_totals(items_data: list, db: AsyncSession, user_id: int):
+    """Calculate total weight and macros from recipe items scoped to accessible products."""
     total_weight = 0.0
     total_cal = 0.0
     total_prot = 0.0
@@ -28,12 +28,19 @@ async def calculate_recipe_totals(items_data: list, db: AsyncSession):
 
     items_to_create = []
     for item in items_data:
-        prod_result = await db.execute(select(Product).where(Product.id == item.product_id))
+        prod_result = await db.execute(
+            select(Product).where(
+                and_(
+                    Product.id == item.product_id,
+                    or_(Product.is_custom.is_(False), Product.created_by_user_id == user_id),
+                )
+            )
+        )
         product = prod_result.scalar_one_or_none()
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Продукт с ID {item.product_id} не найден",
+                detail=f"Продукт с ID {item.product_id} не найден или недоступен",
             )
 
         weight = float(item.weight_grams)
@@ -89,14 +96,25 @@ async def create_recipe(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new recipe with automatic nutrition calculation."""
-    (
-        total_cal,
-        total_prot,
-        total_fat,
-        total_carb,
-        total_weight,
-        items,
-    ) = await calculate_recipe_totals(recipe_in.items, db)
+    if recipe_in.items:
+        (
+            total_cal,
+            total_prot,
+            total_fat,
+            total_carb,
+            total_weight,
+            items,
+        ) = await calculate_recipe_totals(recipe_in.items, db, current_user.id)
+    elif recipe_in.total_calories is not None:
+        total_cal = round(float(recipe_in.total_calories or 0.0), 1)
+        total_prot = round(float(recipe_in.total_protein or 0.0), 1)
+        total_fat = round(float(recipe_in.total_fat or 0.0), 1)
+        total_carb = round(float(recipe_in.total_carbs or 0.0), 1)
+        total_weight = round(float(recipe_in.total_weight_grams or 100.0), 1)
+        items = []
+    else:
+        total_cal, total_prot, total_fat, total_carb, total_weight = 0.0, 0.0, 0.0, 0.0, 0.0
+        items = []
 
     recipe = Recipe(
         user_id=current_user.id,
@@ -187,7 +205,7 @@ async def update_recipe(
             total_carb,
             total_weight,
             new_items,
-        ) = await calculate_recipe_totals(recipe_in.items, db)
+        ) = await calculate_recipe_totals(recipe_in.items, db, current_user.id)
 
         recipe.total_calories = total_cal
         recipe.total_protein = total_prot

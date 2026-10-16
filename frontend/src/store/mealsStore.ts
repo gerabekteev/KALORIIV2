@@ -18,6 +18,19 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+export function getPreviousDayString(dateStr: string): string {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() - 1)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function sortMealsByTime(meals: Meal[]): Meal[] {
+  return [...meals].sort((a, b) => (a.meal_time || '').localeCompare(b.meal_time || ''))
+}
+
 function computeUpdatedSummary(
   summary: DailyMealsSummary | null,
   meals: Meal[]
@@ -33,9 +46,13 @@ function computeUpdatedSummary(
   }
 }
 
+// In-memory timers for undo delete
+const pendingDeletes = new Map<number, ReturnType<typeof setTimeout>>()
+
 interface MealsState {
   meals: Meal[]
   dailySummary: DailyMealsSummary | null
+  previousDayMeals: Meal[]
   selectedDate: string
   isLoading: boolean
   error: string | null
@@ -43,9 +60,13 @@ interface MealsState {
 
   setSelectedDate: (date: string) => void
   fetchMeals: (date?: string) => Promise<void>
+  fetchPreviousDayMeals: (date?: string) => Promise<void>
   addMeal: (payload: CreateMealPayload) => Promise<Meal>
   updateMeal: (id: number, payload: UpdateMealPayload) => Promise<Meal>
   deleteMeal: (id: number) => Promise<void>
+  deleteMealWithUndo: (id: number) => Promise<void>
+  copyMealToDate: (mealId: number, targetDate?: string, targetTime?: string) => Promise<Meal>
+  copyMultipleMealsToDate: (mealIds: number[], targetDate?: string) => Promise<void>
   recalculateMeal: (mealId: number, userComment?: string) => Promise<Meal>
   getTotals: () => { calories: number; protein: number; fat: number; carbs: number }
 
@@ -67,6 +88,7 @@ interface MealsState {
 export const useMealsStore = create<MealsState>((set, get) => ({
   meals: [],
   dailySummary: null,
+  previousDayMeals: [],
   pendingMeals: [],
   selectedDate: getTodayDateString(),
   isLoading: false,
@@ -75,6 +97,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
   setSelectedDate: (date: string) => {
     set({ selectedDate: date })
     get().fetchMeals(date)
+    get().fetchPreviousDayMeals(date)
   },
 
   fetchMeals: async (date?: string) => {
@@ -82,17 +105,30 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const data = await mealsApi.getMeals(targetDate)
-      const mealList = Array.isArray(data) ? data : (data?.meals || [])
+      const mealList = sortMealsByTime(Array.isArray(data) ? data : (data?.meals || []))
       set({
         meals: mealList,
         dailySummary: data && !Array.isArray(data) ? data : null,
         isLoading: false,
       })
+      get().fetchPreviousDayMeals(targetDate)
     } catch (err: any) {
       set({
         error: err.message || 'Ошибка загрузки приемов пищи',
         isLoading: false,
       })
+    }
+  },
+
+  fetchPreviousDayMeals: async (date?: string) => {
+    const baseDate = date || get().selectedDate
+    const prevDate = getPreviousDayString(baseDate)
+    try {
+      const data = await mealsApi.getMeals(prevDate)
+      const list = sortMealsByTime(Array.isArray(data) ? data : (data?.meals || []))
+      set({ previousDayMeals: list })
+    } catch {
+      set({ previousDayMeals: [] })
     }
   },
 
@@ -108,7 +144,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       // If the meal is added for the currently selected date, add to list
       if (newMeal.meal_date === get().selectedDate) {
         set((state) => {
-          const updatedMeals = [newMeal, ...state.meals]
+          const updatedMeals = sortMealsByTime([newMeal, ...state.meals])
           return {
             meals: updatedMeals,
             dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
@@ -133,7 +169,12 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     try {
       const updated = await mealsApi.updateMeal(id, payload)
       set((state) => {
-        const updatedMeals = state.meals.map((m) => (m.id === id ? updated : m))
+        let updatedMeals: Meal[]
+        if (updated.meal_date && updated.meal_date !== state.selectedDate) {
+          updatedMeals = state.meals.filter((m) => m.id !== id)
+        } else {
+          updatedMeals = sortMealsByTime(state.meals.map((m) => (m.id === id ? updated : m)))
+        }
         return {
           meals: updatedMeals,
           dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
@@ -171,12 +212,135 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     }
   },
 
+  deleteMealWithUndo: async (id: number) => {
+    const mealToDelete = get().meals.find((m) => m.id === id)
+    if (!mealToDelete) return
+
+    // Immediately remove from UI
+    set((state) => {
+      const updatedMeals = state.meals.filter((m) => m.id !== id)
+      return {
+        meals: updatedMeals,
+        dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+      }
+    })
+
+    const existing = pendingDeletes.get(id)
+    if (existing) {
+      clearTimeout(existing)
+    }
+
+    const timer = setTimeout(async () => {
+      pendingDeletes.delete(id)
+      try {
+        await mealsApi.deleteMeal(id)
+      } catch (err: any) {
+        // Rollback
+        set((state) => {
+          if (mealToDelete.meal_date !== state.selectedDate) return state
+          const exists = state.meals.some((m) => m.id === id)
+          if (exists) return state
+          const updatedMeals = sortMealsByTime([...state.meals, mealToDelete])
+          return {
+            meals: updatedMeals,
+            dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+          }
+        })
+        useUIStore.getState().addToast('Не удалось удалить блюдо на сервере', 'error')
+      }
+    }, 5000)
+
+    pendingDeletes.set(id, timer)
+
+    useUIStore.getState().addToast(
+      `"${mealToDelete.name}" удалено`,
+      'info',
+      5000,
+      {
+        label: 'Отменить',
+        onClick: () => {
+          const activeTimer = pendingDeletes.get(id)
+          if (activeTimer) {
+            clearTimeout(activeTimer)
+            pendingDeletes.delete(id)
+          }
+          set((state) => {
+            if (mealToDelete.meal_date !== state.selectedDate) return state
+            const exists = state.meals.some((m) => m.id === id)
+            if (exists) return state
+            const updatedMeals = sortMealsByTime([...state.meals, mealToDelete])
+            return {
+              meals: updatedMeals,
+              dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+            }
+          })
+          useUIStore.getState().addToast('Удаление отменено', 'success', 2000)
+        },
+      }
+    )
+  },
+
+  copyMealToDate: async (mealId: number, targetDate?: string, targetTime?: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      const destDate = targetDate || get().selectedDate
+      const copied = await mealsApi.copyMeal(mealId, destDate, targetTime)
+      if (copied.meal_date === get().selectedDate) {
+        set((state) => {
+          const updatedMeals = sortMealsByTime([copied, ...state.meals])
+          return {
+            meals: updatedMeals,
+            dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+            isLoading: false,
+          }
+        })
+      } else {
+        set({ isLoading: false })
+      }
+      useUIStore.getState().addToast(`"${copied.name}" скопировано в дневник!`, 'success', 3000)
+      return copied
+    } catch (err: any) {
+      set({ isLoading: false, error: err.message || 'Ошибка копирования блюда' })
+      useUIStore.getState().addToast(err.message || 'Ошибка копирования блюда', 'error')
+      throw err
+    }
+  },
+
+  copyMultipleMealsToDate: async (mealIds: number[], targetDate?: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      const destDate = targetDate || get().selectedDate
+      const results: Meal[] = []
+      for (const id of mealIds) {
+        const copied = await mealsApi.copyMeal(id, destDate)
+        results.push(copied)
+      }
+      if (destDate === get().selectedDate) {
+        set((state) => {
+          const updatedMeals = sortMealsByTime([...results, ...state.meals])
+          return {
+            meals: updatedMeals,
+            dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+            isLoading: false,
+          }
+        })
+      } else {
+        set({ isLoading: false })
+      }
+      useUIStore.getState().addToast(`Скопировано блюд: ${results.length}`, 'success', 3000)
+    } catch (err: any) {
+      set({ isLoading: false, error: err.message || 'Ошибка копирования блюд' })
+      useUIStore.getState().addToast(err.message || 'Ошибка копирования блюд', 'error')
+      throw err
+    }
+  },
+
   recalculateMeal: async (mealId: number, userComment?: string) => {
     set({ isLoading: true, error: null })
     try {
       const updated = await mealsApi.recalculateMeal(mealId, userComment)
       set((state) => {
-        const updatedMeals = state.meals.map((m) => (m.id === mealId ? updated : m))
+        const updatedMeals = sortMealsByTime(state.meals.map((m) => (m.id === mealId ? updated : m)))
         return {
           meals: updatedMeals,
           dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
@@ -257,6 +421,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
           user_comment: userComment?.trim() || null,
           ai_raw_response:
             result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI'),
+          ingredients: result.ingredients || [],
           meal_date: date,
           meal_time: time,
           is_manually_edited: false,
@@ -279,7 +444,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         if (newMeal.meal_date === get().selectedDate) {
           set((state) => {
             const exists = state.meals.some((m) => m.id === newMeal.id)
-            const updatedMeals = exists ? state.meals : [newMeal, ...state.meals]
+            const updatedMeals = sortMealsByTime(exists ? state.meals : [newMeal, ...state.meals])
             return {
               meals: updatedMeals,
               dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
@@ -345,6 +510,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
           user_comment: text.trim(),
           ai_raw_response:
             result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI'),
+          ingredients: result.ingredients || [],
           meal_date: date,
           meal_time: time,
           is_manually_edited: false,
@@ -359,7 +525,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         if (newMeal.meal_date === get().selectedDate) {
           set((state) => {
             const exists = state.meals.some((m) => m.id === newMeal.id)
-            const updatedMeals = exists ? state.meals : [newMeal, ...state.meals]
+            const updatedMeals = sortMealsByTime(exists ? state.meals : [newMeal, ...state.meals])
             return {
               meals: updatedMeals,
               dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
@@ -421,6 +587,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         user_comment: item.comment || item.textDescription || null,
         ai_raw_response:
           result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI'),
+        ingredients: result.ingredients || [],
         meal_date: item.targetDate,
         meal_time: item.targetTime,
         is_manually_edited: false,
@@ -442,7 +609,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       if (newMeal.meal_date === get().selectedDate) {
         set((state) => {
           const exists = state.meals.some((m) => m.id === newMeal.id)
-          const updatedMeals = exists ? state.meals : [newMeal, ...state.meals]
+          const updatedMeals = sortMealsByTime(exists ? state.meals : [newMeal, ...state.meals])
           return {
             meals: updatedMeals,
             dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
@@ -477,7 +644,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         } catch {}
       }
       return {
-        pendingMeals: state.pendingMeals.filter((m) => m.id !== id),
+        pendingMeals: state.pendingMeals.filter((p) => p.id !== id),
       }
     })
   },

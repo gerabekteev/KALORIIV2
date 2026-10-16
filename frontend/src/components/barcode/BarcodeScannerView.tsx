@@ -70,6 +70,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
   const [isProcessingFile, setIsProcessingFile] = useState(false)
+  const [isScanningOcr, setIsScanningOcr] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
   // Manual code state
@@ -493,6 +494,25 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
     }
   }
 
+  const handleScanLabelViaAI = async (file: File) => {
+    setIsScanningOcr(true)
+    try {
+      const res = await barcodeApi.scanImage(file)
+      if (res.product) {
+        if (navigator.vibrate) navigator.vibrate(60)
+        addToast('Этикетка успешно распознана через AI!', 'success', 2500)
+        onProductFound(res.product)
+      } else {
+        addToast(res.message || 'Не удалось распознать пищевую ценность на упаковке', 'warning', 3500)
+      }
+    } catch (err: any) {
+      console.warn('AI OCR scan error:', err)
+      addToast(err?.message || 'Ошибка распознавания упаковки через AI', 'error')
+    } finally {
+      setIsScanningOcr(false)
+    }
+  }
+
   // Clipboard paste (Ctrl+V) listener
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -900,15 +920,28 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                         </span>
                       </div>
                       <p className="text-xs text-neutral-400">
-                        Это может быть фотография блюда, чек или скриншот доставки. Хотите распознать состав с помощью AI?
+                        Штрихкод не обнаружен. Вы можете распознать пищевую ценность с упаковки/этикетки через AI или проанализировать готовое блюдо.
                       </p>
-                      <Button
-                        className="w-full flex items-center justify-center gap-1.5"
-                        onClick={() => onSwitchToAI(notFoundState.file)}
-                      >
-                        <Sparkles className="w-4 h-4 text-emerald-300" />
-                        <span>Распознать блюдо через AI</span>
-                      </Button>
+                      <div className="flex flex-col gap-2 pt-1">
+                        {notFoundState.file && (
+                          <Button
+                            className="w-full flex items-center justify-center gap-1.5"
+                            variant="secondary"
+                            isLoading={isScanningOcr}
+                            onClick={() => notFoundState.file && handleScanLabelViaAI(notFoundState.file)}
+                          >
+                            <ScanLine className="w-4 h-4 text-emerald-400" />
+                            <span>Считать этикетку / упаковку через AI</span>
+                          </Button>
+                        )}
+                        <Button
+                          className="w-full flex items-center justify-center gap-1.5"
+                          onClick={() => onSwitchToAI(notFoundState.file)}
+                        >
+                          <Sparkles className="w-4 h-4 text-emerald-300" />
+                          <span>Распознать блюдо целиком через AI</span>
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <>

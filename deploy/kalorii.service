@@ -9,7 +9,7 @@ Group=www-data
 WorkingDirectory=/var/www/kalorii/backend
 Environment="PATH=/var/www/kalorii/backend/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 EnvironmentFile=/var/www/kalorii/backend/.env
-ExecStart=/var/www/kalorii/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 5100 --workers 2
+ExecStart=/var/www/kalorii/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 5100 --workers 1
 
 Restart=always
 RestartSec=5s

@@ -98,7 +98,7 @@ export const CaloriesBarChart: React.FC<CaloriesBarChartProps> = ({
           >
             {chartData.map((entry, index) => {
               const isOver = targetCalories > 0 && entry.calories > targetCalories * 1.15
-              const isTargetMet = targetCalories > 0 && entry.calories >= targetCalories * 0.9 && entry.calories <= targetCalories * 1.1
+              const isTargetMet = (entry as any).goal_achieved ?? (targetCalories > 0 && entry.calories >= targetCalories * 0.85 && entry.calories <= targetCalories * 1.15)
               const color = isOver ? '#f59e0b' : isTargetMet ? '#10b981' : '#34d399'
               return <Cell key={`cell-${index}`} fill={color} />
             })}

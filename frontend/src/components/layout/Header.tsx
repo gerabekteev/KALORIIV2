@@ -16,8 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   const { user } = useAuthStore()
 
   return (
-    <header className="sticky top-0 z-30 bg-[#0f0f0f]/90 backdrop-blur-xl border-b border-neutral-800/60 px-4 py-3.5 transition-all">
-      <div className="max-w-md mx-auto flex items-center justify-between">
+    <header className="sticky top-0 z-30 bg-[#0f0f0f]/90 backdrop-blur-xl border-b border-neutral-800/60 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 transition-all">
+      <div className="max-w-lg mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Flame className="w-5 h-5 text-white fill-white" />

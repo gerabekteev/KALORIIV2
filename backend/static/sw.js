@@ -33,8 +33,12 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
-  // Do not cache API calls
-  if (event.request.url.includes('/api/')) {
+  if (
+    event.request.method !== 'GET' ||
+    !event.request.url.startsWith(self.location.origin) ||
+    event.request.url.includes('/api/') ||
+    event.request.url.includes('/uploads/')
+  ) {
     return
   }
 

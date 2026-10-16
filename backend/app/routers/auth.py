@@ -121,31 +121,7 @@ async def refresh_token(
             detail="Не передан токен для обновления (refresh token)",
         )
 
-    try:
-        payload = decode_token(token_str, expected_type="refresh")
-    except HTTPException:
-        # Fallback: check if valid authorization token was provided in header
-        try:
-            payload = jwt.decode(
-                token_str,
-                settings.JWT_SECRET,
-                algorithms=[settings.JWT_ALGORITHM],
-                options={"verify_exp": False},
-            )
-            # Check maximum age (30 days)
-            exp = payload.get("exp", 0)
-            max_age = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS).total_seconds()
-            if datetime.now(timezone.utc).timestamp() - exp > max_age:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Срок действия токена полностью истёк",
-                )
-        except JWTError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Недействительный токен авторизации",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    payload = decode_token(token_str, expected_type="refresh")
 
     user_id_str = payload.get("sub")
     if not user_id_str:

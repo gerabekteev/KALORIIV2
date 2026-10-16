@@ -24,6 +24,11 @@ class RecipeCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     items: List[RecipeItemCreate] = Field(default_factory=list)
+    total_calories: Optional[float] = None
+    total_protein: Optional[float] = None
+    total_fat: Optional[float] = None
+    total_carbs: Optional[float] = None
+    total_weight_grams: Optional[float] = None
 
 
 class RecipeUpdate(BaseModel):

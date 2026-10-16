@@ -1,8 +1,8 @@
 import abc
 import json
 import re
-from typing import Optional, Dict, Any
-from app.schemas.ai import FoodAnalysisResult
+from typing import Optional, Dict, Any, List
+from app.schemas.ai import FoodAnalysisResult, MealIngredientItem
 
 
 class AIProviderError(Exception):
@@ -31,19 +31,30 @@ def build_system_prompt(user_comment: Optional[str] = None) -> str:
         "3. Калории (ккал)\n"
         "4. Белки (г)\n"
         "5. Жиры (г)\n"
-        "6. Углеводы (г)\n\n"
+        "6. Углеводы (г)\n"
+        "7. Массив отдельных компонентов/ингредиентов (ingredients), входящих в состав блюда\n\n"
         "ВАЖНО (Распознавание скриншотов и OCR):\n"
         "Если на изображении представлен скриншот экрана (приложение доставки еды — Яндекс Еда, Самокат, Додо и т.д., таблица пищевой ценности КБЖУ, этикетка продукта, чек, меню или скриншот рецепта) — распознай напечатанный текст, найди точные указанные значения веса в граммах, калорий, белков, жиров и углеводов и верни их в JSON!"
         f"{comment_clause}\n\n"
         "Ответь СТРОГО в JSON формате:\n"
         "{\n"
-        '  "name": "название",\n'
+        '  "name": "название всего блюда",\n'
         '  "weight_grams": число,\n'
         '  "calories": число,\n'
         '  "protein": число,\n'
         '  "fat": число,\n'
         '  "carbs": число,\n'
-        '  "confidence": "high/medium/low"\n'
+        '  "confidence": "high/medium/low",\n'
+        '  "ingredients": [\n'
+        "    {\n"
+        '      "name": "название ингредиента/компонента",\n'
+        '      "weight_grams": число,\n'
+        '      "calories": число,\n'
+        '      "protein": число,\n'
+        '      "fat": число,\n'
+        '      "carbs": число\n'
+        "    }\n"
+        "  ]\n"
         "}"
     )
 
@@ -59,16 +70,27 @@ def build_text_prompt(text: str) -> str:
         "3. Калории (ккал)\n"
         "4. Белки (г)\n"
         "5. Жиры (г)\n"
-        "6. Углеводы (г)\n\n"
+        "6. Углеводы (г)\n"
+        "7. Массив отдельных компонентов/ингредиентов (ingredients), входящих в состав блюда\n\n"
         "Ответь СТРОГО в JSON формате:\n"
         "{\n"
-        '  "name": "название",\n'
+        '  "name": "название всего блюда",\n'
         '  "weight_grams": число,\n'
         '  "calories": число,\n'
         '  "protein": число,\n'
         '  "fat": число,\n'
         '  "carbs": число,\n'
-        '  "confidence": "high/medium/low"\n'
+        '  "confidence": "high/medium/low",\n'
+        '  "ingredients": [\n'
+        "    {\n"
+        '      "name": "название ингредиента/компонента",\n'
+        '      "weight_grams": число,\n'
+        '      "calories": число,\n'
+        '      "protein": число,\n'
+        '      "fat": число,\n'
+        '      "carbs": число\n'
+        "    }\n"
+        "  ]\n"
         "}"
     )
 
@@ -120,14 +142,65 @@ def parse_food_result(raw_json: Dict[str, Any]) -> FoodAnalysisResult:
     if confidence not in {"high", "medium", "low"}:
         confidence = "medium"
 
+    name = str(raw_json.get("name", "Блюдо")).strip()
+    weight_grams = max(0.0, _parse_float_safely(raw_json.get("weight_grams"), 100.0))
+    calories = max(0.0, _parse_float_safely(raw_json.get("calories"), 0.0))
+    protein = max(0.0, _parse_float_safely(raw_json.get("protein"), 0.0))
+    fat = max(0.0, _parse_float_safely(raw_json.get("fat"), 0.0))
+    carbs = max(0.0, _parse_float_safely(raw_json.get("carbs"), 0.0))
+
+    # Parse ingredients
+    ingredients: List[MealIngredientItem] = []
+    raw_ingredients = raw_json.get("ingredients")
+    if isinstance(raw_ingredients, list):
+        for item in raw_ingredients:
+            if isinstance(item, dict) and item.get("name"):
+                ing_name = str(item.get("name")).strip()
+                ing_weight = max(0.0, _parse_float_safely(item.get("weight_grams"), 0.0))
+                ing_cal = max(0.0, _parse_float_safely(item.get("calories"), 0.0))
+                ing_prot = max(0.0, _parse_float_safely(item.get("protein"), 0.0))
+                ing_fat = max(0.0, _parse_float_safely(item.get("fat"), 0.0))
+                ing_carbs = max(0.0, _parse_float_safely(item.get("carbs"), 0.0))
+                ingredients.append(
+                    MealIngredientItem(
+                        name=ing_name,
+                        weight_grams=round(ing_weight, 1),
+                        calories=round(ing_cal, 1),
+                        protein=round(ing_prot, 1),
+                        fat=round(ing_fat, 1),
+                        carbs=round(ing_carbs, 1),
+                    )
+                )
+
+    # Validate sum consistency if 2 or more ingredients are present
+    if len(ingredients) >= 2:
+        sum_cal = sum(i.calories for i in ingredients)
+        sum_weight = sum(i.weight_grams for i in ingredients)
+        sum_prot = sum(i.protein for i in ingredients)
+        sum_fat = sum(i.fat for i in ingredients)
+        sum_carbs = sum(i.carbs for i in ingredients)
+
+        diff_ratio = abs(sum_cal - calories) / (calories if calories > 0 else 1.0)
+        if (diff_ratio > 0.15 or calories == 0) and sum_cal > 0:
+            calories = round(sum_cal, 1)
+            protein = round(sum_prot, 1)
+            fat = round(sum_fat, 1)
+            carbs = round(sum_carbs, 1)
+            if sum_weight > 0:
+                weight_grams = round(sum_weight, 1)
+
+    raw_response_str = json.dumps(raw_json, ensure_ascii=False)
+
     return FoodAnalysisResult(
-        name=str(raw_json.get("name", "Блюдо")).strip(),
-        weight_grams=max(0.0, _parse_float_safely(raw_json.get("weight_grams"), 100.0)),
-        calories=max(0.0, _parse_float_safely(raw_json.get("calories"), 0.0)),
-        protein=max(0.0, _parse_float_safely(raw_json.get("protein"), 0.0)),
-        fat=max(0.0, _parse_float_safely(raw_json.get("fat"), 0.0)),
-        carbs=max(0.0, _parse_float_safely(raw_json.get("carbs"), 0.0)),
+        name=name,
+        weight_grams=round(weight_grams, 1),
+        calories=round(calories, 1),
+        protein=round(protein, 1),
+        fat=round(fat, 1),
+        carbs=round(carbs, 1),
         confidence=confidence,  # type: ignore[arg-type]
+        raw_response=raw_response_str,
+        ingredients=ingredients,
     )
 
 
