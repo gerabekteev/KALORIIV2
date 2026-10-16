@@ -2,7 +2,7 @@ import re
 import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Response, status
-from sqlalchemy import select, and_, delete
+from sqlalchemy import select, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -173,18 +173,30 @@ async def scan_barcode_image_endpoint(
         # Check if product already exists by detected_code to avoid duplicates
         existing_prod = None
         if detected_code:
-            stmt = select(Product).where(Product.barcode == detected_code).limit(1)
+            stmt = select(Product).where(
+                and_(
+                    Product.barcode == detected_code,
+                    or_(Product.is_custom.is_(False), Product.created_by_user_id == current_user.id),
+                )
+            ).limit(1)
             res = await db.execute(stmt)
             existing_prod = res.scalar_one_or_none()
 
         if existing_prod:
             if not existing_prod.image_url:
                 existing_prod.image_url = relative_url_path
+                await db.commit()
+                await db.refresh(existing_prod)
+            else:
+                # Удаляем лишний загруженный файл (BUG-B01)
+                if dest_path.exists():
+                    try:
+                        dest_path.unlink()
+                    except Exception:
+                        pass
             target_prod = existing_prod
-            await db.commit()
-            await db.refresh(target_prod)
         else:
-            # Create product in DB
+            is_private_scan = detected_code is None
             new_prod = Product(
                 name=name,
                 barcode=detected_code,
@@ -195,7 +207,8 @@ async def scan_barcode_image_endpoint(
                 package_weight_grams=grams,
                 image_url=relative_url_path,
                 category="Скан",
-                is_custom=False,
+                is_custom=is_private_scan,
+                created_by_user_id=current_user.id,
             )
             db.add(new_prod)
             await db.commit()

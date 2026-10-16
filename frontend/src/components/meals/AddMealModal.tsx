@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   ChevronRight,
   ShieldCheck,
+  Mic,
+  Square,
 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
@@ -28,7 +30,7 @@ import { aiApi } from '../../api/ai'
 import { barcodeApi } from '../../api/barcode'
 import { BarcodeProductResult } from '../../types'
 
-type ModalMode = 'hub' | 'barcode' | 'ai_photo' | 'text_ai' | 'search' | 'recipes' | 'manual'
+type ModalMode = 'hub' | 'barcode' | 'ai_photo' | 'text_ai' | 'voice_ai' | 'search' | 'recipes' | 'manual'
 
 export const AddMealModal: React.FC = () => {
   const { isAddMealOpen, closeAddMeal, addToast } = useUIStore()
@@ -37,6 +39,7 @@ export const AddMealModal: React.FC = () => {
     selectedDate,
     startPhotoAIAnalysis,
     startTextAIAnalysis,
+    startVoiceAIAnalysis,
   } = useMealsStore()
 
   const [mode, setMode] = useState<ModalMode>('hub')
@@ -54,6 +57,12 @@ export const AddMealModal: React.FC = () => {
 
   // AI Text mode state
   const [textDescription, setTextDescription] = useState('')
+
+  // AI Voice mode state
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   // Manual mode state
   const [manualForm, setManualForm] = useState({
@@ -80,8 +89,25 @@ export const AddMealModal: React.FC = () => {
       setTextDescription('')
       setScannedProduct(null)
       setIsPortionModalOpen(false)
+      setIsRecording(false)
+      setRecordingSeconds(0)
+    } else {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
+      setIsRecording(false)
     }
   }, [isAddMealOpen])
+
+  useEffect(() => {
+    let interval: any
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [isRecording])
 
   useEffect(() => {
     if (selectedPhoto) {
@@ -98,6 +124,20 @@ export const AddMealModal: React.FC = () => {
     if (!isAddMealOpen) return
 
     const handlePaste = (e: ClipboardEvent) => {
+      if (mode === 'barcode') return
+
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        if (e.clipboardData?.getData('text/plain')) {
+          return
+        }
+      }
+
       const items = e.clipboardData?.items
       if (!items) return
 
@@ -106,11 +146,9 @@ export const AddMealModal: React.FC = () => {
           const file = items[i].getAsFile()
           if (file) {
             e.preventDefault()
-            if (mode !== 'barcode') {
-              setSelectedPhoto(file)
-              setMode('ai_photo')
-              addToast('Скриншот получен из буфера обмена (Ctrl+V)', 'info')
-            }
+            setSelectedPhoto(file)
+            setMode('ai_photo')
+            addToast('Скриншот получен из буфера обмена (Ctrl+V)', 'info')
             return
           }
         }
@@ -194,6 +232,48 @@ export const AddMealModal: React.FC = () => {
     closeAddMeal()
 
     addToast('Текст отправлен на расчёт AI. Блюдо появится в дневнике!', 'info', 3500)
+  }
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      audioChunksRef.current = []
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm',
+        })
+        if (audioBlob.size > 0) {
+          startVoiceAIAnalysis(audioBlob, selectedDate)
+          closeAddMeal()
+          addToast(
+            'Голосовое сообщение отправлено в AI! Расшифровка сохранится в описание блюда.',
+            'info',
+            4000
+          )
+        }
+      }
+
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setIsRecording(true)
+      setRecordingSeconds(0)
+    } catch {
+      addToast('Не удалось получить доступ к микрофону в браузере', 'error')
+    }
+  }
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
   }
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -284,6 +364,7 @@ export const AddMealModal: React.FC = () => {
     barcode: 'Сканер штрихкодов',
     ai_photo: 'Распознавание по фото',
     text_ai: 'Описание еды текстом',
+    voice_ai: 'Голос AI',
     search: 'База продуктов',
     recipes: 'Мои рецепты',
     manual: 'Ввод вручную',
@@ -339,7 +420,7 @@ export const AddMealModal: React.FC = () => {
               <span className="text-[11px] font-semibold text-neutral-400 block px-0.5">
                 Быстрые способы:
               </span>
-              <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
                 {/* AI Photo */}
                 <button
                   type="button"
@@ -388,6 +469,23 @@ export const AddMealModal: React.FC = () => {
                   </span>
                   <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
                     Описать текстом
+                  </span>
+                </button>
+
+                {/* Voice AI */}
+                <button
+                  type="button"
+                  onClick={() => setMode('voice_ai')}
+                  className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-[#19191e] hover:bg-[#22222a] border border-neutral-800/90 hover:border-emerald-500/40 transition-all cursor-pointer group active:scale-[0.98] text-center min-w-0"
+                >
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform mb-1.5 shrink-0">
+                    <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-white leading-tight truncate max-w-full">
+                    Голос AI
+                  </span>
+                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate max-w-full">
+                    Сказать голосом
                   </span>
                 </button>
               </div>
@@ -649,6 +747,71 @@ export const AddMealModal: React.FC = () => {
             >
               Рассчитать через AI
             </Button>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* MODE: VOICE AI                                           */}
+        {/* ======================================================== */}
+        {mode === 'voice_ai' && (
+          <div className="space-y-4 py-2 text-center">
+            <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#18181c] border border-neutral-800 space-y-4">
+              <div className="relative">
+                {isRecording && (
+                  <span className="absolute -inset-3 rounded-full bg-red-500/20 animate-ping" />
+                )}
+                <button
+                  type="button"
+                  onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
+                  className={`relative w-20 h-20 rounded-full flex items-center justify-center text-white transition-all shadow-lg cursor-pointer ${
+                    isRecording
+                      ? 'bg-red-500 hover:bg-red-600 shadow-red-500/40 scale-105'
+                      : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 hover:scale-105'
+                  }`}
+                  title={isRecording ? 'Остановить запись' : 'Начать запись'}
+                >
+                  {isRecording ? (
+                    <Square className="w-8 h-8 fill-white" />
+                  ) : (
+                    <Mic className="w-9 h-9" />
+                  )}
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm font-bold text-white my-0">
+                  {isRecording ? 'Идёт запись голоса...' : 'Нажмите на микрофон для записи'}
+                </p>
+                {isRecording ? (
+                  <div className="flex items-center justify-center gap-2 mt-2 text-red-400 font-mono text-sm font-semibold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    <span>00:{String(recordingSeconds).padStart(2, '0')}</span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-neutral-400 block mt-1">
+                    Нажмите кнопку, продиктуйте блюдо и нажмите ещё раз
+                  </span>
+                )}
+              </div>
+
+              {isRecording && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="md"
+                  onClick={stopVoiceRecording}
+                  leftIcon={<Square className="w-4 h-4 fill-white" />}
+                >
+                  Завершить и отправить в AI
+                </Button>
+              )}
+            </div>
+
+            <div className="bg-[#141417] border border-neutral-800/80 rounded-xl p-3 text-left">
+              <p className="text-xs text-neutral-400 leading-relaxed my-0">
+                💡 <b>Подсказка:</b> Скажите, что вы съели (например: <i>«Тарелка борща 350г со сметаной и два куска хлеба»</i>). Нейросеть расшифрует вашу речь, поместит расшифровку в описание продукта для удобного редактирования и посчитает КБЖУ.
+              </p>
+            </div>
           </div>
         )}
 

@@ -1,8 +1,10 @@
 import base64
-from typing import Optional
+import re
+from typing import Optional, List, Dict, Any
 import httpx
 
-from app.schemas.ai import FoodAnalysisResult
+from app.config import settings
+from app.schemas.ai import FoodAnalysisResult, PlannedMealItem
 from app.utils.ai_providers.base import (
     BaseAIProvider,
     AIProviderError,
@@ -10,24 +12,30 @@ from app.utils.ai_providers.base import (
     AIAuthenticationError,
     build_system_prompt,
     build_text_prompt,
+    build_voice_prompt,
     extract_json_from_text,
     parse_food_result,
+    parse_meal_plan_result,
 )
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 class GeminiProvider(BaseAIProvider):
-    """Google Gemini vision and text API provider using direct HTTP requests."""
+    """Google Gemini vision, voice, text, and meal planning API provider using direct HTTP requests."""
 
     def __init__(self, api_key: str, model_id: str = "gemini-3.8-flash"):
         super().__init__(api_key=api_key, model_id=model_id, provider_name="gemini")
 
-    async def _send_and_parse(self, payload: dict) -> FoodAnalysisResult:
-        from app.config import settings
-
+    async def _send_and_extract_json(self, payload: dict) -> Dict[str, Any]:
+        if not re.match(r"^[a-zA-Z0-9._-]+$", self.model_id):
+            raise AIProviderError(f"Invalid Gemini model ID format: {self.model_id}")
         base_url = (settings.GEMINI_BASE_URL or GEMINI_BASE_URL).rstrip("/")
-        url = f"{base_url}/{self.model_id}:generateContent?key={self.api_key}"
+        url = f"{base_url}/{self.model_id}:generateContent"
+        headers = {
+            "x-goog-api-key": self.api_key,
+            "Content-Type": "application/json",
+        }
         proxy = settings.GEMINI_PROXY_URL.strip() if settings.GEMINI_PROXY_URL else None
 
         client_kwargs = {"timeout": 45.0}
@@ -36,11 +44,11 @@ class GeminiProvider(BaseAIProvider):
 
         async with httpx.AsyncClient(**client_kwargs) as client:
             try:
-                response = await client.post(url, json=payload)
+                response = await client.post(url, headers=headers, json=payload)
             except httpx.TimeoutException:
                 raise AIProviderError(f"Gemini ({self.model_id}) timeout exceeded")
             except httpx.RequestError as e:
-                raise AIProviderError(f"Gemini ({self.model_id}) network error: {e}")
+                raise AIProviderError(f"Gemini ({self.model_id}) network connection error: {type(e).__name__}")
 
         # Check for Google Geo-blocking
         if "User location is not supported" in response.text:
@@ -63,7 +71,7 @@ class GeminiProvider(BaseAIProvider):
                     payload_retry["generationConfig"] = dict(payload_retry["generationConfig"])
                     payload_retry["generationConfig"].pop("responseMimeType", None)
                 async with httpx.AsyncClient(**client_kwargs) as client:
-                    response = await client.post(url, json=payload_retry)
+                    response = await client.post(url, headers=headers, json=payload_retry)
                 if "User location is not supported" in response.text:
                     raise AIProviderError(
                         f"Gemini ({self.model_id}) заблокирован Google по геолокации сервера. "
@@ -125,11 +133,15 @@ class GeminiProvider(BaseAIProvider):
                     raise AIProviderError(f"Gemini ({self.model_id}) returned no text in response parts")
                 parsed_json = extract_json_from_text(combined_text)
 
-            return parse_food_result(parsed_json)
+            return parsed_json
         except AIProviderError:
             raise
         except Exception as e:
             raise AIProviderError(f"Failed to parse Gemini response: {e}")
+
+    async def _send_and_parse(self, payload: dict) -> FoodAnalysisResult:
+        parsed_json = await self._send_and_extract_json(payload)
+        return parse_food_result(parsed_json)
 
     async def analyze_food(
         self,
@@ -188,3 +200,67 @@ class GeminiProvider(BaseAIProvider):
         }
 
         return await self._send_and_parse(payload)
+
+    async def analyze_food_voice(
+        self,
+        audio_bytes: bytes,
+        mime_type: str = "audio/ogg",
+    ) -> FoodAnalysisResult:
+        if not self.api_key:
+            raise AIAuthenticationError("Gemini API key is not configured")
+
+        b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
+        prompt = build_voice_prompt()
+
+        # Нормализуем MIME-тип аудио для Gemini API
+        clean_mime = mime_type.split(";")[0].strip().lower()
+        if clean_mime not in {"audio/ogg", "audio/webm", "audio/mp4", "audio/mpeg", "audio/mp3", "audio/wav"}:
+            clean_mime = "audio/ogg"
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inlineData": {
+                                "mimeType": clean_mime,
+                                "data": b64_audio,
+                            }
+                        },
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "responseMimeType": "application/json",
+            },
+        }
+
+        return await self._send_and_parse(payload)
+
+    async def generate_meal_plan(
+        self,
+        prompt: str,
+        expected_count: int,
+        max_calories: float,
+    ) -> List[PlannedMealItem]:
+        if not self.api_key:
+            raise AIAuthenticationError("Gemini API key is not configured")
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.4,
+                "responseMimeType": "application/json",
+            },
+        }
+
+        parsed_json = await self._send_and_extract_json(payload)
+        return parse_meal_plan_result(parsed_json, expected_count=expected_count, max_calories=max_calories)

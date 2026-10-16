@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 from collections import defaultdict, deque
 from typing import Optional, Dict, Tuple, List
@@ -9,7 +10,7 @@ from app.config import settings
 from app.models.user import User
 from app.schemas.ai import FoodRecognitionResponse, TextAnalysisRequest
 from app.services.auth import get_current_user
-from app.services.ai_router import ai_router, AllProvidersFailedError
+from app.services.ai_router import ai_router, AllProvidersFailedError, MODEL_METADATA_CATALOG
 from app.utils.image import save_uploaded_file
 
 logger = logging.getLogger("kalorii.ai_router")
@@ -81,6 +82,23 @@ def _sanitize_api_key(key: Optional[str]) -> Optional[str]:
     if len(k) < 8 or any(c.isspace() for c in k):
         return None
     return k
+
+
+_SAFE_MODEL_ID_RE = re.compile(r"^[a-zA-Z0-9._:/-]+$")
+
+
+def _is_allowed_model(provider: str, model_id: str, has_custom_key: bool) -> bool:
+    if not _SAFE_MODEL_ID_RE.match(model_id) or ".." in model_id:
+        return False
+    if has_custom_key:
+        return True
+    if model_id in MODEL_METADATA_CATALOG:
+        return True
+    if provider == "openrouter" and (model_id.endswith(":free") or model_id == "openrouter/auto"):
+        return True
+    if provider == "gemini" and model_id.startswith("gemini-"):
+        return True
+    return False
 
 
 def _parse_custom_ai_models(x_ai_models: Optional[str]) -> Optional[List[Tuple[str, str]]]:
@@ -165,6 +183,16 @@ def resolve_ai_config(
                     custom_chain = chain
         except Exception as e:
             logger.debug(f"Could not parse user ai_settings_json: {e}")
+
+    if custom_chain is not None:
+        custom_chain = [
+            (prov, mod_id)
+            for prov, mod_id in custom_chain
+            if _is_allowed_model(
+                prov, mod_id,
+                has_custom_key=bool(resolved_gemini if prov == "gemini" else resolved_openrouter),
+            )
+        ]
 
     return resolved_gemini, resolved_openrouter, custom_chain
 
@@ -315,6 +343,78 @@ async def analyze_food_text_endpoint(
         carbs=result.carbs,
         confidence=result.confidence,
         photo_path=None,
+        provider_used=provider_name,
+        model_used=model_id,
+        raw_response=result.raw_response,
+        ingredients=result.ingredients,
+    )
+
+
+@router.post("/recognize-voice", response_model=FoodRecognitionResponse)
+async def recognize_food_voice_endpoint(
+    audio: UploadFile = File(..., description="Голосовое сообщение пользователя (OGG, WebM, MP4, WAV, MP3)"),
+    x_gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
+    x_openrouter_key: Optional[str] = Header(None, alias="X-OpenRouter-Key"),
+    x_ai_models: Optional[str] = Header(None, alias="X-AI-Models"),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Recognize food and transcribe voice audio description using AI.
+    Returns structured KBJU, ingredients, and verbatim text transcription (to store in user_comment).
+    """
+    check_ai_rate_limit(current_user.id)
+
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Аудиофайл пуст",
+        )
+    if len(audio_bytes) > settings.MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Размер голосового сообщения превышает 10 МБ",
+        )
+
+    mime_type = (audio.content_type or "audio/ogg").lower()
+
+    custom_gemini, custom_openrouter, custom_chain = resolve_ai_config(
+        current_user=current_user,
+        x_gemini_key=x_gemini_key,
+        x_openrouter_key=x_openrouter_key,
+        x_ai_models=x_ai_models,
+    )
+
+    try:
+        result, provider_name, model_id = await ai_router.recognize_food_by_voice(
+            audio_bytes=audio_bytes,
+            mime_type=mime_type,
+            custom_gemini_key=custom_gemini,
+            custom_openrouter_key=custom_openrouter,
+            custom_model_chain=custom_chain,
+        )
+    except AllProvidersFailedError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Voice AI error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обработке голосового сообщения",
+        )
+
+    return FoodRecognitionResponse(
+        name=result.name,
+        weight_grams=result.weight_grams,
+        calories=result.calories,
+        protein=result.protein,
+        fat=result.fat,
+        carbs=result.carbs,
+        confidence=result.confidence,
+        photo_path=None,
+        transcription=result.transcription or result.name,
         provider_used=provider_name,
         model_used=model_id,
         raw_response=result.raw_response,

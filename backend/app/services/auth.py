@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
+import hashlib
 import bcrypt
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
@@ -14,20 +15,30 @@ from app.models.user import User
 security = HTTPBearer(auto_error=False)
 
 
+def _prepare_password_bytes(password: str) -> bytes:
+    """Safely prepare password bytes for bcrypt (handles >72 UTF-8 bytes without mid-character slicing)."""
+    raw_bytes = password.encode("utf-8")
+    if len(raw_bytes) <= 72:
+        return raw_bytes
+    return hashlib.sha256(raw_bytes).hexdigest().encode("ascii")
+
+
 def hash_password(password: str) -> str:
-    """Hash a plaintext password using bcrypt with standard rounds."""
-    # Truncate password to 72 bytes if necessary (bcrypt max input length)
-    password_bytes = password.encode("utf-8")[:72]
+    password_bytes = _prepare_password_bytes(password)
     salt = bcrypt.gensalt(rounds=12)
     return bcrypt.hashpw(password_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plaintext password against a stored bcrypt hash."""
     try:
-        plain_bytes = plain_password.encode("utf-8")[:72]
         hash_bytes = hashed_password.encode("utf-8")
-        return bcrypt.checkpw(plain_bytes, hash_bytes)
+        prepared = _prepare_password_bytes(plain_password)
+        if bcrypt.checkpw(prepared, hash_bytes):
+            return True
+        legacy_bytes = plain_password.encode("utf-8")[:72]
+        if legacy_bytes != prepared:
+            return bcrypt.checkpw(legacy_bytes, hash_bytes)
+        return False
     except Exception:
         return False
 

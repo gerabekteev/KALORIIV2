@@ -516,6 +516,18 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
   // Clipboard paste (Ctrl+V) listener
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        if (e.clipboardData?.getData('text/plain')) {
+          return
+        }
+      }
+
       const items = e.clipboardData?.items
       if (!items) return
 

@@ -70,7 +70,7 @@ cat << 'EOF' > /opt/kalorii/backend/.env
 PROJECT_NAME="KaloriiAI"
 DEBUG=false
 DATABASE_URL=sqlite+aiosqlite:////app/backend/data/db.sqlite3
-JWT_SECRET=super_secure_jwt_secret_kalorii_production_2026
+JWT_SECRET=$(openssl rand -hex 32)
 GEMINI_API_KEY=your_gemini_api_key_here
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 CORS_ORIGINS=["https://kalorii.lopni.fun","http://localhost:5100"]

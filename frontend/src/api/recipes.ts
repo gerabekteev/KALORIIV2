@@ -78,9 +78,14 @@ export const recipesApi = {
    */
   async saveMealAsRecipe(meal: Meal): Promise<Recipe> {
     const weight = meal.weight_grams && meal.weight_grams > 0 ? meal.weight_grams : 100
+    const ingSummary =
+      Array.isArray(meal.ingredients) && meal.ingredients.length > 0
+        ? `Состав: ${meal.ingredients.map((i) => `${i.name} (${Math.round(i.weight_grams)}г)`).join(', ')}`
+        : `Рецепт из дневника питания (${meal.meal_date})`
+
     return this.createQuickRecipe({
       name: meal.name,
-      description: `Рецепт из дневника питания (${meal.meal_date})`,
+      description: ingSummary,
       calories: meal.calories,
       protein: meal.protein,
       fat: meal.fat,

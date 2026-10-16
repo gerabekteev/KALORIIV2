@@ -1,8 +1,9 @@
 import abc
 import json
 import re
+import uuid
 from typing import Optional, Dict, Any, List
-from app.schemas.ai import FoodAnalysisResult, MealIngredientItem
+from app.schemas.ai import FoodAnalysisResult, MealIngredientItem, PlannedMealItem
 
 
 class AIProviderError(Exception):
@@ -95,6 +96,106 @@ def build_text_prompt(text: str) -> str:
     )
 
 
+def build_voice_prompt() -> str:
+    """Build standardized prompt for voice audio food recognition + verbatim transcription."""
+    return (
+        "Ты — эксперт-нутрициолог. Прослушай голосовое сообщение пользователя, в котором он рассказывает, что он съел.\n"
+        "Выполни две задачи:\n"
+        "1. Дословно и точно транскрибируй речь пользователя на русском языке в поле `transcription` (сохрани все названные продукты, граммовки и детали, чтобы пользователь мог видеть и редактировать это описание на сайте).\n"
+        "2. На основе сказанного определи общее название приёма пищи, вес в граммах, калории, белки, жиры, углеводы и массив отдельных ингредиентов (`ingredients`).\n\n"
+        "Ответь СТРОГО в JSON формате:\n"
+        "{\n"
+        '  "transcription": "дословная текстовая расшифровка голосового сообщения пользователя",\n'
+        '  "name": "краткое и понятное название блюда/приёма пищи",\n'
+        '  "weight_grams": число,\n'
+        '  "calories": число,\n'
+        '  "protein": число,\n'
+        '  "fat": число,\n'
+        '  "carbs": число,\n'
+        '  "confidence": "high/medium/low",\n'
+        '  "ingredients": [\n'
+        "    {\n"
+        '      "name": "название ингредиента",\n'
+        '      "weight_grams": число,\n'
+        '      "calories": число,\n'
+        '      "protein": число,\n'
+        '      "fat": число,\n'
+        '      "carbs": число\n'
+        "    }\n"
+        "  ]\n"
+        "}"
+    )
+
+
+def build_meal_plan_prompt(
+    meals_to_generate: int,
+    max_calories: float,
+    target_protein: float,
+    target_fat: float,
+    target_carbs: float,
+    user_preferences: Optional[str] = None,
+    locked_meal_names: Optional[List[str]] = None,
+    favorite_products_hint: Optional[str] = None,
+) -> str:
+    """
+    Build prompt for generating a daily meal plan where NOT EXCEEDING max_calories is the primary constraint.
+    """
+    prefs_clause = (
+        f"\nПожелания пользователя: {user_preferences.strip()}"
+        if user_preferences and user_preferences.strip()
+        else ""
+    )
+    locked_clause = (
+        f"\nУ пользователя уже закреплены в меню следующие блюда (НЕ повторяй их): {', '.join(locked_meal_names)}."
+        if locked_meal_names
+        else ""
+    )
+    fav_clause = (
+        f"\nПривычные и любимые продукты пользователя (можешь использовать их при составлении блюд, если они подходят): {favorite_products_hint}"
+        if favorite_products_hint
+        else ""
+    )
+
+    min_cal = round(max_calories * 0.85)
+    strict_max_cal = round(max_calories)
+
+    return (
+        "Ты — профессиональный AI-нутрициолог. Составь рацион питания для пользователя.\n"
+        f"Необходимо сгенерировать ровно {meals_to_generate} блюд(а) (приёмов пищи).\n\n"
+        "ГЛАВНОЕ И СТРОГОЕ ПРАВИЛО:\n"
+        f"- Суммарная калорийность всех {meals_to_generate} сгенерированных блюд НЕ ДОЛЖНА ПРЕВЫШАТЬ {strict_max_cal} ккал! "
+        f"(Целевой коридор суммы калорий: от {min_cal} до {strict_max_cal} ккал, выход за верхнюю границу {strict_max_cal} ккал категорически запрещён).\n"
+        f"- Вторичные ориентиры по БЖУ на эти {meals_to_generate} блюд(а): Белки ~{round(target_protein)}г, Жиры ~{round(target_fat)}г, Углеводы ~{round(target_carbs)}г (постарайся приблизиться к ним, но главное — не превысить лимит {strict_max_cal} ккал!).\n"
+        "- Каждое блюдо должно состоять из простых, понятных и доступных ингредиентов.\n"
+        "- Рецепт каждого блюда — это просто точный состав его ингредиентов (ingredients) с граммовками и КБЖУ каждого компонента, сумма которых даёт КБЖУ самого блюда."
+        f"{prefs_clause}{locked_clause}{fav_clause}\n\n"
+        "Ответь СТРОГО в JSON формате:\n"
+        "{\n"
+        '  "meals": [\n'
+        "    {\n"
+        '      "meal_label": "Приём пищи 1 (например: Завтрак / Обед / Ужин / Перекус)",\n'
+        '      "name": "Название блюда",\n'
+        '      "weight_grams": число,\n'
+        '      "calories": число,\n'
+        '      "protein": число,\n'
+        '      "fat": число,\n'
+        '      "carbs": число,\n'
+        '      "ingredients": [\n'
+        "        {\n"
+        '          "name": "Название ингредиента",\n'
+        '          "weight_grams": число,\n'
+        '          "calories": число,\n'
+        '          "protein": число,\n'
+        '          "fat": число,\n'
+        '          "carbs": число\n'
+        "        }\n"
+        "      ]\n"
+        "    }\n"
+        "  ]\n"
+        "}"
+    )
+
+
 def extract_json_from_text(text: str) -> Dict[str, Any]:
     """Extract valid JSON from LLM response text, stripping markdown code fences and thought blocks if present."""
     text = text.strip()
@@ -149,6 +250,9 @@ def parse_food_result(raw_json: Dict[str, Any]) -> FoodAnalysisResult:
     fat = max(0.0, _parse_float_safely(raw_json.get("fat"), 0.0))
     carbs = max(0.0, _parse_float_safely(raw_json.get("carbs"), 0.0))
 
+    raw_transcription = raw_json.get("transcription")
+    transcription = str(raw_transcription).strip() if raw_transcription else None
+
     # Parse ingredients
     ingredients: List[MealIngredientItem] = []
     raw_ingredients = raw_json.get("ingredients")
@@ -199,13 +303,111 @@ def parse_food_result(raw_json: Dict[str, Any]) -> FoodAnalysisResult:
         fat=round(fat, 1),
         carbs=round(carbs, 1),
         confidence=confidence,  # type: ignore[arg-type]
+        transcription=transcription,
         raw_response=raw_response_str,
         ingredients=ingredients,
     )
 
 
+def parse_meal_plan_result(
+    raw_json: Dict[str, Any],
+    expected_count: int,
+    max_calories: float,
+) -> List[PlannedMealItem]:
+    """
+    Parse and validate AI-generated meal plan list.
+    Enforces hard calorie ceiling: if total calories of generated meals exceed max_calories,
+    proportionally scales down portion weights and macros so total <= max_calories.
+    """
+    raw_meals = raw_json.get("meals")
+    if not isinstance(raw_meals, list) or len(raw_meals) == 0:
+        raise AIProviderError("Нейросеть вернула пустой список блюд для меню")
+
+    parsed_meals: List[PlannedMealItem] = []
+    for idx, item in enumerate(raw_meals[:expected_count]):
+        if not isinstance(item, dict):
+            continue
+        m_name = str(item.get("name") or f"Блюдо {idx + 1}").strip()
+        m_label = str(item.get("meal_label") or f"Приём пищи {idx + 1}").strip()
+
+        ingredients: List[MealIngredientItem] = []
+        raw_ings = item.get("ingredients")
+        if isinstance(raw_ings, list):
+            for ing in raw_ings:
+                if isinstance(ing, dict) and ing.get("name"):
+                    ingredients.append(
+                        MealIngredientItem(
+                            name=str(ing.get("name")).strip(),
+                            weight_grams=round(max(1.0, _parse_float_safely(ing.get("weight_grams"), 50.0)), 1),
+                            calories=round(max(0.0, _parse_float_safely(ing.get("calories"), 0.0)), 1),
+                            protein=round(max(0.0, _parse_float_safely(ing.get("protein"), 0.0)), 1),
+                            fat=round(max(0.0, _parse_float_safely(ing.get("fat"), 0.0)), 1),
+                            carbs=round(max(0.0, _parse_float_safely(ing.get("carbs"), 0.0)), 1),
+                        )
+                    )
+
+        if ingredients:
+            cal = round(sum(i.calories for i in ingredients), 1)
+            prot = round(sum(i.protein for i in ingredients), 1)
+            fat = round(sum(i.fat for i in ingredients), 1)
+            carbs = round(sum(i.carbs for i in ingredients), 1)
+            weight = round(sum(i.weight_grams for i in ingredients), 1)
+        else:
+            cal = round(max(0.0, _parse_float_safely(item.get("calories"), 300.0)), 1)
+            prot = round(max(0.0, _parse_float_safely(item.get("protein"), 20.0)), 1)
+            fat = round(max(0.0, _parse_float_safely(item.get("fat"), 10.0)), 1)
+            carbs = round(max(0.0, _parse_float_safely(item.get("carbs"), 30.0)), 1)
+            weight = round(max(10.0, _parse_float_safely(item.get("weight_grams"), 200.0)), 1)
+
+        parsed_meals.append(
+            PlannedMealItem(
+                id=f"plan-{uuid.uuid4().hex[:8]}",
+                meal_label=m_label,
+                name=m_name,
+                weight_grams=weight,
+                calories=cal,
+                protein=prot,
+                fat=fat,
+                carbs=carbs,
+                ingredients=ingredients,
+                locked=False,
+                added_to_diary=False,
+            )
+        )
+
+    if not parsed_meals:
+        raise AIProviderError("Не удалось распознать блюда в сгенерированном меню")
+
+    # ЖЁСТКАЯ ГАРАНТИЯ НЕПРЕВЫШЕНИЯ КАЛОРИЙНОСТИ:
+    # Если сумма калорий сгенерированных блюд превышает max_calories, масштабируем граммовки вниз
+    total_cal = sum(m.calories for m in parsed_meals)
+    if max_calories > 0 and total_cal > max_calories:
+        scale_factor = (max_calories * 0.98) / total_cal
+        for m in parsed_meals:
+            if m.ingredients:
+                for ing in m.ingredients:
+                    ing.weight_grams = max(5.0, round(ing.weight_grams * scale_factor))
+                    ing.calories = round(ing.calories * scale_factor, 1)
+                    ing.protein = round(ing.protein * scale_factor, 1)
+                    ing.fat = round(ing.fat * scale_factor, 1)
+                    ing.carbs = round(ing.carbs * scale_factor, 1)
+                m.weight_grams = round(sum(i.weight_grams for i in m.ingredients), 1)
+                m.calories = round(sum(i.calories for i in m.ingredients), 1)
+                m.protein = round(sum(i.protein for i in m.ingredients), 1)
+                m.fat = round(sum(i.fat for i in m.ingredients), 1)
+                m.carbs = round(sum(i.carbs for i in m.ingredients), 1)
+            else:
+                m.weight_grams = max(10.0, round(m.weight_grams * scale_factor))
+                m.calories = round(m.calories * scale_factor, 1)
+                m.protein = round(m.protein * scale_factor, 1)
+                m.fat = round(m.fat * scale_factor, 1)
+                m.carbs = round(m.carbs * scale_factor, 1)
+
+    return parsed_meals
+
+
 class BaseAIProvider(abc.ABC):
-    """Abstract interface for multi-modal AI vision providers."""
+    """Abstract interface for multi-modal AI vision, voice, and meal planning providers."""
 
     def __init__(self, api_key: str, model_id: str, provider_name: str):
         self.api_key = api_key
@@ -228,4 +430,23 @@ class BaseAIProvider(abc.ABC):
         text: str,
     ) -> FoodAnalysisResult:
         """Send text description of food to provider API and return structured food analysis."""
+        pass
+
+    @abc.abstractmethod
+    async def analyze_food_voice(
+        self,
+        audio_bytes: bytes,
+        mime_type: str = "audio/ogg",
+    ) -> FoodAnalysisResult:
+        """Send voice audio to provider API and return structured food analysis and transcription."""
+        pass
+
+    @abc.abstractmethod
+    async def generate_meal_plan(
+        self,
+        prompt: str,
+        expected_count: int,
+        max_calories: float,
+    ) -> List[PlannedMealItem]:
+        """Send meal plan prompt to provider API and return list of planned meals."""
         pass

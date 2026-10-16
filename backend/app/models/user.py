@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.product import Product
     from app.models.recipe import Recipe
     from app.models.scanned_product import UserScannedProduct
+    from app.models.meal_plan import MealPlan
 
 
 class User(Base):
@@ -39,6 +40,14 @@ class User(Base):
     # AI settings
     ai_settings_json: Mapped[Optional[str]] = mapped_column(String(4000), nullable=True)
 
+    # Telegram integration
+    telegram_chat_id: Mapped[Optional[int]] = mapped_column(
+        Integer, unique=True, index=True, nullable=True
+    )
+    telegram_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    telegram_link_code: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
+    telegram_link_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -60,6 +69,9 @@ class User(Base):
     )
     scanned_products: Mapped[List["UserScannedProduct"]] = relationship(
         "UserScannedProduct", back_populates="user", cascade="all, delete-orphan"
+    )
+    meal_plans: Mapped[List["MealPlan"]] = relationship(
+        "MealPlan", back_populates="user", cascade="all, delete-orphan"
     )
 
 

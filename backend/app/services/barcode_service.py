@@ -446,7 +446,17 @@ async def update_barcode_product(
     if package_weight_grams is not None:
         product.package_weight_grams = max(1.0, round(float(package_weight_grams), 1))
     if image_url is not None:
-        product.image_url = image_url.strip() if image_url else None
+        clean_img = image_url.strip()
+        if clean_img and not (
+            clean_img.startswith("/uploads/")
+            or clean_img.startswith("https://images.openfoodfacts.org/")
+            or clean_img.startswith("https://static.openfoodfacts.org/")
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Недопустимый источник изображения продукта",
+            )
+        product.image_url = clean_img if clean_img else None
 
     try:
         await db.commit()

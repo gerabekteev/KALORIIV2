@@ -66,11 +66,12 @@ export interface Meal {
 
 export interface PendingAIMeal {
   id: string
-  type: 'photo' | 'text'
+  type: 'photo' | 'text' | 'voice'
   photoFile?: File
   previewUrl?: string
   comment?: string
   textDescription?: string
+  audioBlob?: Blob
   targetDate: string
   targetTime: string
   status: 'analyzing' | 'error'
@@ -232,6 +233,7 @@ export interface AIRecognitionResult {
   carbs: number
   confidence: 'high' | 'medium' | 'low' | string
   photo_path?: string | null
+  transcription?: string | null
   provider_used?: string | null
   model_used?: string | null
   raw_response?: string | null
@@ -340,3 +342,58 @@ export interface BarcodeScanImageResponse {
   product?: BarcodeProductResult | null
   message?: string | null
 }
+
+export interface PlannedMealItem {
+  id: string
+  meal_label: string
+  name: string
+  weight_grams: number
+  calories: number
+  protein: number
+  fat: number
+  carbs: number
+  ingredients: MealIngredient[]
+  locked: boolean
+  added_to_diary?: boolean
+}
+
+export interface MealPlanGeneratePayload {
+  plan_date: string
+  meals_count: number
+  target_calories: number
+  target_protein: number
+  target_fat: number
+  target_carbs: number
+  user_preferences?: string | null
+  locked_meals?: PlannedMealItem[]
+}
+
+export interface MealPlanResponse {
+  id?: number | null
+  plan_date: string
+  meals_count: number
+  target_calories: number
+  target_protein: number
+  target_fat: number
+  target_carbs: number
+  user_preferences?: string | null
+  total_generated_calories: number
+  total_generated_protein: number
+  total_generated_fat: number
+  total_generated_carbs: number
+  meals: PlannedMealItem[]
+  provider_used?: string | null
+  model_used?: string | null
+  updated_at?: string | null
+}
+
+export interface TelegramStatusResponse {
+  is_linked: boolean
+  telegram_username?: string | null
+  telegram_chat_id?: number | null
+  bot_username?: string | null
+  link_code?: string | null
+  deep_link_url?: string | null
+  expires_at?: string | null
+}
+

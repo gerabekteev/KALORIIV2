@@ -5,6 +5,7 @@ import { Layout } from './components/layout/Layout'
 import { TodayPage } from './pages/TodayPage'
 import { StatsPage } from './pages/StatsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { MealPlanPage } from './pages/MealPlanPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { PageLoading } from './components/ui/Loading'
@@ -74,6 +75,7 @@ export const App: React.FC = () => {
         }
       >
         <Route index element={<TodayPage />} />
+        <Route path="meal-plan" element={<MealPlanPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>

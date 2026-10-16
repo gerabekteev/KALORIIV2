@@ -18,6 +18,7 @@ export const EditMealModal: React.FC = () => {
     fat: '',
     carbs: '',
     weight_grams: '',
+    meal_date: '',
     meal_time: '',
     user_comment: '',
   })
@@ -34,6 +35,7 @@ export const EditMealModal: React.FC = () => {
         fat: editingMeal.fat?.toString() || '0',
         carbs: editingMeal.carbs?.toString() || '0',
         weight_grams: editingMeal.weight_grams?.toString() || '',
+        meal_date: editingMeal.meal_date || '',
         meal_time: editingMeal.meal_time ? editingMeal.meal_time.slice(0, 5) : '',
         user_comment: editingMeal.user_comment || '',
       })
@@ -169,6 +171,7 @@ export const EditMealModal: React.FC = () => {
         fat: Number(form.fat) || 0,
         carbs: Number(form.carbs) || 0,
         weight_grams: form.weight_grams ? Number(form.weight_grams) : undefined,
+        meal_date: form.meal_date || undefined,
         meal_time: form.meal_time || undefined,
         user_comment: form.user_comment.trim() ? form.user_comment.trim() : null,
         ingredients: validIngredients,
@@ -340,12 +343,20 @@ export const EditMealModal: React.FC = () => {
           )}
         </div>
 
-        <Input
-          label="Время приёма"
-          type="time"
-          value={form.meal_time}
-          onChange={(e) => setForm({ ...form, meal_time: e.target.value })}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Дата приёма"
+            type="date"
+            value={form.meal_date}
+            onChange={(e) => setForm({ ...form, meal_date: e.target.value })}
+          />
+          <Input
+            label="Время приёма"
+            type="time"
+            value={form.meal_time}
+            onChange={(e) => setForm({ ...form, meal_time: e.target.value })}
+          />
+        </div>
 
         <Input
           label="Комментарий"

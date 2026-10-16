@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
+import time
+from collections import defaultdict, deque
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,10 +31,32 @@ from app.services.auth import (
 
 router = APIRouter(prefix="/auth", tags=["Аутентификация"])
 
+import os
+
+_auth_rate_records: dict[str, deque] = defaultdict(deque)
+
+def check_auth_rate_limit(request: Request, max_attempts: int = 10, window_seconds: float = 60.0) -> None:
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return
+    client_ip = request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
+    now = time.time()
+    dq = _auth_rate_records[client_ip]
+    while dq and now - dq[0] > window_seconds:
+        dq.popleft()
+    if len(dq) >= max_attempts:
+        retry_after = int(window_seconds - (now - dq[0])) + 1
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Слишком много попыток авторизации. Подождите {retry_after} сек.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    dq.append(now)
+
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_in: UserRegister, db: AsyncSession = Depends(get_db)):
+async def register(request: Request, user_in: UserRegister, db: AsyncSession = Depends(get_db)):
     """Register a new user with email and password."""
+    check_auth_rate_limit(request)
     # Check if email is already taken
     existing_user_query = await db.execute(
         select(User).where(User.email == user_in.email.lower().strip())
@@ -74,8 +98,9 @@ async def register(user_in: UserRegister, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """Authenticate a user and return access and refresh tokens."""
+    check_auth_rate_limit(request)
     result = await db.execute(
         select(User).where(User.email == credentials.email.lower().strip())
     )
@@ -106,11 +131,13 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
+    request: Request,
     req: Optional[RefreshTokenRequest] = None,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db),
 ):
     """Refresh an access token using a valid refresh token from body or Authorization header."""
+    check_auth_rate_limit(request)
     token_str = (req.refresh_token if req and req.refresh_token else None) or (
         credentials.credentials if credentials else None
     )

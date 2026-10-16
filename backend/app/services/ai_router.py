@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional, List, Tuple
 from app.config import settings
-from app.schemas.ai import FoodAnalysisResult
+from app.schemas.ai import FoodAnalysisResult, PlannedMealItem
 from app.utils.ai_providers import (
     BaseAIProvider,
     GeminiProvider,
@@ -272,6 +272,130 @@ class AIRouter:
         logger.error(f"All AI models failed for text recognition. Errors summary: {errors_collected}")
         raise AllProvidersFailedError(
             "Все модели AI в данный момент недоступны. Пожалуйста, введите данные о блюде вручную."
+        )
+
+    async def recognize_food_by_voice(
+        self,
+        audio_bytes: bytes,
+        mime_type: str = "audio/ogg",
+        custom_gemini_key: Optional[str] = None,
+        custom_openrouter_key: Optional[str] = None,
+        custom_model_chain: Optional[List[Tuple[str, str]]] = None,
+    ) -> Tuple[FoodAnalysisResult, str, str]:
+        """
+        Execute voice food recognition & transcription across the user's priority model chain.
+        Returns (result, provider_name, model_id).
+        """
+        errors_collected: List[str] = []
+        chain_to_use = custom_model_chain if custom_model_chain is not None else self.model_chain
+        if not chain_to_use:
+            raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
+
+        for provider_type, model_id in chain_to_use:
+            provider = self._get_provider_instance(
+                provider_type,
+                model_id,
+                gemini_key=custom_gemini_key,
+                openrouter_key=custom_openrouter_key,
+            )
+            if not provider:
+                continue
+
+            logger.info(f"Attempting voice food recognition using {provider_type} / {model_id}...")
+
+            for attempt in range(1, 3):
+                try:
+                    result = await provider.analyze_food_voice(
+                        audio_bytes=audio_bytes,
+                        mime_type=mime_type,
+                    )
+                    logger.info(
+                        f"Successfully recognized voice food using {provider_type}/{model_id} (attempt {attempt}): {result.name}"
+                    )
+                    return result, provider_type, model_id
+                except (AIAuthenticationError, AIRateLimitError) as err:
+                    logger.warning(f"Failover on {provider_type}/{model_id}: {err}")
+                    errors_collected.append(f"{provider_type}/{model_id}: {err}")
+                    break
+                except AIProviderError as err:
+                    logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
+                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+                    err_str = str(err).lower()
+                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "audio", "modality", "resource_exhausted"]):
+                        break
+                    if attempt == 1:
+                        await asyncio.sleep(2)
+                except Exception as ex:
+                    logger.error(f"Unexpected error in {provider_type}/{model_id}: {ex}", exc_info=True)
+                    errors_collected.append(f"{provider_type}/{model_id}: {ex}")
+                    break
+
+        logger.error(f"All AI models failed for voice recognition: {errors_collected}")
+        raise AllProvidersFailedError(
+            "Не удалось распознать голосовое сообщение через AI. Попробуйте описать блюдо текстом."
+        )
+
+    async def generate_meal_plan(
+        self,
+        prompt: str,
+        expected_count: int,
+        max_calories: float,
+        custom_gemini_key: Optional[str] = None,
+        custom_openrouter_key: Optional[str] = None,
+        custom_model_chain: Optional[List[Tuple[str, str]]] = None,
+    ) -> Tuple[List[PlannedMealItem], str, str]:
+        """
+        Generate daily meal plan across the user's priority model chain.
+        Returns (planned_meals_list, provider_name, model_id).
+        """
+        errors_collected: List[str] = []
+        chain_to_use = custom_model_chain if custom_model_chain is not None else self.model_chain
+        if not chain_to_use:
+            raise AllProvidersFailedError("Все модели AI отключены в конфигурации. Включите хотя бы одну модель в настройках профиля.")
+
+        for provider_type, model_id in chain_to_use:
+            provider = self._get_provider_instance(
+                provider_type,
+                model_id,
+                gemini_key=custom_gemini_key,
+                openrouter_key=custom_openrouter_key,
+            )
+            if not provider:
+                continue
+
+            logger.info(f"Attempting meal plan generation using {provider_type} / {model_id}...")
+
+            for attempt in range(1, 3):
+                try:
+                    meals_list = await provider.generate_meal_plan(
+                        prompt=prompt,
+                        expected_count=expected_count,
+                        max_calories=max_calories,
+                    )
+                    logger.info(
+                        f"Successfully generated {len(meals_list)} meals using {provider_type}/{model_id}"
+                    )
+                    return meals_list, provider_type, model_id
+                except (AIAuthenticationError, AIRateLimitError) as err:
+                    logger.warning(f"Failover on {provider_type}/{model_id}: {err}")
+                    errors_collected.append(f"{provider_type}/{model_id}: {err}")
+                    break
+                except AIProviderError as err:
+                    logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
+                    errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
+                    err_str = str(err).lower()
+                    if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "resource_exhausted"]):
+                        break
+                    if attempt == 1:
+                        await asyncio.sleep(2)
+                except Exception as ex:
+                    logger.error(f"Unexpected error in {provider_type}/{model_id}: {ex}", exc_info=True)
+                    errors_collected.append(f"{provider_type}/{model_id}: {ex}")
+                    break
+
+        logger.error(f"All AI models failed for meal plan generation: {errors_collected}")
+        raise AllProvidersFailedError(
+            "Все модели AI в данный момент перегружены или недоступны. Попробуйте нажать кнопку генерации ещё раз через несколько секунд."
         )
 
 

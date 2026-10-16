@@ -84,6 +84,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem('kalorii_token')
     localStorage.removeItem('kalorii_refresh_token')
+    localStorage.removeItem('kalorii_ai_settings')
+    localStorage.removeItem('kalorii_meal_plans_cache')
     set({
       user: null,
       token: null,
@@ -106,6 +108,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (err) {
       localStorage.removeItem('kalorii_token')
       localStorage.removeItem('kalorii_refresh_token')
+      localStorage.removeItem('kalorii_ai_settings')
+      localStorage.removeItem('kalorii_meal_plans_cache')
       set({ user: null, token: null, isAuthenticated: false, isLoading: false })
     }
   },

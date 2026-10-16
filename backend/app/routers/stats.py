@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from typing import Optional, List, Dict
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
@@ -24,11 +24,12 @@ async def get_stats(
     period: str = Query("week", description="Период: day, week, month, year, custom"),
     start_date: Optional[date] = Query(None, description="Начальная дата для custom"),
     end_date: Optional[date] = Query(None, description="Конечная дата для custom"),
+    x_client_date: Optional[date] = Header(None, alias="X-Client-Date"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get aggregated nutrition statistics and daily breakdowns for a given period."""
-    today = date.today()
+    today = x_client_date or date.today()
 
     if period in ("day", "today"):
         start = today
@@ -52,6 +53,11 @@ async def get_stats(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="start_date не может быть позже end_date",
+            )
+        if (end_date - start_date).days > 366:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Максимальная длительность произвольного периода — 366 дней",
             )
         start = start_date
         end = end_date
@@ -154,7 +160,9 @@ async def get_stats(
     else:
         p_pct = f_pct = c_pct = 0.0
 
-    goal_met_percentage = round((goal_met_days / total_days) * 100, 1) if total_days > 0 else 0.0
+    goal_met_percentage = (
+        round((goal_met_days / tracked_days) * 100, 1) if tracked_days > 0 else 0.0
+    )
 
     return StatsPeriodResponse(
         period=period,

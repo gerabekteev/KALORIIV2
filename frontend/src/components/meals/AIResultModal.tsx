@@ -66,6 +66,7 @@ export const AIResultModal: React.FC = () => {
         meal_date: selectedDate,
         meal_time: form.meal_time,
         photo_path: aiResultData?.photo_path,
+        ingredients: aiResultData?.ingredients || [],
         is_manually_edited: false,
       })
       addToast('Блюдо успешно добавлено!', 'success')

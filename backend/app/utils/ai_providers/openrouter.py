@@ -1,10 +1,10 @@
 import base64
 import json
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import httpx
 
-from app.schemas.ai import FoodAnalysisResult
+from app.schemas.ai import FoodAnalysisResult, PlannedMealItem
 from app.utils.ai_providers.base import (
     BaseAIProvider,
     AIProviderError,
@@ -12,8 +12,10 @@ from app.utils.ai_providers.base import (
     AIAuthenticationError,
     build_system_prompt,
     build_text_prompt,
+    build_voice_prompt,
     extract_json_from_text,
     parse_food_result,
+    parse_meal_plan_result,
 )
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -45,7 +47,7 @@ def _extract_openrouter_error(resp_text: str) -> str:
 
 
 class OpenRouterProvider(BaseAIProvider):
-    """OpenRouter provider for OpenAI-compatible multi-modal and text endpoints."""
+    """OpenRouter provider for OpenAI-compatible multi-modal, voice, text and meal planning endpoints."""
 
     def __init__(
         self,
@@ -54,7 +56,7 @@ class OpenRouterProvider(BaseAIProvider):
     ):
         super().__init__(api_key=api_key, model_id=model_id, provider_name="openrouter")
 
-    async def _send_and_parse(self, payload: Dict[str, Any]) -> FoodAnalysisResult:
+    async def _send_and_extract_json(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "HTTP-Referer": "https://kalorii.lopni.fun",
@@ -133,11 +135,15 @@ class OpenRouterProvider(BaseAIProvider):
             ).strip()
 
             parsed_json = extract_json_from_text(cleaned_text or text_output)
-            return parse_food_result(parsed_json)
+            return parsed_json
         except AIProviderError:
             raise
         except Exception as e:
             raise AIProviderError(f"Failed to parse OpenRouter response: {e}")
+
+    async def _send_and_parse(self, payload: Dict[str, Any]) -> FoodAnalysisResult:
+        parsed_json = await self._send_and_extract_json(payload)
+        return parse_food_result(parsed_json)
 
     async def analyze_food(
         self,
@@ -194,3 +200,72 @@ class OpenRouterProvider(BaseAIProvider):
         }
 
         return await self._send_and_parse(payload)
+
+    async def analyze_food_voice(
+        self,
+        audio_bytes: bytes,
+        mime_type: str = "audio/ogg",
+    ) -> FoodAnalysisResult:
+        if not self.api_key:
+            raise AIAuthenticationError("OpenRouter API key is not configured")
+
+        b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
+        prompt = build_voice_prompt()
+
+        clean_mime = mime_type.split(";")[0].strip().lower()
+        audio_format = "ogg"
+        if "wav" in clean_mime:
+            audio_format = "wav"
+        elif "mp3" in clean_mime or "mpeg" in clean_mime:
+            audio_format = "mp3"
+        elif "webm" in clean_mime:
+            audio_format = "webm"
+        elif "mp4" in clean_mime or "m4a" in clean_mime:
+            audio_format = "m4a"
+
+        payload: Dict[str, Any] = {
+            "model": self.model_id,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "input_audio",
+                            "input_audio": {
+                                "data": b64_audio,
+                                "format": audio_format,
+                            },
+                        },
+                    ],
+                }
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"},
+        }
+
+        return await self._send_and_parse(payload)
+
+    async def generate_meal_plan(
+        self,
+        prompt: str,
+        expected_count: int,
+        max_calories: float,
+    ) -> List[PlannedMealItem]:
+        if not self.api_key:
+            raise AIAuthenticationError("OpenRouter API key is not configured")
+
+        payload: Dict[str, Any] = {
+            "model": self.model_id,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            "temperature": 0.4,
+            "response_format": {"type": "json_object"},
+        }
+
+        parsed_json = await self._send_and_extract_json(payload)
+        return parse_meal_plan_result(parsed_json, expected_count=expected_count, max_calories=max_calories)

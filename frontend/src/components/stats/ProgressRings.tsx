@@ -34,7 +34,7 @@ export const ProgressRings: React.FC<ProgressRingsProps> = ({
     {
       name: 'Белки',
       current: protein.current,
-      target: protein.target || 120,
+      target: protein.target || 140,
       color: '#3b82f6', // blue
       unit: 'г',
     },

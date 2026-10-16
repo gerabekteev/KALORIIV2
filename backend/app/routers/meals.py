@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from datetime import date as dt_date, datetime, timezone
 from typing import Optional
@@ -24,6 +25,7 @@ from app.services.ai_router import ai_router, AllProvidersFailedError
 from app.routers.ai import check_ai_rate_limit, _parse_custom_ai_models, resolve_ai_config
 
 router = APIRouter(prefix="/meals", tags=["Приёмы пищи"])
+logger = logging.getLogger("kalorii.meals")
 
 
 @router.get("", response_model=DailyMealsSummary)
@@ -106,9 +108,10 @@ async def create_meal(
         await db.refresh(meal)
     except Exception as e:
         await db.rollback()
+        logger.error(f"Error creating meal: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при создании приёма пищи: {e}",
+            detail="Ошибка при создании приёма пищи",
         )
 
     return MealResponse.model_validate(meal)
@@ -178,9 +181,10 @@ async def update_meal(
         await db.refresh(meal)
     except Exception as e:
         await db.rollback()
+        logger.error(f"Error updating meal {meal_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при обновлении приёма пищи: {e}",
+            detail="Ошибка при обновлении приёма пищи",
         )
 
     return MealResponse.model_validate(meal)
@@ -223,9 +227,10 @@ async def delete_meal(
         await db.commit()
     except Exception as e:
         await db.rollback()
+        logger.error(f"Error deleting meal {meal_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при удалении приёма пищи: {e}",
+            detail="Ошибка при удалении приёма пищи",
         )
 
     if file_to_unlink:
@@ -283,9 +288,10 @@ async def recalculate_meal(
     # 5. Check if meal has a stored photo
     photo_bytes = None
     if meal.photo_path and not meal.photo_path.startswith(("http://", "https://")):
-        filename = meal.photo_path.replace("/uploads/", "").lstrip("/\\")
-        photo_file = settings.UPLOAD_DIR / filename
-        if photo_file.exists():
+        safe_name = Path(meal.photo_path).name
+        upload_root = settings.UPLOAD_DIR.resolve()
+        photo_file = (upload_root / safe_name).resolve()
+        if photo_file.parent == upload_root and photo_file.is_file():
             try:
                 photo_bytes = photo_file.read_bytes()
             except Exception:
@@ -323,14 +329,16 @@ async def recalculate_meal(
     except HTTPException:
         raise
     except AllProvidersFailedError as e:
+        logger.error(f"All AI providers failed for meal {meal_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
+            detail="Сервис AI временно недоступен. Попробуйте позже.",
         )
     except Exception as e:
+        logger.error(f"Error processing AI request for meal {meal_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при обработке запроса AI: {str(e)}",
+            detail="Ошибка при обработке запроса AI",
         )
 
     # 7. Update meal fields
@@ -360,9 +368,10 @@ async def recalculate_meal(
         await db.refresh(meal)
     except Exception as e:
         await db.rollback()
+        logger.error(f"Error saving recalculated meal {meal_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при сохранении пересчитанного приёма пищи: {e}",
+            detail="Ошибка при сохранении пересчитанного приёма пищи",
         )
 
     return MealResponse.model_validate(meal)
@@ -411,9 +420,10 @@ async def copy_meal(
         await db.refresh(new_meal)
     except Exception as e:
         await db.rollback()
+        logger.error(f"Error copying meal {meal_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при копировании приёма пищи: {e}",
+            detail="Ошибка при копировании приёма пищи",
         )
 
     return MealResponse.model_validate(new_meal)

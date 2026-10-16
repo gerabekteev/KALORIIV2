@@ -29,7 +29,7 @@ interface MealCardProps {
 
 export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const { openEditMeal, addToast } = useUIStore()
-  const { deleteMealWithUndo, updateMeal, copyMealToDate, recalculateMeal } = useMealsStore()
+  const { deleteMealWithUndo, updateMeal, copyMealToDate, recalculateMeal, selectedDate } = useMealsStore()
 
   const [isSavingRecipe, setIsSavingRecipe] = useState(false)
   const [isSavedRecipe, setIsSavedRecipe] = useState(false)
@@ -118,7 +118,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const handleCopyMeal = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     try {
-      await copyMealToDate(meal.id, getTodayDateString())
+      await copyMealToDate(meal.id, selectedDate || getTodayDateString())
     } catch {
       // Handled in store
     }

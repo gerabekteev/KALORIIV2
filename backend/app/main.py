@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -11,7 +12,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base, AsyncSessionLocal
-from app.routers import auth, meals, products, recipes, stats, profile, ai, barcode
+from app.routers import auth, meals, products, recipes, stats, profile, ai, barcode, meal_plan, telegram
+from app.services.telegram_bot import telegram_bot_service
 from app.utils.image import cleanup_orphan_uploads
 from scripts.seed_products import seed_products
 
@@ -21,6 +23,21 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("kalorii.main")
+
+
+async def _periodic_orphan_cleanup() -> None:
+    """Background task that cleans up orphan uploaded files every 12 hours."""
+    while True:
+        await asyncio.sleep(12 * 3600)
+        try:
+            async with AsyncSessionLocal() as session:
+                cleaned = await cleanup_orphan_uploads(session, max_age_hours=24)
+                if cleaned > 0:
+                    logger.info(f"Periodic cleanup removed {cleaned} orphan upload files.")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.debug(f"Error in periodic orphan cleanup: {e}")
 
 
 @asynccontextmanager
@@ -38,6 +55,11 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE products ADD COLUMN image_url VARCHAR(500)",
             "ALTER TABLE products ADD COLUMN package_weight_grams FLOAT DEFAULT 100.0",
             "ALTER TABLE meals ADD COLUMN ingredients_json TEXT",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_products_global_barcode_uniq ON products (barcode) WHERE is_custom = 0 AND barcode IS NOT NULL",
+            "ALTER TABLE users ADD COLUMN telegram_chat_id BIGINT",
+            "ALTER TABLE users ADD COLUMN telegram_username VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN telegram_link_code VARCHAR(64)",
+            "ALTER TABLE users ADD COLUMN telegram_link_expires_at DATETIME",
         ]:
             try:
                 await conn.execute(text(alter_sql))
@@ -60,10 +82,17 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.debug(f"Error during orphan uploads cleanup: {e}")
 
+    cleanup_task = asyncio.create_task(_periodic_orphan_cleanup())
+    tg_task = asyncio.create_task(telegram_bot_service.start_polling())
     logger.info("KaloriiAI backend ready.")
-    yield
-    logger.info("Shutting down KaloriiAI application...")
-    await engine.dispose()
+    try:
+        yield
+    finally:
+        telegram_bot_service.stop()
+        tg_task.cancel()
+        cleanup_task.cancel()
+        logger.info("Shutting down KaloriiAI application...")
+        await engine.dispose()
 
 
 app = FastAPI(
@@ -96,6 +125,8 @@ app.include_router(stats.router, prefix=settings.API_V1_PREFIX)
 app.include_router(profile.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ai.router, prefix=settings.API_V1_PREFIX)
 app.include_router(barcode.router, prefix=settings.API_V1_PREFIX)
+app.include_router(meal_plan.router, prefix=settings.API_V1_PREFIX)
+app.include_router(telegram.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/api/health", tags=["Служебные"])
@@ -115,18 +146,22 @@ if not STATIC_DIR.exists():
 
 if STATIC_DIR.exists():
     from fastapi.responses import FileResponse
+    STATIC_ROOT = STATIC_DIR.resolve()
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str):
-        # Allow API, docs, and uploads to pass through or 404
-        if full_path.startswith(("api", "uploads", "docs", "redoc", "openapi.json")):
+        normalized = full_path.lstrip("/\\")
+        if normalized.startswith(("api", "uploads", "docs", "redoc", "openapi.json")):
             raise HTTPException(status_code=404, detail="Not Found")
-
-        file_path = STATIC_DIR / full_path
+        try:
+            file_path = (STATIC_ROOT / normalized).resolve()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid path")
+        if not file_path.is_relative_to(STATIC_ROOT):
+            raise HTTPException(status_code=403, detail="Forbidden")
         if file_path.is_file():
             return FileResponse(file_path)
-
-        index_file = STATIC_DIR / "index.html"
+        index_file = STATIC_ROOT / "index.html"
         if index_file.is_file():
             return FileResponse(index_file)
         raise HTTPException(status_code=404, detail="Frontend index.html not found")

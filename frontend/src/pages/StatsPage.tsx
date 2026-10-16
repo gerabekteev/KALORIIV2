@@ -153,11 +153,11 @@ export const StatsPage: React.FC = () => {
           }}
           fat={{
             current: daysTracked > 0 ? Math.round(totalFat / daysTracked) : 0,
-            target: user?.daily_fat_goal || 73,
+            target: user?.daily_fat_goal || 70,
           }}
           carbs={{
             current: daysTracked > 0 ? Math.round(totalCarbs / daysTracked) : 0,
-            target: user?.daily_carbs_goal || 275,
+            target: user?.daily_carbs_goal || 250,
           }}
         />
       </Card>

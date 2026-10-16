@@ -19,8 +19,9 @@ export function getTodayDateString(): string {
 }
 
 export function getPreviousDayString(dateStr: string): string {
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() - 1)
+  const parts = dateStr.split('-').map(Number)
+  if (parts.length !== 3) return dateStr
+  const d = new Date(parts[0], parts[1] - 1, parts[2] - 1)
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -48,6 +49,23 @@ function computeUpdatedSummary(
 
 // In-memory timers for undo delete
 const pendingDeletes = new Map<number, ReturnType<typeof setTimeout>>()
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    for (const [mealId, timer] of pendingDeletes.entries()) {
+      clearTimeout(timer)
+      pendingDeletes.delete(mealId)
+      const token = localStorage.getItem('kalorii_token')
+      fetch(`/api/meals/${mealId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        keepalive: true,
+      }).catch(() => {})
+    }
+  })
+}
+
+let latestFetchRequestId = 0
 
 interface MealsState {
   meals: Meal[]
@@ -81,6 +99,11 @@ interface MealsState {
     targetDate?: string,
     targetTime?: string
   ) => void
+  startVoiceAIAnalysis: (
+    audioBlob: Blob,
+    targetDate?: string,
+    targetTime?: string
+  ) => void
   retryPendingMeal: (id: string) => Promise<void>
   dismissPendingMeal: (id: string) => void
 }
@@ -102,17 +125,25 @@ export const useMealsStore = create<MealsState>((set, get) => ({
 
   fetchMeals: async (date?: string) => {
     const targetDate = date || get().selectedDate
+    const requestId = ++latestFetchRequestId
     set({ isLoading: true, error: null })
     try {
       const data = await mealsApi.getMeals(targetDate)
-      const mealList = sortMealsByTime(Array.isArray(data) ? data : (data?.meals || []))
+      if (requestId !== latestFetchRequestId) return
+
+      const rawList = Array.isArray(data) ? data : (data?.meals || [])
+      const filteredList = rawList.filter((m) => !pendingDeletes.has(m.id))
+      const mealList = sortMealsByTime(filteredList)
       set({
         meals: mealList,
-        dailySummary: data && !Array.isArray(data) ? data : null,
+        dailySummary: data && !Array.isArray(data)
+          ? (filteredList.length !== rawList.length ? computeUpdatedSummary(data, mealList) : data)
+          : null,
         isLoading: false,
       })
       get().fetchPreviousDayMeals(targetDate)
     } catch (err: any) {
+      if (requestId !== latestFetchRequestId) return
       set({
         error: err.message || 'Ошибка загрузки приемов пищи',
         isLoading: false,
@@ -310,9 +341,12 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const destDate = targetDate || get().selectedDate
+      const prevMap = new Map(get().previousDayMeals.map((m) => [m.id, m]))
       const results: Meal[] = []
       for (const id of mealIds) {
-        const copied = await mealsApi.copyMeal(id, destDate)
+        const sourceMeal = prevMap.get(id)
+        const preserveTime = sourceMeal?.meal_time ? sourceMeal.meal_time.slice(0, 5) : undefined
+        const copied = await mealsApi.copyMeal(id, destDate, preserveTime)
         results.push(copied)
       }
       if (destDate === get().selectedDate) {
@@ -552,6 +586,88 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     })()
   },
 
+  startVoiceAIAnalysis: (
+    audioBlob: Blob,
+    targetDate?: string,
+    targetTime?: string
+  ) => {
+    const id = `pending-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+    const date = targetDate || get().selectedDate
+    const time = targetTime || new Date().toTimeString().slice(0, 5)
+
+    const pendingItem: PendingAIMeal = {
+      id,
+      type: 'voice',
+      audioBlob,
+      textDescription: '🎤 Расшифровка голосового описания...',
+      targetDate: date,
+      targetTime: time,
+      status: 'analyzing',
+      createdAt: Date.now(),
+    }
+
+    set((state) => ({
+      pendingMeals: [pendingItem, ...state.pendingMeals],
+    }))
+
+    ;(async () => {
+      try {
+        const result = await aiApi.recognizeVoice(audioBlob)
+        // Помещаем расшифрованный текст речи в user_comment (описание продукта),
+        // чтобы пользователь на сайте мог свободно его редактировать и пересчитывать через AI!
+        const transcriptionComment = (result.transcription || result.name || '').trim()
+
+        const newMeal = await mealsApi.createMeal({
+          name: result.name || 'Блюдо (голос)',
+          calories: Math.round(result.calories || 0),
+          protein: Math.round((result.protein || 0) * 10) / 10,
+          fat: Math.round((result.fat || 0) * 10) / 10,
+          carbs: Math.round((result.carbs || 0) * 10) / 10,
+          weight_grams: result.weight_grams ? Math.round(result.weight_grams) : undefined,
+          photo_path: null,
+          user_comment: transcriptionComment || null,
+          ai_raw_response:
+            result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI Voice'),
+          ingredients: result.ingredients || [],
+          meal_date: date,
+          meal_time: time,
+          is_manually_edited: false,
+        })
+
+        set((state) => ({
+          pendingMeals: state.pendingMeals.filter((p) => p.id !== id),
+        }))
+
+        if (newMeal.meal_date === get().selectedDate) {
+          set((state) => {
+            const exists = state.meals.some((m) => m.id === newMeal.id)
+            const updatedMeals = sortMealsByTime(exists ? state.meals : [newMeal, ...state.meals])
+            return {
+              meals: updatedMeals,
+              dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+            }
+          })
+        }
+
+        useUIStore
+          .getState()
+          .addToast(
+            `🎤 "${newMeal.name}" (${Math.round(newMeal.calories)} ккал) распознано и добавлено!`,
+            'success',
+            4500
+          )
+      } catch (err: any) {
+        const errMsg = err.message || 'Ошибка распознавания голосового сообщения'
+        set((state) => ({
+          pendingMeals: state.pendingMeals.map((p) =>
+            p.id === id ? { ...p, status: 'error', errorMessage: errMsg } : p
+          ),
+        }))
+        useUIStore.getState().addToast(errMsg, 'error', 5000)
+      }
+    })()
+  },
+
   retryPendingMeal: async (id: string) => {
     const item = get().pendingMeals.find((p) => p.id === id)
     if (!item) return
@@ -568,25 +684,41 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         result = await aiApi.recognizeFood(item.photoFile, item.comment)
       } else if (item.type === 'text' && item.textDescription) {
         result = await aiApi.analyzeText(item.textDescription)
+      } else if (item.type === 'voice' && item.audioBlob) {
+        result = await aiApi.recognizeVoice(item.audioBlob)
       } else {
         throw new Error('Недостаточно данных для повтора анализа')
       }
 
+      const mealName =
+        result.name ||
+        (item.type === 'photo'
+          ? 'Распознанное блюдо'
+          : item.type === 'voice'
+          ? 'Блюдо (голос)'
+          : item.textDescription?.slice(0, 30) || 'Блюдо')
+
+      const userComment =
+        item.type === 'voice'
+          ? (result.transcription || result.name || item.textDescription || '').trim() || null
+          : item.comment || item.textDescription || null
+
       const newMeal = await mealsApi.createMeal({
-        name:
-          result.name ||
-          (item.type === 'photo'
-            ? 'Распознанное блюдо'
-            : item.textDescription?.slice(0, 30) || 'Блюдо'),
+        name: mealName,
         calories: Math.round(result.calories || 0),
         protein: Math.round((result.protein || 0) * 10) / 10,
         fat: Math.round((result.fat || 0) * 10) / 10,
         carbs: Math.round((result.carbs || 0) * 10) / 10,
         weight_grams: result.weight_grams ? Math.round(result.weight_grams) : undefined,
         photo_path: result.photo_path || null,
-        user_comment: item.comment || item.textDescription || null,
+        user_comment: userComment,
         ai_raw_response:
-          result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI'),
+          result.raw_response ||
+          (result.model_used
+            ? `Model: ${result.model_used}`
+            : item.type === 'voice'
+            ? 'AI Voice'
+            : 'AI'),
         ingredients: result.ingredients || [],
         meal_date: item.targetDate,
         meal_time: item.targetTime,

@@ -15,6 +15,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { AISettingsCard } from '../components/settings/AISettingsCard'
+import { TelegramBotCard } from '../components/settings/TelegramBotCard'
 
 export const ProfilePage: React.FC = () => {
   const { user, setUser, logout } = useAuthStore()
@@ -159,10 +160,10 @@ export const ProfilePage: React.FC = () => {
         age: age ? parseInt(age, 10) : undefined,
         gender,
         activity_level: activity,
-        daily_calories_goal: parseInt(goalCalories, 10) || 2200,
+        daily_calories_goal: parseInt(goalCalories, 10) || 2000,
         daily_protein_goal: parseInt(goalProtein, 10) || 140,
-        daily_fat_goal: parseInt(goalFat, 10) || 73,
-        daily_carbs_goal: parseInt(goalCarbs, 10) || 275,
+        daily_fat_goal: parseInt(goalFat, 10) || 70,
+        daily_carbs_goal: parseInt(goalCarbs, 10) || 250,
       })
       setUser(updatedUser)
       addToast('Профиль и цели сохранены!', 'success')
@@ -411,6 +412,9 @@ export const ProfilePage: React.FC = () => {
           </Button>
         </div>
       </Card>
+
+      {/* Telegram Bot Integration */}
+      <TelegramBotCard />
 
       {/* Interactive AI Model Settings & Providers */}
       <AISettingsCard />

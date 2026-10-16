@@ -57,4 +57,17 @@ export const aiApi = {
       headers,
     })
   },
+
+  async recognizeVoice(audioBlob: Blob, filename = 'voice.webm'): Promise<AIRecognitionResult> {
+    const formData = new FormData()
+    formData.append('audio', audioBlob, filename)
+
+    const headers = getAIHeaders()
+
+    return apiClient<AIRecognitionResult>('/ai/recognize-voice', {
+      method: 'POST',
+      body: formData,
+      headers,
+    })
+  },
 }

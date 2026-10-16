@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Utensils, BarChart3, User, Plus } from 'lucide-react'
+import { Utensils, BarChart3, User, Plus, ChefHat } from 'lucide-react'
 import { useMealsStore } from '../../store/mealsStore'
 import { useUIStore } from '../../store/uiStore'
 
@@ -47,6 +47,38 @@ export const BottomNav: React.FC = () => {
                 )}
               </div>
               <span className="text-[11px] mt-0.5 tracking-tight">Сегодня</span>
+            </>
+          )}
+        </NavLink>
+
+        {/* Tab 2: Что съесть (AI Меню) */}
+        <NavLink
+          to="/meal-plan"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+              isActive
+                ? 'text-emerald-400 font-semibold'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <div
+                className={`relative p-1 rounded-xl transition-all ${
+                  isActive ? 'bg-emerald-500/10' : ''
+                }`}
+              >
+                <ChefHat
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    isActive ? 'scale-110 stroke-[2.3]' : 'stroke-[1.8]'
+                  }`}
+                />
+                {isActive && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-400 rounded-full" />
+                )}
+              </div>
+              <span className="text-[11px] mt-0.5 tracking-tight">Что съесть</span>
             </>
           )}
         </NavLink>

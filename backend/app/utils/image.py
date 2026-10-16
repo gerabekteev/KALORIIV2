@@ -7,6 +7,9 @@ from fastapi import UploadFile, HTTPException, status
 
 from app.config import settings
 
+Image.MAX_IMAGE_PIXELS = 25_000_000
+MAX_DIMENSION_HARD_LIMIT = 8000
+
 ALLOWED_MIME_TYPES = {
     "image/jpeg",
     "image/jpg",
@@ -35,6 +38,12 @@ def process_image(image_bytes: bytes) -> Tuple[bytes, str]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Невозможно прочитать файл изображения. Файл повреждён или имеет неподдерживаемый формат.",
+        )
+
+    if image.width > MAX_DIMENSION_HARD_LIMIT or image.height > MAX_DIMENSION_HARD_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Разрешение изображения слишком велико ({image.width}x{image.height}). Максимум {MAX_DIMENSION_HARD_LIMIT}px.",
         )
 
     # Correct orientation based on EXIF tag

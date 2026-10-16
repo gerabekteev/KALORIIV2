@@ -33,6 +33,12 @@ export async function apiClient<T>(
     ...(options.headers as Record<string, string>),
   }
 
+  const now = new Date()
+  const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  if (!headers['X-Client-Date']) {
+    headers['X-Client-Date'] = localDateStr
+  }
+
   if (token && !headers['Authorization']) {
     headers['Authorization'] = `Bearer ${token}`
   }

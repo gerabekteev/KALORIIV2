@@ -369,16 +369,19 @@ async def test_comprehensive_audit_b01_to_b14_and_features():
         if shared_file.exists():
             shared_file.unlink()
 
-        # Path Traversal attack test on DELETE
+        # Path Traversal attack test (SEC-02 blocks path traversal in schema validation with 422)
         res_pt = await client.post(
             "/api/meals",
             json={"name": "Path Traversal Meal", "calories": 100, "protein": 5, "fat": 2, "carbs": 10, "photo_path": "/uploads/../main.py"},
             headers=h1,
         )
-        pt_meal_id = res_pt.json()["id"]
-        # Delete it: should not crash and should not touch main.py
-        del_pt_res = await client.delete(f"/api/meals/{pt_meal_id}", headers=h1)
-        assert Path("app/main.py").exists() or Path("backend/app/main.py").exists()
+        if res_pt.status_code == 422:
+            # Blocked by SEC-02 input validation
+            pass
+        else:
+            pt_meal_id = res_pt.json()["id"]
+            del_pt_res = await client.delete(f"/api/meals/{pt_meal_id}", headers=h1)
+            assert Path("app/main.py").exists() or Path("backend/app/main.py").exists()
 
         # ------------------------------------------------------------------
         # BUG-B05: cleanup_orphan_uploads unit test
