@@ -39,6 +39,7 @@ MODEL_METADATA_CATALOG: dict[str, Tuple[str, str]] = {
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": ("NVIDIA Omni (Free)", "Reasoning VLM от NVIDIA с поддержкой vision"),
     "gemini-3.7-flash": ("Gemini 3.7 Flash", "Сбалансированный анализ и высокая скорость (20 RPD)"),
     "gemini-3.5-flash-lite": ("Gemini 3.5 Flash-Lite", "Экономичный и ультрабыстрый отклик"),
+    "nvidia/nemotron-3.5-super-vl:free": ("NVIDIA Nemotron Super-VL (Free)", "Сверхбыстрая Vision VLM модель от NVIDIA"),
 }
 
 
