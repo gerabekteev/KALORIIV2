@@ -12,19 +12,6 @@ This project is integrated with **Google Stitch MCP** (`stitch`) for UI design a
 
 > **Security Note:** All configuration files containing API keys are excluded in `.gitignore` to prevent leaking credentials to Git remotes.
 
-### Available Stitch Design Concepts
-1. **Concept 1: Nordic Light Wellness** (Светлая скандинавская эстетика)
-   - **Project ID**: `projects/17204641045655770014`
-   - **Local Folder**: `docs/stitch_screens/concepts/1_nordic_light/`
-2. **Concept 2: Neo-Brutalist Pop** (Яркий нео-брутализм с черными контурами и жесткими тенями)
-   - **Project ID**: `projects/1277369673546296672`
-   - **Local Folder**: `docs/stitch_screens/concepts/2_neo_brutalism/`
-3. **Concept 3: Cyber Bio-HUD** (Ультра-технологичный биохакинг, неоновый OLED-интерфейс)
-   - **Project ID**: `projects/12681834509373312105`
-   - **Local Folder**: `docs/stitch_screens/concepts/3_cyber_hud/`
-4. **Baseline Modern Clean Health**:
-   - **Project ID**: `projects/9045932829388391320`
-   - **Local Folder**: `docs/stitch_screens/`
 
 ### Stitch Helper CLI (`scripts/stitch_tool.py`)
 You can use the helper script for direct operations:
@@ -32,11 +19,11 @@ You can use the helper script for direct operations:
 # List all Stitch projects
 python scripts/stitch_tool.py projects
 
-# List screens in the NutriVision project
-python scripts/stitch_tool.py screens
+# List screens in a project
+python scripts/stitch_tool.py screens <project_id>
 
-# Download all screen HTML code and screenshots locally into docs/stitch_screens/
-python scripts/stitch_tool.py pull
+# Download screen HTML code and screenshots locally into docs/stitch_screens/
+python scripts/stitch_tool.py pull <project_id>
 
 # Inspect a specific screen
 python scripts/stitch_tool.py get-screen <screen_resource_name>

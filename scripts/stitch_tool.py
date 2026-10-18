@@ -23,7 +23,7 @@ if sys.stdout.encoding != "utf-8":
 # Paths
 ROOT_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT_DIR / ".agents" / "mcp_config.json"
-DEFAULT_PROJECT_ID = "projects/9045932829388391320"
+DEFAULT_PROJECT_ID = None
 
 
 def load_config():
@@ -114,6 +114,9 @@ def cmd_projects(args):
 
 def cmd_screens(args):
     project_id = args.project_id or DEFAULT_PROJECT_ID
+    if not project_id:
+        print("[!] Error: Please specify a project_id (e.g. python scripts/stitch_tool.py screens projects/<id>)", file=sys.stderr)
+        return
     data = call_mcp_tool("list_screens", {"projectId": project_id})
     screens = data.get("screens", [])
     print(f"\nScreens in {project_id} ({len(screens)} screen(s)):\n")
@@ -141,6 +144,9 @@ def cmd_get_screen(args):
 
 def cmd_pull(args):
     project_id = args.project_id or DEFAULT_PROJECT_ID
+    if not project_id:
+        print("[!] Error: Please specify a project_id (e.g. python scripts/stitch_tool.py pull projects/<id>)", file=sys.stderr)
+        return
     out_dir = Path(args.out_dir or (ROOT_DIR / "docs" / "stitch_screens"))
     out_dir.mkdir(parents=True, exist_ok=True)
 
