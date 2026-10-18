@@ -12,6 +12,7 @@ interface CreateRecipeModalProps {
   isOpen: boolean
   onClose: () => void
   onRecipeCreated: (recipe: Recipe) => void
+  editingRecipe?: Recipe | null
 }
 
 interface IngredientRow {
@@ -23,6 +24,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
   isOpen,
   onClose,
   onRecipeCreated,
+  editingRecipe,
 }) => {
   const { addToast } = useUIStore()
 
@@ -51,6 +53,49 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
   const [isSearching, setIsSearching] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [ingredientWeight, setIngredientWeight] = useState('100')
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (editingRecipe) {
+      if (editingRecipe.items && editingRecipe.items.length > 0) {
+        setMode('ingredients')
+        setIngName(editingRecipe.name)
+        setIngDescription(editingRecipe.description || '')
+        setIngredients(
+          editingRecipe.items
+            .filter((it) => it.product)
+            .map((it) => ({
+              product: it.product!,
+              weight_grams: it.weight_grams,
+            }))
+        )
+      } else {
+        setMode('quick')
+        setQuickForm({
+          name: editingRecipe.name,
+          description: editingRecipe.description || '',
+          calories: String(Math.round(editingRecipe.total_calories)),
+          protein: String(Math.round(editingRecipe.total_protein * 10) / 10),
+          fat: String(Math.round(editingRecipe.total_fat * 10) / 10),
+          carbs: String(Math.round(editingRecipe.total_carbs * 10) / 10),
+          weight_grams: String(Math.round(editingRecipe.total_weight_grams || 100)),
+        })
+      }
+    } else {
+      setQuickForm({
+        name: '',
+        description: '',
+        calories: '',
+        protein: '',
+        fat: '',
+        carbs: '',
+        weight_grams: '100',
+      })
+      setIngName('')
+      setIngDescription('')
+      setIngredients([])
+    }
+  }, [isOpen, editingRecipe])
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -118,17 +163,31 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
 
     setIsSubmitting(true)
     try {
-      const recipe = await recipesApi.createQuickRecipe({
-        name: quickForm.name.trim(),
-        description: quickForm.description.trim() || undefined,
-        calories: parseFloat(quickForm.calories) || 0,
-        protein: parseFloat(quickForm.protein) || 0,
-        fat: parseFloat(quickForm.fat) || 0,
-        carbs: parseFloat(quickForm.carbs) || 0,
-        weight_grams: parseFloat(quickForm.weight_grams) || 100,
-      })
+      let recipe: Recipe
+      if (editingRecipe) {
+        recipe = await recipesApi.updateRecipe(editingRecipe.id, {
+          name: quickForm.name.trim(),
+          description: quickForm.description.trim() || undefined,
+          total_calories: parseFloat(quickForm.calories) || 0,
+          total_protein: parseFloat(quickForm.protein) || 0,
+          total_fat: parseFloat(quickForm.fat) || 0,
+          total_carbs: parseFloat(quickForm.carbs) || 0,
+          total_weight_grams: parseFloat(quickForm.weight_grams) || 100,
+        })
+        addToast(`Рецепт "${recipe.name}" успешно обновлён!`, 'success')
+      } else {
+        recipe = await recipesApi.createQuickRecipe({
+          name: quickForm.name.trim(),
+          description: quickForm.description.trim() || undefined,
+          calories: parseFloat(quickForm.calories) || 0,
+          protein: parseFloat(quickForm.protein) || 0,
+          fat: parseFloat(quickForm.fat) || 0,
+          carbs: parseFloat(quickForm.carbs) || 0,
+          weight_grams: parseFloat(quickForm.weight_grams) || 100,
+        })
+        addToast(`Рецепт "${recipe.name}" успешно создан!`, 'success')
+      }
 
-      addToast(`Рецепт "${recipe.name}" успешно создан!`, 'success')
       onRecipeCreated(recipe)
       onClose()
       // reset
@@ -142,7 +201,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
         weight_grams: '100',
       })
     } catch {
-      addToast('Не удалось создать рецепт', 'error')
+      addToast(editingRecipe ? 'Не удалось обновить рецепт' : 'Не удалось создать рецепт', 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -161,16 +220,29 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
 
     setIsSubmitting(true)
     try {
-      const recipe = await recipesApi.createRecipe({
-        name: ingName.trim(),
-        description: ingDescription.trim() || undefined,
-        items: ingredients.map((item) => ({
-          product_id: item.product.id,
-          weight_grams: item.weight_grams,
-        })),
-      })
+      let recipe: Recipe
+      if (editingRecipe) {
+        recipe = await recipesApi.updateRecipe(editingRecipe.id, {
+          name: ingName.trim(),
+          description: ingDescription.trim() || undefined,
+          items: ingredients.map((item) => ({
+            product_id: item.product.id,
+            weight_grams: item.weight_grams,
+          })),
+        })
+        addToast(`Рецепт "${recipe.name}" успешно обновлён!`, 'success')
+      } else {
+        recipe = await recipesApi.createRecipe({
+          name: ingName.trim(),
+          description: ingDescription.trim() || undefined,
+          items: ingredients.map((item) => ({
+            product_id: item.product.id,
+            weight_grams: item.weight_grams,
+          })),
+        })
+        addToast(`Рецепт "${recipe.name}" успешно создан!`, 'success')
+      }
 
-      addToast(`Рецепт "${recipe.name}" успешно создан!`, 'success')
       onRecipeCreated(recipe)
       onClose()
       // reset
@@ -178,14 +250,19 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
       setIngDescription('')
       setIngredients([])
     } catch {
-      addToast('Не удалось создать рецепт', 'error')
+      addToast(editingRecipe ? 'Не удалось обновить рецепт' : 'Не удалось создать рецепт', 'error')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Новый рецепт" maxWidth="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingRecipe ? 'Редактировать рецепт' : 'Новый рецепт'}
+      maxWidth="md"
+    >
       <div className="space-y-4">
         {/* Mode Selector */}
         <div className="flex bg-[#141417] p-1 rounded-xl border border-neutral-800">

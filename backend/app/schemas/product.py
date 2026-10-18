@@ -9,11 +9,16 @@ def _validate_safe_product_image(v: Optional[str]) -> Optional[str]:
     val = v.strip()
     if not val:
         return None
-    if val.startswith(("http://", "https://", "/uploads/")):
+    if val.startswith(("http://", "https://")):
+        if any(c in val for c in ["\r", "\n", "\t", " ", "<", ">", '"', "'"]):
+            raise ValueError("Недопустимый формат URL изображения продукта")
         return val
-    if val.startswith("uploads/"):
-        return f"/{val}"
-    raise ValueError("Недопустимый URL или путь к изображению продукта")
+    clean_name = val.replace("/uploads/", "").replace("uploads/", "").lstrip("/")
+    if ".." in clean_name or "/" in clean_name or "\\" in clean_name:
+        raise ValueError("Недопустимый путь к изображению продукта")
+    if not re.match(r"^[a-zA-Z0-9._-]+\.(jpg|jpeg|png|webp)$", clean_name, re.IGNORECASE):
+        raise ValueError("Недопустимый формат имени файла изображения продукта")
+    return f"/uploads/{clean_name}"
 
 
 class ProductCreate(BaseModel):

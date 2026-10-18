@@ -1,6 +1,6 @@
 import html
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from collections import defaultdict
 from pydantic import BaseModel
@@ -35,7 +35,7 @@ async def get_telegram_status(
     bot_user = settings.TELEGRAM_BOT_USERNAME.lstrip("@").strip() if settings.TELEGRAM_BOT_USERNAME else None
     code = current_user.telegram_link_code
     exp = current_user.telegram_link_expires_at
-    if exp and exp < datetime.utcnow():
+    if exp and exp < datetime.now(timezone.utc).replace(tzinfo=None):
         code = None
         exp = None
 
@@ -59,7 +59,7 @@ async def generate_telegram_link_code(
 ):
     """Generate a 15-minute one-time code for linking Telegram account to KaloriiAI."""
     code = f"KLR-{secrets.randbelow(900000) + 100000}"
-    expires = datetime.utcnow() + timedelta(minutes=15)
+    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
 
     current_user.telegram_link_code = code
     current_user.telegram_link_expires_at = expires

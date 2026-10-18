@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nordic Light Wellness — Дневник питания</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Playfair Display & Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Container Queries and Forms -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#e9e1dd",
+            "on-background": "#1e1b19",
+            "inverse-on-surface": "#f7efeb",
+            "tertiary-fixed-dim": "#ffb77d",
+            "surface-container": "#f4ece8",
+            "on-secondary": "#ffffff",
+            "surface-variant": "#e9e1dd",
+            "tertiary-container": "#b15f00",
+            "tertiary-fixed": "#ffdcc3",
+            "secondary": "#4953bc",
+            "secondary-fixed-dim": "#bdc2ff",
+            "on-primary-fixed-variant": "#005137",
+            "on-tertiary-container": "#fffbff",
+            "on-secondary-fixed-variant": "#2f3aa3",
+            "on-primary-fixed": "#002114",
+            "background": "#fff8f5",
+            "secondary-container": "#8792fe",
+            "outline-variant": "#bccac0",
+            "on-tertiary-fixed": "#2f1500",
+            "primary-container": "#00855d",
+            "primary": "#006948",
+            "tertiary": "#8d4b00",
+            "surface-tint": "#006c4a",
+            "on-error-container": "#93000a",
+            "error-container": "#ffdad6",
+            "inverse-surface": "#33302d",
+            "surface-bright": "#fff8f5",
+            "outline": "#6d7a72",
+            "secondary-fixed": "#e0e0ff",
+            "primary-fixed": "#85f8c4",
+            "on-primary": "#ffffff",
+            "on-error": "#ffffff",
+            "primary-fixed-dim": "#68dba9",
+            "surface-container-high": "#eee7e3",
+            "surface-dim": "#e0d8d5",
+            "on-tertiary-fixed-variant": "#6e3900",
+            "on-surface": "#1e1b19",
+            "on-secondary-fixed": "#000767",
+            "on-surface-variant": "#3d4a42",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-primary-container": "#f5fff7",
+            "on-secondary-container": "#17228f",
+            "error": "#ba1a1a",
+            "surface-container-low": "#faf2ee",
+            "inverse-primary": "#68dba9",
+            "surface": "#fff8f5"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter-desktop": "1.5rem",
+            "space-md": "1rem",
+            "gutter": "1rem",
+            "space-xs": "0.25rem",
+            "margin-tablet": "2rem",
+            "space-sm": "0.5rem",
+            "margin": "1.25rem",
+            "space-xl": "2.5rem",
+            "space-lg": "1.5rem",
+            "margin-desktop": "3rem"
+          },
+          "fontFamily": {
+            "display-mobile": ["Playfair Display", "serif"],
+            "stat-value": ["Plus Jakarta Sans", "sans-serif"],
+            "label-sm": ["Plus Jakarta Sans", "sans-serif"],
+            "label-md": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-lg": ["Playfair Display", "serif"],
+            "body-md": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-lg-mobile": ["Playfair Display", "serif"],
+            "label-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-md": ["Plus Jakarta Sans", "sans-serif"],
+            "display": ["Playfair Display", "serif"],
+            "body-sm": ["Plus Jakarta Sans", "sans-serif"],
+            "body-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-sm": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          "fontSize": {
+            "display-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+            "stat-value": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-md": ["14px", { "lineHeight": "22px", "letterSpacing": "0", "fontWeight": "400" }],
+            "headline-lg-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+            "body-sm": ["12px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "body-lg": ["16px", { "lineHeight": "26px", "letterSpacing": "0", "fontWeight": "400" }],
+            "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #FBFBF9;
+      color: #1e1b19;
+      -webkit-font-smoothing: antialiased;
+    }
+    .nordic-shadow {
+      box-shadow: 0 1px 2px -1px rgba(28, 25, 23, 0.04), 0 3px 8px -2px rgba(28, 25, 23, 0.03);
+    }
+    .dock-shadow {
+      box-shadow: 0 16px 36px -6px rgba(28, 25, 23, 0.08), 0 4px 12px -2px rgba(28, 25, 23, 0.04);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex justify-center selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Outer Mobile Shell Canvas (Strictly mobile 390px scale) -->
+<div class="w-full max-w-[390px] min-h-screen flex flex-col bg-[#FBFBF9] relative pb-28">
+<!-- 1. TopAppBar (Shared Component Implementation) -->
+<header class="w-full px-5 pt-3 pb-2 max-w-lg mx-auto flex justify-between items-center bg-background">
+<div class="flex items-center gap-3">
+<div class="relative w-10 h-10 rounded-full overflow-hidden ring-1 ring-outline-variant/40 bg-surface-container-high flex items-center justify-center">
+<img alt="Alexander profile avatar" class="w-full h-full object-cover" data-alt="Close-up portrait of Alexander, a serene young man with short fair hair in a high-key natural Nordic daylight setting with soft organic linen textures and tranquil warm beige tones, shot with editorial depth of field in modern Kinfolk aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA070KT8Z4Mh0CgTlcRN0qXSbrUZnwnVrDXKWfNaJPEk9_ZibaV-430rE0BSaA37rvmoWtU1dtSqAQYJrqH1Ggr2ea0ztcVyI46XDEJ9kg9NHShQ9rjRGm5T85uvNTqul6BZF8O-IG_CdxUCkFasNFTRyhiGINe8Rp-d73vi33l73U-j7p_4ilwq0iMAbgXvobFfsTOgaFDPPMYWf9N9haBKSgVxjjvBaypRTte4KT0unVHnOQ--6pgQG7aurcuWhz_zBPgDNiy-uFk"/>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Добрый день, Александр</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[13px]" data-icon="energy_savings_leaf" style="font-variation-settings: 'FILL' 1;">energy_savings_leaf</span>
+              7 дней баланса
+            </span>
+</div>
+</div>
+</div>
+<button aria-label="Уведомления" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors duration-150 active:scale-95">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Horizontal 7-Day Calendar Strip -->
+<section class="px-5 py-2.5">
+<div class="flex items-center justify-between gap-1.5 bg-surface-container-lowest p-1.5 rounded-2xl border border-stone-200/70 nordic-shadow">
+<!-- Пн -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-on-surface-variant cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-label-sm text-label-sm text-stone-400">Пн</span>
+<span class="font-body-md text-body-md font-semibold mt-0.5">22</span>
+</div>
+<!-- Вт -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-on-surface-variant cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-label-sm text-label-sm text-stone-400">Вт</span>
+<span class="font-body-md text-body-md font-semibold mt-0.5">23</span>
+</div>
+<!-- Ср (Today - Active State) -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2.5 rounded-xl bg-primary text-on-primary shadow-sm cursor-pointer">
+<span class="font-label-sm text-label-sm tracking-wide text-primary-fixed uppercase">Ср</span>
+<span class="font-body-md text-body-md font-bold mt-0.5">24</span>
+<span class="w-1 h-1 rounded-full bg-primary-fixed mt-0.5"></span>
+</div>
+<!-- Чт -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-on-surface-variant cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-label-sm text-label-sm text-stone-400">Чт</span>
+<span class="font-body-md text-body-md font-semibold mt-0.5">25</span>
+</div>
+<!-- Пт -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-on-surface-variant cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-label-sm text-label-sm text-stone-400">Пт</span>
+<span class="font-body-md text-body-md font-semibold mt-0.5">26</span>
+</div>
+<!-- Сб -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-on-surface-variant cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-label-sm text-label-sm text-stone-400">Сб</span>
+<span class="font-body-md text-body-md font-semibold mt-0.5">27</span>
+</div>
+<!-- Вс -->
+<div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-on-surface-variant cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="font-label-sm text-label-sm text-stone-400">Вс</span>
+<span class="font-body-md text-body-md font-semibold mt-0.5">28</span>
+</div>
+</div>
+</section>
+<!-- Main Content Stream -->
+<main class="px-5 space-y-4 mt-1">
+<!-- 2. Daily Calorie Budget Hero Card -->
+<section class="bg-surface-container-lowest rounded-3xl p-5 border border-stone-200/80 nordic-shadow relative overflow-hidden">
+<!-- Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<h2 class="font-headline-sm text-headline-sm tracking-tight text-on-surface">Баланс дня</h2>
+</div>
+<span class="font-label-md text-label-md text-outline tracking-wider bg-surface-container px-2.5 py-1 rounded-full">
+            Цель: 2 100 ккал
+          </span>
+</div>
+<!-- Visual Dual-Arc / Number Metric presentation -->
+<div class="mt-4 flex items-baseline justify-between">
+<div>
+<div class="flex items-baseline gap-1.5">
+<span class="font-display-mobile text-display-mobile font-normal text-on-surface tracking-tighter">1 450</span>
+<span class="font-label-md text-label-md text-on-surface-variant">ккал</span>
+</div>
+<p class="font-body-sm text-body-sm text-outline -mt-1">употреблено за сегодня</p>
+</div>
+<div class="text-right">
+<span class="font-stat-value text-stat-value text-primary font-bold tracking-tight">650</span>
+<p class="font-body-sm text-body-sm text-outline -mt-1">ккал осталось</p>
+</div>
+</div>
+<!-- Sleek segmented progress track -->
+<div class="mt-3.5 flex w-full h-2 rounded-full bg-surface-container-high overflow-hidden gap-1 p-0.5">
+<div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 69%;"></div>
+<div class="h-full bg-stone-200 rounded-full flex-1"></div>
+</div>
+<!-- 3 Macro Chips / Progress Wells -->
+<div class="mt-5 grid grid-cols-3 gap-2.5 pt-4 border-t border-stone-100">
+<!-- Белки -->
+<div class="flex flex-col p-2.5 rounded-2xl bg-surface-container-low/70 border border-stone-200/40">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-sm text-label-sm text-secondary font-bold">Белки</span>
+<span class="w-1.5 h-1.5 rounded-full bg-[#818CF8]"></span>
+</div>
+<div class="flex items-baseline gap-0.5">
+<span class="font-stat-value text-[17px] leading-tight font-bold text-on-surface">110</span>
+<span class="font-label-sm text-label-sm text-stone-400">/ 140г</span>
+</div>
+<div class="w-full bg-stone-200/70 h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-[#818CF8] h-full rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+<!-- Жиры -->
+<div class="flex flex-col p-2.5 rounded-2xl bg-surface-container-low/70 border border-stone-200/40">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-sm text-label-sm text-[#D97706] font-bold">Жиры</span>
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+</div>
+<div class="flex items-baseline gap-0.5">
+<span class="font-stat-value text-[17px] leading-tight font-bold text-on-surface">45</span>
+<span class="font-label-sm text-label-sm text-stone-400">/ 65г</span>
+</div>
+<div class="w-full bg-stone-200/70 h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-[#D97706] h-full rounded-full" style="width: 69%;"></div>
+</div>
+</div>
+<!-- Углеводы -->
+<div class="flex flex-col p-2.5 rounded-2xl bg-surface-container-low/70 border border-stone-200/40">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-sm text-label-sm text-primary font-bold">Углеводы</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+<div class="flex items-baseline gap-0.5">
+<span class="font-stat-value text-[17px] leading-tight font-bold text-on-surface">165</span>
+<span class="font-label-sm text-label-sm text-stone-400">/ 220г</span>
+</div>
+<div class="w-full bg-stone-200/70 h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 75%;"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Wellness Water & Activity Section (2-Column Grid) -->
+<section class="grid grid-cols-2 gap-3">
+<!-- Water Card -->
+<div class="bg-surface-container-lowest rounded-3xl p-4 border border-stone-200/80 nordic-shadow flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Вода</span>
+<div class="w-7 h-7 rounded-full bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="water_drop" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+</div>
+<div class="mt-2.5">
+<div class="flex items-baseline gap-1">
+<span class="font-stat-value text-[22px] font-bold text-on-surface">1.8</span>
+<span class="font-label-md text-label-md text-stone-400">/ 2.5 л</span>
+</div>
+<p class="font-body-sm text-[11px] text-outline mt-0.5">72% от нормы</p>
+</div>
+<!-- Segmented Water Bars -->
+<div class="flex gap-1 mt-3">
+<span class="h-1.5 flex-1 bg-[#0284C7] rounded-full"></span>
+<span class="h-1.5 flex-1 bg-[#0284C7] rounded-full"></span>
+<span class="h-1.5 flex-1 bg-[#0284C7] rounded-full"></span>
+<span class="h-1.5 flex-1 bg-stone-200 rounded-full"></span>
+</div>
+</div>
+<button class="mt-4 w-full py-1.5 px-2 bg-surface-container-low hover:bg-surface-container rounded-full text-[11px] font-label-md font-semibold text-[#0284C7] flex items-center justify-center gap-1 transition-all active:scale-95 border border-stone-200/50">
+<span class="material-symbols-outlined text-[13px]" data-icon="add">add</span>
+            +250 мл
+          </button>
+</div>
+<!-- Activity Card -->
+<div class="bg-surface-container-lowest rounded-3xl p-4 border border-stone-200/80 nordic-shadow flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Активность</span>
+<div class="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_fire_department" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+</div>
+<div class="mt-2.5">
+<div class="flex items-baseline gap-1">
+<span class="font-stat-value text-[22px] font-bold text-on-surface">8 450</span>
+</div>
+<p class="font-body-sm text-[11px] text-outline mt-0.5">шагов пройдено</p>
+</div>
+<div class="mt-3.5 flex items-center gap-1.5 text-tertiary">
+<span class="material-symbols-outlined text-[15px]" data-icon="bolt">bolt</span>
+<span class="font-label-md text-label-md font-bold text-on-surface">420 ккал</span>
+<span class="font-body-sm text-[11px] text-stone-400">сожжено</span>
+</div>
+</div>
+<!-- Mini Step Progress Bar -->
+<div class="mt-3 w-full bg-stone-200/70 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 84%;"></div>
+</div>
+</div>
+</section>
+<!-- 4. Chronological Food Journal ('Дневник питания') -->
+<section class="space-y-3 pt-2">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-baseline gap-2">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Дневник питания</h2>
+<span class="font-label-sm text-label-sm text-outline">3 приема</span>
+</div>
+<button class="font-label-md text-label-md text-primary font-semibold hover:underline">
+            Фильтры
+          </button>
+</div>
+<!-- Meal Item 1: Завтрак -->
+<article class="bg-surface-container-lowest rounded-2xl p-4 border border-stone-200/80 nordic-shadow flex items-center justify-between">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-2xl bg-surface-container flex items-center justify-center text-primary mt-0.5">
+<span class="material-symbols-outlined text-[20px]" data-icon="bakery_dining">bakery_dining</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-[15px] font-semibold text-on-surface">Завтрак</h3>
+<span class="font-label-sm text-[10px] text-outline bg-surface-container-low px-1.5 py-0.5 rounded-md">08:30</span>
+</div>
+<p class="font-body-sm text-[13px] text-on-surface-variant mt-0.5 leading-snug">
+                Овсянка на кокосовом молоке с ягодами
+              </p>
+<p class="font-body-sm text-[12px] text-stone-400">
+                Матча латте
+              </p>
+</div>
+</div>
+<div class="text-right pl-2">
+<span class="font-stat-value text-[16px] font-bold text-on-surface">540</span>
+<span class="font-label-sm text-[10px] text-stone-400 block -mt-0.5">ккал</span>
+</div>
+</article>
+<!-- Meal Item 2: Обед -->
+<article class="bg-surface-container-lowest rounded-2xl p-4 border border-stone-200/80 nordic-shadow flex items-center justify-between">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-2xl bg-surface-container flex items-center justify-center text-primary mt-0.5">
+<span class="material-symbols-outlined text-[20px]" data-icon="dinner_dining">dinner_dining</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-[15px] font-semibold text-on-surface">Обед</h3>
+<span class="font-label-sm text-[10px] text-outline bg-surface-container-low px-1.5 py-0.5 rounded-md">13:15</span>
+</div>
+<p class="font-body-sm text-[13px] text-on-surface-variant mt-0.5 leading-snug">
+                Запеченный лосось с диким рисом
+              </p>
+<p class="font-body-sm text-[12px] text-stone-400">
+                Свежий салат с зеленью
+              </p>
+</div>
+</div>
+<div class="text-right pl-2">
+<span class="font-stat-value text-[16px] font-bold text-on-surface">720</span>
+<span class="font-label-sm text-[10px] text-stone-400 block -mt-0.5">ккал</span>
+</div>
+</article>
+<!-- Meal Item 3: Перекус -->
+<article class="bg-surface-container-lowest rounded-2xl p-4 border border-stone-200/80 nordic-shadow flex items-center justify-between">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-2xl bg-surface-container flex items-center justify-center text-primary mt-0.5">
+<span class="material-symbols-outlined text-[20px]" data-icon="nutrition">nutrition</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-[15px] font-semibold text-on-surface">Перекус</h3>
+<span class="font-label-sm text-[10px] text-outline bg-surface-container-low px-1.5 py-0.5 rounded-md">16:40</span>
+</div>
+<p class="font-body-sm text-[13px] text-on-surface-variant mt-0.5 leading-snug">
+                Греческий йогурт с семенами чиа
+              </p>
+</div>
+</div>
+<div class="text-right pl-2">
+<span class="font-stat-value text-[16px] font-bold text-on-surface">190</span>
+<span class="font-label-sm text-[10px] text-stone-400 block -mt-0.5">ккал</span>
+</div>
+</article>
+<!-- Meal Item 4: Ужин (Planning state - dashed border) -->
+<div class="rounded-2xl p-4 border-2 border-dashed border-stone-300/80 bg-surface-container-lowest/50 hover:bg-surface-container-lowest transition-colors flex items-center justify-between cursor-pointer active:scale-[0.99]">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-2xl border border-stone-200 bg-surface-container-lowest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+</div>
+<div>
+<span class="font-headline-sm text-[15px] font-semibold text-on-surface block">+ Добавить ужин</span>
+<span class="font-body-sm text-[12px] text-stone-400">Планируется на вечер</span>
+</div>
+</div>
+<span class="font-label-sm text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+            Осталось 650 ккал
+          </span>
+</div>
+</section>
+</main>
+<!-- 5. Floating Translucent Glass Dock (BottomNavBar Shared Component) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 max-w-lg mx-auto pointer-events-none">
+<div class="w-full max-w-[370px] mx-auto pointer-events-auto bg-surface-container-lowest/80 backdrop-blur-md rounded-full border border-outline-variant/30 dock-shadow px-3 py-2 flex items-center justify-between">
+<!-- Tab 1: Дневник (Active Navigation Match) -->
+<button class="flex flex-col items-center justify-center bg-primary text-on-primary rounded-full px-3 py-1.5 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="menu_book" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-label-sm text-[10px] mt-0.5">Дневник</span>
+</button>
+<!-- Tab 2: Аналитика -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors duration-200 px-3 py-1.5 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="monitoring">monitoring</span>
+<span class="font-label-sm text-[10px] mt-0.5">Аналитика</span>
+</button>
+<!-- Central Elevated Camera Pill (Скан) -->
+<button aria-label="AI фото-скан блюда" class="w-12 h-12 -my-3 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[22px]" data-icon="photo_camera" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+</button>
+<!-- Tab 3: Скан / Планы -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors duration-200 px-3 py-1.5 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="photo_camera">photo_camera</span>
+<span class="font-label-sm text-[10px] mt-0.5">Скан</span>
+</button>
+<!-- Tab 4: Профиль -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors duration-200 px-3 py-1.5 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="person">person</span>
+<span class="font-label-sm text-[10px] mt-0.5">Профиль</span>
+</button>
+</div>
+</nav>
+</div>
+</body></html>

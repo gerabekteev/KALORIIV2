@@ -8,6 +8,11 @@
 !.env.example
 *.pem
 *.key
+.agents/mcp_config.json
+.agents/plugins/**/mcp_config.json
+.vscode/mcp.json
+.antigravity/
+.gemini/
 
 # Python & Virtual Environments
 __pycache__/

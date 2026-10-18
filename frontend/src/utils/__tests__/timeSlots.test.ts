@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getSlotForTime, SLOTS_CONFIG } from '../timeSlots'
+import { getSlotForTime, SLOTS_CONFIG, getMealTimeMeta } from '../timeSlots'
 
 describe('timeSlots utility (UX-03)', () => {
   it('has 4 correctly configured daily slots', () => {
@@ -36,5 +36,13 @@ describe('timeSlots utility (UX-03)', () => {
   it('defaults to snack when time is missing or empty', () => {
     expect(getSlotForTime(undefined)).toBe('snack')
     expect(getSlotForTime('')).toBe('snack')
+  })
+
+  it('correctly returns icon and label metadata with getMealTimeMeta', () => {
+    expect(getMealTimeMeta('08:00')).toEqual({ slot: 'breakfast', icon: '☀️', label: 'Завтрак' })
+    expect(getMealTimeMeta('13:00', 500)).toEqual({ slot: 'lunch', icon: '🍲', label: 'Обед' })
+    expect(getMealTimeMeta('13:00', 120)).toEqual({ slot: 'snack', icon: '🍏', label: 'Перекус' })
+    expect(getMealTimeMeta('17:00')).toEqual({ slot: 'snack', icon: '🍏', label: 'Перекус' })
+    expect(getMealTimeMeta('20:00')).toEqual({ slot: 'dinner', icon: '🪐', label: 'Ужин' })
   })
 })

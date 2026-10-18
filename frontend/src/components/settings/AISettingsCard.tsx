@@ -6,12 +6,8 @@ import {
   XCircle,
   ChevronUp,
   ChevronDown,
-  Key,
-  Eye,
-  EyeOff,
   Save,
   RotateCcw,
-  ShieldCheck,
 } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
@@ -21,33 +17,30 @@ import { profileApi, AIModelItem } from '../../api/profile'
 
 export type { AIModelItem }
 
+export interface AISettingsCardProps {
+  embedded?: boolean
+}
+
 export const DEFAULT_AI_MODELS: AIModelItem[] = [
   {
-    id: 'gemini-3.1-flash-lite',
-    name: 'Gemini 3.1 Flash-Lite (500 RPD)',
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash-Lite',
     provider: 'gemini',
     description: 'Лимит 500 запросов/день, 15 RPM. Быстрый и надёжный',
     enabled: true,
   },
   {
-    id: 'gemini-3.5-flash',
-    name: 'Gemini 3.5 Flash',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
     provider: 'gemini',
     description: 'Высокая точность и детализация блюд',
     enabled: true,
   },
   {
-    id: 'gemini-3.6-flash',
-    name: 'Gemini 3.6 Flash',
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
     provider: 'gemini',
     description: 'Стабильная мультимодальная модель',
-    enabled: true,
-  },
-  {
-    id: 'gemini-3.8-flash',
-    name: 'Gemini 3.8 Flash',
-    provider: 'gemini',
-    description: 'Максимальный reasoning и точность (20 RPD)',
     enabled: true,
   },
   {
@@ -58,38 +51,17 @@ export const DEFAULT_AI_MODELS: AIModelItem[] = [
     enabled: true,
   },
   {
-    id: 'google/gemma-4-26b-a4b-it:free',
-    name: 'Gemma 4 26B (Free)',
+    id: 'google/gemma-3-27b-it:free',
+    name: 'Gemma 3 27B (Free)',
     provider: 'openrouter',
     description: 'Мощная визуальная модель от Google',
     enabled: true,
   },
   {
-    id: 'google/gemma-4-31b-it:free',
-    name: 'Gemma 4 31B (Free)',
+    id: 'qwen/qwen2.5-vl-72b-instruct:free',
+    name: 'Qwen 2.5 VL 72B (Free)',
     provider: 'openrouter',
-    description: 'Продвинутая мультимодальная модель Google',
-    enabled: true,
-  },
-  {
-    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-    name: 'NVIDIA Omni (Free)',
-    provider: 'openrouter',
-    description: 'Reasoning VLM от NVIDIA с поддержкой vision',
-    enabled: true,
-  },
-  {
-    id: 'gemini-3.7-flash',
-    name: 'Gemini 3.7 Flash',
-    provider: 'gemini',
-    description: 'Сбалансированный анализ и высокая скорость (20 RPD)',
-    enabled: true,
-  },
-  {
-    id: 'gemini-3.5-flash-lite',
-    name: 'Gemini 3.5 Flash-Lite',
-    provider: 'gemini',
-    description: 'Экономичный и ультрабыстрый отклик',
+    description: 'Флагманская vision-модель для распознавания еды',
     enabled: true,
   },
 ]
@@ -137,15 +109,13 @@ function loadSavedSettings() {
   }
 }
 
-export const AISettingsCard: React.FC = () => {
+export const AISettingsCard: React.FC<AISettingsCardProps> = ({ embedded = false }) => {
   const { addToast } = useUIStore()
 
   const [savedConfig] = useState(loadSavedSettings)
   const [models, setModels] = useState<AIModelItem[]>(savedConfig.models)
   const [geminiKey, setGeminiKey] = useState(savedConfig.geminiKey)
   const [openrouterKey, setOpenrouterKey] = useState(savedConfig.openrouterKey)
-  const [showGeminiKey, setShowGeminiKey] = useState(false)
-  const [showOpenrouterKey, setShowOpenrouterKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
 
@@ -307,8 +277,8 @@ export const AISettingsCard: React.FC = () => {
   const enabledModels = models.filter((m) => m.enabled)
   const activeModelId = enabledModels[0]?.id
 
-  return (
-    <Card variant="default" padding="md" className="space-y-4">
+  const content = (
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
         <div className="flex items-center gap-2">
@@ -333,7 +303,7 @@ export const AISettingsCard: React.FC = () => {
         onClose={() => setShowResetModal(false)}
         onConfirm={handleReset}
         title="Сбросить настройки AI?"
-        description="Порядок моделей и ключи будут возвращены к рекомендованным настройкам по умолчанию."
+        description="Порядок моделей будет возвращен к рекомендованным настройкам по умолчанию."
         confirmText="Сбросить"
         cancelText="Отмена"
         isDangerous
@@ -374,29 +344,29 @@ export const AISettingsCard: React.FC = () => {
                     type="checkbox"
                     checked={model.enabled}
                     onChange={() => handleToggle(model.id)}
-                    className="w-4 h-4 accent-emerald-500 rounded cursor-pointer shrink-0"
+                    className="w-5 h-5 accent-emerald-500 rounded cursor-pointer shrink-0"
                     title={model.enabled ? 'Отключить модель' : 'Включить модель'}
                   />
 
-                  {/* Reorder Buttons */}
-                  <div className="flex flex-col gap-0.5 shrink-0">
+                  {/* Reorder Buttons (Clean 32x32px touch targets) */}
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       disabled={index === 0}
                       onClick={() => handleMoveUp(index)}
-                      className="text-neutral-500 hover:text-white disabled:opacity-20 transition-colors cursor-pointer p-0.5"
+                      className="w-8 h-8 rounded-lg bg-neutral-800/80 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-400 hover:text-white disabled:opacity-20 transition-colors cursor-pointer flex items-center justify-center active:scale-95 touch-manipulation"
                       title="Повысить приоритет"
                     >
-                      <ChevronUp className="w-3.5 h-3.5" />
+                      <ChevronUp className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       disabled={index === models.length - 1}
                       onClick={() => handleMoveDown(index)}
-                      className="text-neutral-500 hover:text-white disabled:opacity-20 transition-colors cursor-pointer p-0.5"
+                      className="w-8 h-8 rounded-lg bg-neutral-800/80 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-400 hover:text-white disabled:opacity-20 transition-colors cursor-pointer flex items-center justify-center active:scale-95 touch-manipulation"
                       title="Понизить приоритет"
                     >
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -452,93 +422,6 @@ export const AISettingsCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Custom API Keys Section */}
-      <div className="pt-2 border-t border-neutral-800 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Key className="w-3.5 h-3.5 text-amber-400" />
-            <h4 className="text-xs font-bold text-white my-0">
-              Пользовательские API ключи (опционально)
-            </h4>
-          </div>
-          <span className="text-[10px] text-neutral-400">
-            Сохраняются в профиле и браузере
-          </span>
-        </div>
-
-        {/* Gemini API Key */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-neutral-300 font-medium">Google Gemini API:</span>
-            {geminiKey.trim() ? (
-              <span className="text-emerald-400 flex items-center gap-1 text-[10px] font-semibold">
-                <CheckCircle2 className="w-3 h-3" /> Свой ключ активен
-              </span>
-            ) : (
-              <span className="text-neutral-500 flex items-center gap-1 text-[10px]">
-                <ShieldCheck className="w-3 h-3" /> Системный ключ KaloriiAI
-              </span>
-            )}
-          </div>
-          <div className="relative">
-            <input
-              type={showGeminiKey ? 'text' : 'password'}
-              placeholder="AIzaSy... (оставьте пустым для системного ключа)"
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              className="w-full bg-[#141417] border border-neutral-800 rounded-xl px-3 py-2 pr-9 text-xs text-white placeholder-neutral-600 outline-none focus:border-emerald-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowGeminiKey(!showGeminiKey)}
-              className="absolute right-2.5 top-2.5 text-neutral-500 hover:text-neutral-300 transition-colors"
-            >
-              {showGeminiKey ? (
-                <EyeOff className="w-3.5 h-3.5" />
-              ) : (
-                <Eye className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* OpenRouter API Key */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-neutral-300 font-medium">OpenRouter API:</span>
-            {openrouterKey.trim() ? (
-              <span className="text-emerald-400 flex items-center gap-1 text-[10px] font-semibold">
-                <CheckCircle2 className="w-3 h-3" /> Свой ключ активен
-              </span>
-            ) : (
-              <span className="text-neutral-500 flex items-center gap-1 text-[10px]">
-                <ShieldCheck className="w-3 h-3" /> Системный ключ KaloriiAI
-              </span>
-            )}
-          </div>
-          <div className="relative">
-            <input
-              type={showOpenrouterKey ? 'text' : 'password'}
-              placeholder="sk-or-v1-... (оставьте пустым для системного ключа)"
-              value={openrouterKey}
-              onChange={(e) => setOpenrouterKey(e.target.value)}
-              className="w-full bg-[#141417] border border-neutral-800 rounded-xl px-3 py-2 pr-9 text-xs text-white placeholder-neutral-600 outline-none focus:border-emerald-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowOpenrouterKey(!showOpenrouterKey)}
-              className="absolute right-2.5 top-2.5 text-neutral-500 hover:text-neutral-300 transition-colors"
-            >
-              {showOpenrouterKey ? (
-                <EyeOff className="w-3.5 h-3.5" />
-              ) : (
-                <Eye className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Save Button */}
       <Button
         type="button"
@@ -550,6 +433,16 @@ export const AISettingsCard: React.FC = () => {
       >
         Сохранить настройки AI
       </Button>
+    </div>
+  )
+
+  if (embedded) {
+    return content
+  }
+
+  return (
+    <Card variant="default" padding="md" className="space-y-4">
+      {content}
     </Card>
   )
 }

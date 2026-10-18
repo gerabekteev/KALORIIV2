@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PUNCH TRACKER - Neo-Brutalist Fitness &amp; Calorie Tracker</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-low": "#f5f4ec",
+            "on-secondary-fixed-variant": "#891933",
+            "on-tertiary-fixed-variant": "#004c69",
+            "tertiary": "#00668a",
+            "surface": "#fbf9f1",
+            "background": "#FFFDF5",
+            "tertiary-container": "#9ddaff",
+            "primary-fixed-dim": "#98da27",
+            "on-secondary": "#ffffff",
+            "primary": "#446900",
+            "surface-variant": "#e4e3db",
+            "secondary-container": "#fe7488",
+            "surface-bright": "#fbf9f1",
+            "on-background": "#1b1c17",
+            "surface-container-lowest": "#ffffff",
+            "secondary-fixed": "#ffdadc",
+            "surface-dim": "#dcdad2",
+            "inverse-on-surface": "#f3f1e9",
+            "on-secondary-fixed": "#400010",
+            "inverse-primary": "#98da27",
+            "on-error": "#ffffff",
+            "on-secondary-container": "#730425",
+            "on-surface": "#1b1c17",
+            "primary-fixed": "#b2f746",
+            "on-primary-container": "#416400",
+            "surface-tint": "#446900",
+            "inverse-surface": "#30312c",
+            "error-container": "#ffdad6",
+            "on-primary": "#ffffff",
+            "on-tertiary-container": "#006184",
+            "on-tertiary": "#ffffff",
+            "on-tertiary-fixed": "#001e2c",
+            "tertiary-fixed-dim": "#7bd0ff",
+            "secondary-fixed-dim": "#ffb2b9",
+            "on-primary-fixed-variant": "#334f00",
+            "on-error-container": "#93000a",
+            "surface-container": "#f0eee6",
+            "outline-variant": "#c2cab0",
+            "error": "#ba1a1a",
+            "primary-container": "#a3e635",
+            "on-surface-variant": "#424936",
+            "on-primary-fixed": "#121f00",
+            "tertiary-fixed": "#c4e7ff",
+            "surface-container-high": "#eae8e0",
+            "outline": "#727a64",
+            "surface-container-highest": "#e4e3db",
+            "secondary": "#a93349"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "space-md": "1rem",
+            "margin": "1.25rem",
+            "gutter-mobile": "0.75rem",
+            "space-xl": "2.25rem",
+            "gutter": "1rem",
+            "space-lg": "1.5rem",
+            "space-xs": "0.25rem",
+            "margin-mobile": "1rem"
+          },
+          "fontFamily": {
+            "headline-lg-mobile": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "label-md": ["Space Grotesk"],
+            "label-lg": ["Space Grotesk"],
+            "body-lg": ["Space Grotesk"],
+            "headline-sm": ["Space Grotesk"],
+            "body-sm": ["Space Grotesk"],
+            "label-sticker": ["Space Grotesk"],
+            "headline-lg": ["Space Grotesk"],
+            "body-md": ["Space Grotesk"],
+            "display-hero-mobile": ["Space Grotesk"],
+            "display-hero": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "headline-lg-mobile": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-md": ["22px", { "lineHeight": "26px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-md": ["11px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "700" }],
+            "label-lg": ["14px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+            "headline-sm": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "label-sticker": ["10px", { "lineHeight": "10px", "letterSpacing": "0.12em", "fontWeight": "700" }],
+            "headline-lg": ["36px", { "lineHeight": "40px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "display-hero-mobile": ["44px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+            "display-hero": ["56px", { "lineHeight": "56px", "letterSpacing": "-0.04em", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .comic-stripes {
+      background-image: repeating-linear-gradient(
+        -45deg,
+        #a3e635,
+        #a3e635 10px,
+        #82cc18 10px,
+        #82cc18 20px
+      );
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex justify-center selection:bg-primary-container selection:text-black">
+<!-- Mobile Viewport Wrapper (390px) -->
+<main class="w-full max-w-[390px] bg-background min-h-screen flex flex-col relative pb-28">
+<!-- TopAppBar (From Shared Components & Requirements) -->
+<header class="bg-surface border-b-[3px] border-on-surface shadow-[0px_4px_0px_#000000] flex justify-between items-center w-full px-margin-mobile py-space-sm sticky top-0 z-40">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-full border-[2.5px] border-black bg-primary-container overflow-hidden flex items-center justify-center shadow-[2px_2px_0px_#000000]">
+<img class="w-full h-full object-cover" data-alt="A stylized vibrant neo-brutalist cartoon avatar of a determined young male athlete with a neon headband, crisp black ink outlines, bold graphic comic colors, yellow and lime green highlights, light cream studio background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVmd73kGq-EV-Uj23Jv6JberHoDCtU13o-fetPqtEXd2ShI7kGZMTJdtaYwZUxYmm_NW9eDFHxPBKvNHS0SOvYhiMrSqnM-TbAlM_x-mYKpEI7lYZk94aTlXahseFV-VS2m3JyjquSOuZoZ0rwunsx_jjgGeGdXEsJnM8NqvUYcNWGiNLPFDeSWA5jAp3FsHLtLh5WfeGQTPyCvyM85_rTUz33oeaf44fr6Dnvm6gj7oOMMyJaEa1Z2eHZI-RvX60NykAJK3jt14E"/>
+</div>
+<div class="flex flex-col">
+<span class="text-label-sticker font-label-sticker text-black/60 uppercase">АТЛЕТ</span>
+<span class="text-headline-sm font-headline-sm text-on-surface uppercase tracking-tight">PUNCH TRACKER</span>
+</div>
+</div>
+<!-- Trailing Action / Streak Badge -->
+<div class="bg-[#FDE047] border-[2px] border-black px-2.5 py-1 rounded-full shadow-[2px_2px_0px_#000000] flex items-center gap-1 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer">
+<span class="material-symbols-outlined text-[16px] text-black" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="text-label-md font-label-md text-black">7 DAYS STREAK</span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<div class="px-margin-mobile pt-4 flex flex-col gap-4">
+<!-- Greeting & Comic Sticker Header -->
+<section class="flex items-center justify-between">
+<div>
+<span class="text-label-md font-label-md text-black/70">ЧЕТВЕРГ, 21 НОЯБРЯ</span>
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-black tracking-tight flex items-center gap-1">
+            ХЕЙ, АЛЕКСАНДР! ⚡
+          </h1>
+</div>
+<div class="bg-[#FDE047] border-[2px] border-black px-2.5 py-1 rounded-xl shadow-[3px_3px_0px_#000000] -rotate-2 select-none">
+<span class="text-label-sticker font-label-sticker text-black flex items-center gap-0.5">
+            🔥 7 ДНЕЙ В УДАРЕ!
+          </span>
+</div>
+</section>
+<!-- Chunky 7-Day Week Selector -->
+<nav aria-label="Календарь недели" class="grid grid-cols-7 gap-1.5">
+<!-- ПН 18 -->
+<button class="flex flex-col items-center justify-center py-2 bg-surface-container-lowest border-[2px] border-black rounded-xl shadow-[2px_2px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black/60">ПН</span>
+<span class="text-label-lg font-label-lg text-black mt-0.5">18</span>
+</button>
+<!-- ВТ 19 -->
+<button class="flex flex-col items-center justify-center py-2 bg-surface-container-lowest border-[2px] border-black rounded-xl shadow-[2px_2px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black/60">ВТ</span>
+<span class="text-label-lg font-label-lg text-black mt-0.5">19</span>
+</button>
+<!-- СР 20 -->
+<button class="flex flex-col items-center justify-center py-2 bg-surface-container-lowest border-[2px] border-black rounded-xl shadow-[2px_2px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black/60">СР</span>
+<span class="text-label-lg font-label-lg text-black mt-0.5">20</span>
+</button>
+<!-- ЧТ 21 (TODAY ACTIVE) -->
+<button class="flex flex-col items-center justify-center py-2 bg-primary-container border-[2.5px] border-black rounded-xl shadow-[3px_3px_0px_#000000] scale-105 z-10 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black">ЧТ</span>
+<span class="text-headline-sm font-headline-sm text-black -mt-0.5">21</span>
+<span class="w-1.5 h-1.5 bg-black rounded-full mt-0.5"></span>
+</button>
+<!-- ПТ 22 -->
+<button class="flex flex-col items-center justify-center py-2 bg-surface-container-lowest border-[2px] border-black rounded-xl shadow-[2px_2px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black/60">ПТ</span>
+<span class="text-label-lg font-label-lg text-black mt-0.5">22</span>
+</button>
+<!-- СБ 23 -->
+<button class="flex flex-col items-center justify-center py-2 bg-surface-container-lowest border-[2px] border-black rounded-xl shadow-[2px_2px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black/60">СБ</span>
+<span class="text-label-lg font-label-lg text-black mt-0.5">23</span>
+</button>
+<!-- ВС 24 -->
+<button class="flex flex-col items-center justify-center py-2 bg-surface-container-lowest border-[2px] border-black rounded-xl shadow-[2px_2px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all" type="button">
+<span class="text-label-sticker font-label-sticker text-black/60">ВС</span>
+<span class="text-label-lg font-label-lg text-black mt-0.5">24</span>
+</button>
+</nav>
+<!-- Energy Battery & Calorie Hero Card -->
+<section class="bg-[#FDE047] rounded-2xl border-[3px] border-black shadow-[5px_5px_0px_#000000] p-4 flex flex-col gap-3 relative overflow-hidden">
+<!-- Header Pill & Subtitle -->
+<div class="flex items-center justify-between">
+<div class="bg-black text-[#FDE047] border-[2px] border-black px-2.5 py-0.5 rounded-full shadow-[2px_2px_0px_rgba(0,0,0,0.2)]">
+<span class="text-label-sticker font-label-sticker">⚡ ЭНЕРГИЯ ДНЯ</span>
+</div>
+<span class="text-body-sm font-body-sm text-black/80 font-bold">из нормы 2 100 ккал</span>
+</div>
+<!-- Big Metric -->
+<div class="flex items-baseline gap-2">
+<span class="text-display-hero-mobile font-display-hero-mobile text-black tracking-tight leading-none">
+            ОСТАЛОСЬ 650
+          </span>
+<span class="text-headline-md font-headline-md text-black">ККАЛ</span>
+</div>
+<!-- Comic Striped Energy Bar -->
+<div class="w-full">
+<div class="h-8 rounded-xl border-[2.5px] border-black bg-white overflow-hidden p-0.5 relative shadow-[2px_2px_0px_#000000] flex items-center">
+<div class="h-full rounded-lg comic-stripes border-r-[2.5px] border-black transition-all flex items-center justify-end pr-2" style="width: 69%;">
+</div>
+<div class="absolute inset-0 flex items-center justify-between px-3 pointer-events-none">
+<span class="text-label-sticker font-label-sticker text-black bg-white/90 px-1.5 py-0.5 rounded border border-black shadow-[1px_1px_0px_#000]">
+                1 450 ККАЛ СЪЕДЕНО
+              </span>
+<span class="text-label-sticker font-label-sticker text-black/70 font-bold">69%</span>
+</div>
+</div>
+</div>
+<!-- 3 High-Contrast Macro Blocks -->
+<div class="grid grid-cols-3 gap-2 pt-1">
+<!-- Protein Block -->
+<div class="bg-[#FB7185] border-[2px] border-black rounded-xl p-2 shadow-[2px_2px_0px_#000000] flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-sticker font-label-sticker text-black uppercase">БЕЛКИ</span>
+<span class="text-label-sticker font-label-sticker text-black/70">78%</span>
+</div>
+<div class="my-1">
+<span class="text-label-lg font-label-lg text-black block leading-none">110 / 140</span>
+<span class="text-label-sticker font-label-sticker text-black/70">ГРАММ</span>
+</div>
+<div class="w-full h-2 bg-white rounded-full border border-black overflow-hidden p-0.5">
+<div class="bg-black h-full rounded-full" style="width: 78%"></div>
+</div>
+</div>
+<!-- Fat Block -->
+<div class="bg-[#FB923C] border-[2px] border-black rounded-xl p-2 shadow-[2px_2px_0px_#000000] flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-sticker font-label-sticker text-black uppercase">ЖИРЫ</span>
+<span class="text-label-sticker font-label-sticker text-black/70">69%</span>
+</div>
+<div class="my-1">
+<span class="text-label-lg font-label-lg text-black block leading-none">45 / 65</span>
+<span class="text-label-sticker font-label-sticker text-black/70">ГРАММ</span>
+</div>
+<div class="w-full h-2 bg-white rounded-full border border-black overflow-hidden p-0.5">
+<div class="bg-black h-full rounded-full" style="width: 69%"></div>
+</div>
+</div>
+<!-- Carbs Block -->
+<div class="bg-[#38BDF8] border-[2px] border-black rounded-xl p-2 shadow-[2px_2px_0px_#000000] flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-sticker font-label-sticker text-black uppercase">УГЛЕВОДЫ</span>
+<span class="text-label-sticker font-label-sticker text-black/70">75%</span>
+</div>
+<div class="my-1">
+<span class="text-label-lg font-label-lg text-black block leading-none">165 / 220</span>
+<span class="text-label-sticker font-label-sticker text-black/70">ГРАММ</span>
+</div>
+<div class="w-full h-2 bg-white rounded-full border border-black overflow-hidden p-0.5">
+<div class="bg-black h-full rounded-full" style="width: 75%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tactile Water & Activity Dual Cards -->
+<section class="grid grid-cols-2 gap-3">
+<!-- Water Card -->
+<div class="bg-[#BAE6FD] border-[2.5px] border-black shadow-[4px_4px_0px_#000000] rounded-2xl p-3.5 flex flex-col justify-between gap-3 relative">
+<div class="flex items-center justify-between">
+<span class="text-headline-sm">💧</span>
+<span class="bg-white border-[1.5px] border-black px-1.5 py-0.5 rounded text-label-sticker font-label-sticker text-black">
+              ВОДА
+            </span>
+</div>
+<div>
+<span class="text-headline-md font-headline-md text-black leading-tight block">1.8 / 2.5 Л</span>
+<div class="w-full bg-white h-2 rounded-full border border-black overflow-hidden mt-1 p-0.5">
+<div class="bg-tertiary h-full rounded-full" style="width: 72%"></div>
+</div>
+</div>
+<button class="w-full bg-white text-black border-[2px] border-black rounded-xl py-1.5 font-label-md text-label-md uppercase shadow-[2px_2px_0px_#000000] hover:bg-surface-container active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span>
+            +250 МЛ
+          </button>
+</div>
+<!-- Activity Card -->
+<div class="bg-[#A3E635] border-[2.5px] border-black shadow-[4px_4px_0px_#000000] rounded-2xl p-3.5 flex flex-col justify-between gap-3 relative">
+<div class="flex items-center justify-between">
+<span class="text-headline-sm">👟</span>
+<span class="bg-white border-[1.5px] border-black px-1.5 py-0.5 rounded text-label-sticker font-label-sticker text-black">
+              ШАГИ
+            </span>
+</div>
+<div>
+<span class="text-headline-md font-headline-md text-black leading-tight block">8 450</span>
+<span class="text-label-sticker font-label-sticker text-black/80 uppercase block">Цель 10 000</span>
+<div class="w-full bg-white h-2 rounded-full border border-black overflow-hidden mt-1 p-0.5">
+<div class="bg-black h-full rounded-full" style="width: 84%"></div>
+</div>
+</div>
+<div class="bg-white border-[2px] border-black rounded-xl py-1.5 px-2 text-center shadow-[2px_2px_0px_#000000] flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">local_fire_department</span>
+<span class="text-label-md font-label-md text-black uppercase">420 ККАЛ</span>
+</div>
+</div>
+</section>
+<!-- Chunky Food Feed (ДНЕВНИК ПИТАНИЯ) -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between mt-1">
+<h2 class="text-headline-sm font-headline-sm text-black tracking-tight flex items-center gap-1.5">
+            🍳 ПРИЁМЫ ПИЩИ
+          </h2>
+<span class="bg-[#FDE047] border-[2px] border-black rounded-full px-2.5 py-0.5 text-label-sticker font-label-sticker text-black shadow-[2px_2px_0px_#000000]">
+            3 ИЗ 4
+          </span>
+</div>
+<!-- Breakfast Card -->
+<article class="bg-surface-container-lowest border-[2.5px] border-black rounded-2xl p-3.5 shadow-[3px_3px_0px_#000000] flex flex-col gap-2 relative">
+<div class="flex items-center justify-between border-b-[2px] border-black/10 pb-2">
+<div class="flex items-center gap-2">
+<span class="bg-[#FDE047] border-[1.5px] border-black text-black px-2 py-0.5 rounded-lg text-label-sticker font-label-sticker">
+                ЗАВТРАК
+              </span>
+<span class="text-body-sm font-body-sm text-black/60">08:30</span>
+</div>
+<span class="text-headline-sm font-headline-sm text-black">540 ккал</span>
+</div>
+<ul class="flex flex-col gap-1 text-body-sm font-body-sm text-black">
+<li class="flex items-center justify-between">
+<span>• Овсяная каша с черникой</span>
+<span class="font-bold text-black/70">380 ккал</span>
+</li>
+<li class="flex items-center justify-between">
+<span>• Кофе с молоком без сахара</span>
+<span class="font-bold text-black/70">160 ккал</span>
+</li>
+</ul>
+</article>
+<!-- Lunch Card -->
+<article class="bg-surface-container-lowest border-[2.5px] border-black rounded-2xl p-3.5 shadow-[3px_3px_0px_#000000] flex flex-col gap-2 relative">
+<div class="flex items-center justify-between border-b-[2px] border-black/10 pb-2">
+<div class="flex items-center gap-2">
+<span class="bg-[#A3E635] border-[1.5px] border-black text-black px-2 py-0.5 rounded-lg text-label-sticker font-label-sticker">
+                ОБЕД
+              </span>
+<span class="text-body-sm font-body-sm text-black/60">13:45</span>
+</div>
+<span class="text-headline-sm font-headline-sm text-black">720 ккал</span>
+</div>
+<ul class="flex flex-col gap-1 text-body-sm font-body-sm text-black">
+<li class="flex items-center justify-between">
+<span>• Стейк индейки гриль с овощами</span>
+<span class="font-bold text-black/70">490 ккал</span>
+</li>
+<li class="flex items-center justify-between">
+<span>• Гречневая каша</span>
+<span class="font-bold text-black/70">230 ккал</span>
+</li>
+</ul>
+</article>
+<!-- Dinner Placeholder (Interactive Action) -->
+<button class="w-full bg-surface-container-lowest/70 border-[2.5px] border-dashed border-black rounded-2xl p-4 text-center cursor-pointer hover:bg-black/5 active:bg-black/10 active:translate-x-[1px] active:translate-y-[1px] transition-all flex items-center justify-center gap-2 text-headline-sm font-headline-sm text-black uppercase" type="button">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+          + ЗАПИСАТЬ УЖИН
+        </button>
+</section>
+</div>
+<!-- Retro-Pop Bottom Navigation Dock (Conforming to Shared Components JSON) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter-mobile py-space-sm max-w-md mx-auto bg-surface-container-lowest border-t-[3px] border-on-surface shadow-[0px_-4px_0px_#000000]">
+<!-- Nav Item 1: FEED (Active according to JSON rules for primary home/log feed) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container border-[2.5px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl px-3 py-1" href="#feed">
+<span class="material-symbols-outlined text-[22px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="text-label-md font-label-md uppercase">FEED</span>
+</a>
+<!-- Nav Item 2: MACROS -->
+<a class="flex flex-col items-center justify-center text-on-surface px-2 py-1 hover:-translate-y-1 transition-transform" href="#macros">
+<span class="material-symbols-outlined text-[22px]">nutrition</span>
+<span class="text-label-md font-label-md uppercase">MACROS</span>
+</a>
+<!-- Central Giant Floating AI Scanner Button (Docked with offset) -->
+<button aria-label="AI Фотосканер еды" class="relative -translate-y-5 bg-[#FDE047] rounded-full w-14 h-14 border-[3px] border-black shadow-[4px_4px_0px_#000000] flex flex-col items-center justify-center hover:scale-105 active:translate-y-0 active:shadow-none transition-all focus:outline-none" type="button">
+<span class="material-symbols-outlined text-black text-[24px]">center_focus_strong</span>
+<span class="text-[9px] font-black uppercase text-black -mt-0.5">SCAN</span>
+</button>
+<!-- Nav Item 3: SCAN (Alternate direct link from JSON) -->
+<a class="flex flex-col items-center justify-center text-on-surface px-2 py-1 hover:-translate-y-1 transition-transform" href="#stats">
+<span class="material-symbols-outlined text-[22px]">bar_chart</span>
+<span class="text-label-md font-label-md uppercase">STATS</span>
+</a>
+<!-- Nav Item 4: Profile / Extra -->
+<a class="flex flex-col items-center justify-center text-on-surface px-2 py-1 hover:-translate-y-1 transition-transform" href="#profile">
+<span class="material-symbols-outlined text-[22px]">person</span>
+<span class="text-label-md font-label-md uppercase">ПРОФИЛЬ</span>
+</a>
+</nav>
+</main>
+</body></html>

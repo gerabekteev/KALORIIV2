@@ -154,6 +154,7 @@ export interface CreateRecipePayload {
   name: string
   description?: string | null
   items?: Array<{ product_id: number; weight_grams: number }>
+  ingredients?: MealIngredient[]
   total_calories?: number
   total_protein?: number
   total_fat?: number
@@ -174,6 +175,7 @@ export interface Recipe {
   is_favorite: boolean
   created_at?: string
   items?: RecipeItem[]
+  ingredients?: MealIngredient[]
 }
 
 export interface WeightLog {

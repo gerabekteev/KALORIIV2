@@ -1,6 +1,6 @@
 import React from 'react'
 
-export type PeriodType = 'today' | 'week' | 'month' | 'year'
+export type PeriodType = 'today' | 'week' | 'month' | 'year' | 'custom'
 
 interface PeriodSelectorProps {
   selectedPeriod: PeriodType
@@ -16,6 +16,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
     { key: 'week', label: '7 дней' },
     { key: 'month', label: '30 дней' },
     { key: 'year', label: 'Год' },
+    { key: 'custom', label: 'Период' },
   ]
 
   return (

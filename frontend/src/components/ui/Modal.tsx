@@ -10,6 +10,7 @@ export interface ModalProps {
   description?: string
   children: React.ReactNode
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  hideBackdrop?: boolean
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -19,10 +20,14 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   children,
   maxWidth = 'md',
+  hideBackdrop = false,
 }) => {
+  const [depth, setDepth] = React.useState(1)
+
   useEffect(() => {
     if (!isOpen) return
     modalStack.push(onClose)
+    setDepth(modalStack.length)
     document.body.style.overflow = 'hidden'
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,14 +60,21 @@ export const Modal: React.FC<ModalProps> = ({
     full: 'max-w-full',
   }
 
+  const isTopModal = depth > 1
+  const zIndexClass = isTopModal ? 'z-[60]' : 'z-50'
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <div className={`fixed inset-0 ${zIndexClass} flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200`}>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {!hideBackdrop && (
+        <div
+          className={`fixed inset-0 transition-opacity ${
+            isTopModal ? 'bg-black/40' : 'bg-black/75 backdrop-blur-sm'
+          }`}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Modal Dialog / Mobile Bottom Sheet */}
       <div

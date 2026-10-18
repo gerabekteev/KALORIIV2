@@ -30,16 +30,16 @@ DEFAULT_MODEL_CHAIN: List[Tuple[str, str]] = [
 
 MODEL_METADATA_CATALOG: dict[str, Tuple[str, str]] = {
     "gemini-3.1-flash-lite": ("Gemini 3.1 Flash-Lite (500 RPD)", "Лимит 500 запросов/день, 15 RPM. Быстрый и надёжный"),
+    "gemini-3.5-flash-lite": ("Gemini 3.5 Flash-Lite", "Экономичный и ультрабыстрый отклик"),
     "gemini-3.5-flash": ("Gemini 3.5 Flash", "Высокая точность и детализация блюд"),
-    "gemini-3.6-flash": ("Gemini 3.6 Flash", "Стабильная мультимодальная модель"),
-    "gemini-3.8-flash": ("Gemini 3.8 Flash", "Максимальный reasoning и точность (20 RPD)"),
+    "gemini-3.7-flash": ("Gemini 3.7 Flash", "Сбалансированный анализ и высокая скорость (20 RPD)"),
+    "nvidia/nemotron-3.5-super-vl:free": ("NVIDIA Nemotron Super-VL (Free)", "Сверхбыстрая Vision VLM модель от NVIDIA"),
     "openrouter/auto": ("OpenRouter Auto", "Умный авто-выбор лучшей доступной модели"),
     "google/gemma-4-26b-a4b-it:free": ("Gemma 4 26B (Free)", "Мощная визуальная модель от Google"),
     "google/gemma-4-31b-it:free": ("Gemma 4 31B (Free)", "Продвинутая мультимодальная модель Google"),
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": ("NVIDIA Omni (Free)", "Reasoning VLM от NVIDIA с поддержкой vision"),
-    "gemini-3.7-flash": ("Gemini 3.7 Flash", "Сбалансированный анализ и высокая скорость (20 RPD)"),
-    "gemini-3.5-flash-lite": ("Gemini 3.5 Flash-Lite", "Экономичный и ультрабыстрый отклик"),
-    "nvidia/nemotron-3.5-super-vl:free": ("NVIDIA Nemotron Super-VL (Free)", "Сверхбыстрая Vision VLM модель от NVIDIA"),
+    "gemini-3.6-flash": ("Gemini 3.6 Flash", "Стабильная мультимодальная модель"),
+    "gemini-3.8-flash": ("Gemini 3.8 Flash", "Максимальный reasoning и точность (20 RPD)"),
 }
 
 
@@ -181,7 +181,10 @@ class AIRouter:
                             errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
 
                             err_str = str(err).lower()
-                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
+                            if any(term in err_str for term in [
+                                "high demand", "503", "404", "not found", "does not exist", "invalid model",
+                                "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"
+                            ]):
                                 logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
                                 break
 
@@ -278,7 +281,10 @@ class AIRouter:
                             errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
 
                             err_str = str(err).lower()
-                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"]):
+                            if any(term in err_str for term in [
+                                "high demand", "503", "404", "not found", "does not exist", "invalid model",
+                                "unavailable", "заблокирован", "not supported", "no longer available", "resource_exhausted"
+                            ]):
                                 logger.info(f"Instant failover triggered for {model_id}: {err}. Moving directly to next model in chain.")
                                 break
 
@@ -361,7 +367,10 @@ class AIRouter:
                             logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
                             errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
                             err_str = str(err).lower()
-                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "audio", "modality", "resource_exhausted"]):
+                            if any(term in err_str for term in [
+                                "high demand", "503", "404", "not found", "does not exist", "invalid model",
+                                "unavailable", "заблокирован", "not supported", "audio", "modality", "resource_exhausted"
+                            ]):
                                 break
                             if attempt == 1:
                                 await asyncio.sleep(2)
@@ -380,6 +389,9 @@ class AIRouter:
         raise AllProvidersFailedError(
             "Не удалось распознать голосовое сообщение через AI. Попробуйте описать блюдо текстом."
         )
+
+    # Alias for backward compatibility
+    recognize_food_voice = recognize_food_by_voice
 
     async def generate_meal_plan(
         self,
@@ -437,7 +449,10 @@ class AIRouter:
                             logger.warning(f"Attempt {attempt}/2 failed for {provider_type}/{model_id}: {err}")
                             errors_collected.append(f"{provider_type}/{model_id} (try {attempt}): {err}")
                             err_str = str(err).lower()
-                            if any(term in err_str for term in ["high demand", "503", "unavailable", "заблокирован", "not supported", "resource_exhausted"]):
+                            if any(term in err_str for term in [
+                                "high demand", "503", "404", "not found", "does not exist", "invalid model",
+                                "unavailable", "заблокирован", "not supported", "resource_exhausted"
+                            ]):
                                 break
                             if attempt == 1:
                                 await asyncio.sleep(2)

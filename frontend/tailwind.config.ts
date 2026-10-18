@@ -5,6 +5,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        neutral: {
+          850: '#1f1f24',
+        },
         dark: {
           bg: '#0f0f0f',
           surface: '#18181b',

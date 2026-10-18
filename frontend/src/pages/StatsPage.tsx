@@ -15,8 +15,21 @@ import { pluralizeRu } from '../utils/pluralize'
 
 export const StatsPage: React.FC = () => {
   const { user } = useAuthStore()
-  const { period, setPeriod, stats, weightLogs, isLoading, error, refetch } = useStats('week')
+  const {
+    period,
+    setPeriod,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
+    stats,
+    weightLogs,
+    isLoading,
+    error,
+    refetch,
+  } = useStats('week')
   const [chartTab, setChartTab] = useState<'bar' | 'trend'>('bar')
+  const [macroMode, setMacroMode] = useState<'grams' | 'calories'>('grams')
 
   const targetCalories = user?.daily_calories_goal || 2000
 
@@ -83,6 +96,29 @@ export const StatsPage: React.FC = () => {
           selectedPeriod={period}
           onSelectPeriod={(p: PeriodType) => setPeriod(p)}
         />
+
+        {period === 'custom' && (
+          <div className="flex items-center gap-2 bg-[#16161a] p-2.5 rounded-xl border border-neutral-800 text-xs animate-in fade-in duration-150">
+            <div className="flex-1 min-w-0">
+              <label className="text-[10px] text-neutral-400 block mb-1">С даты</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="w-full bg-[#111113] border border-neutral-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="text-[10px] text-neutral-400 block mb-1">По дату</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="w-full bg-[#111113] border border-neutral-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary KPI Cards */}
@@ -118,49 +154,53 @@ export const StatsPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Calories Chart with Bar / Trend toggle */}
-      <Card variant="default" padding="md" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-sm font-bold text-white tracking-tight">
-              Калории по дням
-            </h3>
+      {/* Calories Chart with Bar / Trend toggle (скрываем для 'today', так как одиночный столбик не информативен) */}
+      {period !== 'today' && (
+        <Card variant="default" padding="md" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-white tracking-tight">
+                Калории по дням
+              </h3>
+            </div>
+
+            <div className="flex bg-[#141418] p-0.5 rounded-lg border border-neutral-800 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setChartTab('bar')}
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                  chartTab === 'bar'
+                    ? 'bg-neutral-700 text-white font-medium'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Столбцы
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartTab('trend')}
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                  chartTab === 'trend'
+                    ? 'bg-neutral-700 text-white font-medium'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Тренд
+              </button>
+            </div>
           </div>
 
-          <div className="flex bg-[#141418] p-0.5 rounded-lg border border-neutral-800 text-[11px]">
-            <button
-              onClick={() => setChartTab('bar')}
-              className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                chartTab === 'bar'
-                  ? 'bg-neutral-700 text-white font-medium'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Столбцы
-            </button>
-            <button
-              onClick={() => setChartTab('trend')}
-              className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                chartTab === 'trend'
-                  ? 'bg-neutral-700 text-white font-medium'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Тренд
-            </button>
-          </div>
-        </div>
-
-        {chartTab === 'bar' ? (
-          <CaloriesBarChart
-            data={stats?.days || []}
-            targetCalories={targetCalories}
-          />
-        ) : (
-          <CaloriesTrendChart data={stats?.days || []} />
-        )}
-      </Card>
+          {chartTab === 'bar' ? (
+            <CaloriesBarChart
+              data={stats?.days || []}
+              targetCalories={targetCalories}
+            />
+          ) : (
+            <CaloriesTrendChart data={stats?.days || []} />
+          )}
+        </Card>
+      )}
 
       {/* Apple Health Style Progress Rings */}
       <Card variant="default" padding="md" className="space-y-2">
@@ -190,18 +230,48 @@ export const StatsPage: React.FC = () => {
         />
       </Card>
 
-      {/* Macros Distribution */}
+      {/* Macros Distribution with Grams / Calories switcher */}
       <Card variant="default" padding="md" className="space-y-2">
-        <div className="flex items-center gap-2">
-          <PieChart className="w-4 h-4 text-purple-400" />
-          <h3 className="text-sm font-bold text-white tracking-tight">
-            Соотношение Б / Ж / У
-          </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <PieChart className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-bold text-white tracking-tight">
+              Соотношение Б / Ж / У
+            </h3>
+          </div>
+
+          {/* Switcher in top right corner: Grams vs Calories */}
+          <div className="flex bg-[#141418] p-0.5 rounded-lg border border-neutral-800 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setMacroMode('grams')}
+              className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                macroMode === 'grams'
+                  ? 'bg-neutral-700 text-white font-medium'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              По граммам
+            </button>
+            <button
+              type="button"
+              onClick={() => setMacroMode('calories')}
+              className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                macroMode === 'calories'
+                  ? 'bg-neutral-700 text-white font-medium'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              По калориям
+            </button>
+          </div>
         </div>
+
         <MacrosPieChart
           protein={totalProtein}
           fat={totalFat}
           carbs={totalCarbs}
+          mode={macroMode}
         />
       </Card>
 

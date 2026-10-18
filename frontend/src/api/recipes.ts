@@ -1,20 +1,7 @@
 import { apiClient } from './client'
-import { Recipe, Meal } from '../types'
-import { productsApi } from './products'
+import { Recipe, Meal, MealIngredient, CreateRecipePayload } from '../types'
 
-export interface CreateRecipePayload {
-  name: string
-  description?: string | null
-  items?: Array<{
-    product_id: number
-    weight_grams: number
-  }>
-  total_calories?: number
-  total_protein?: number
-  total_fat?: number
-  total_carbs?: number
-  total_weight_grams?: number
-}
+export type { CreateRecipePayload }
 
 export const recipesApi = {
   async getRecipes(favoriteOnly?: boolean): Promise<Recipe[]> {
@@ -27,6 +14,13 @@ export const recipesApi = {
   async createRecipe(payload: CreateRecipePayload): Promise<Recipe> {
     return apiClient<Recipe>('/recipes', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async updateRecipe(id: number, payload: Partial<CreateRecipePayload>): Promise<Recipe> {
+    return apiClient<Recipe>(`/recipes/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(payload),
     })
   },
@@ -54,6 +48,7 @@ export const recipesApi = {
     fat: number
     carbs: number
     weight_grams?: number
+    ingredients?: MealIngredient[]
   }): Promise<Recipe> {
     const weight = data.weight_grams && data.weight_grams > 0 ? Number(data.weight_grams) : 100
     const calories = Math.max(0, Number(data.calories) || 0)
@@ -65,6 +60,7 @@ export const recipesApi = {
       name: data.name,
       description: data.description || 'Быстрый рецепт',
       items: [],
+      ingredients: data.ingredients || [],
       total_calories: calories,
       total_protein: protein,
       total_fat: fat,
@@ -91,6 +87,7 @@ export const recipesApi = {
       fat: meal.fat,
       carbs: meal.carbs,
       weight_grams: weight,
+      ingredients: meal.ingredients || [],
     })
   },
 }

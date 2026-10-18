@@ -74,13 +74,15 @@ def check_ai_rate_limit(user_id: int) -> None:
 
 
 def _sanitize_api_key(key: Optional[str]) -> Optional[str]:
-    """Sanitizes and validates an API key string, ignoring dummy/null values."""
+    """Sanitizes and validates an API key string, ignoring dummy/null/masked values."""
     if not key or not isinstance(key, str):
         return None
     k = key.strip().strip("\"'")
     if not k or k.lower() in ("null", "undefined", "none", "false", "true", "0"):
         return None
-    if len(k) < 8 or any(c.isspace() for c in k):
+    if "..." in k or "•••" in k or "****" in k:
+        return None
+    if len(k) < 12 or any(c.isspace() for c in k):
         return None
     return k
 

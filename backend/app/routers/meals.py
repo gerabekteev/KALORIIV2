@@ -24,6 +24,7 @@ from app.services.auth import get_current_user
 from app.services.ai_router import ai_router, AllProvidersFailedError
 from app.routers.ai import check_ai_rate_limit, _parse_custom_ai_models, resolve_ai_config
 from app.utils.timezone import resolve_client_date, get_user_now
+from app.utils.image import safe_unlink_upload_if_unreferenced
 
 router = APIRouter(prefix="/meals", tags=["Приёмы пищи"])
 logger = logging.getLogger("kalorii.meals")
@@ -38,13 +39,6 @@ async def get_meals_by_date(
     db: AsyncSession = Depends(get_db),
 ):
     """Get all meals for a specific date, including daily nutrition summary."""
-    if x_client_timezone and getattr(current_user, "timezone", None) != x_client_timezone:
-        try:
-            current_user.timezone = x_client_timezone
-            await db.commit()
-        except Exception:
-            pass
-
     target_date = resolve_client_date(
         explicit_date=date,
         x_client_date=x_client_date,
@@ -226,20 +220,7 @@ async def delete_meal(
             detail="Приём пищи не найден",
         )
 
-    file_to_unlink = None
-    if meal.photo_path and meal.photo_path.startswith("/uploads/"):
-        safe_name = Path(meal.photo_path).name
-        upload_root = settings.UPLOAD_DIR.resolve()
-        photo_file = (upload_root / safe_name).resolve()
-        if photo_file.parent == upload_root and photo_file.is_file():
-            other_meals = await db.execute(
-                select(Meal.id).where(and_(Meal.id != meal.id, Meal.photo_path == meal.photo_path)).limit(1)
-            )
-            linked_products = await db.execute(
-                select(Product.id).where(Product.image_url == meal.photo_path).limit(1)
-            )
-            if not other_meals.scalar_one_or_none() and not linked_products.scalar_one_or_none():
-                file_to_unlink = photo_file
+    photo_path = meal.photo_path
 
     try:
         await db.delete(meal)
@@ -252,11 +233,8 @@ async def delete_meal(
             detail="Ошибка при удалении приёма пищи",
         )
 
-    if file_to_unlink:
-        try:
-            file_to_unlink.unlink()
-        except Exception:
-            pass
+    if photo_path:
+        await safe_unlink_upload_if_unreferenced(db, photo_path)
 
     return None
 

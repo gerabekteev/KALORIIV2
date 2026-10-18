@@ -25,7 +25,7 @@ from app.services.ai_router import get_default_model_items
 from app.services.auth import get_current_user
 from app.services.nutrition import calculate_nutrition_plan
 from app.routers.ai import _sanitize_api_key
-from app.utils.timezone import resolve_client_date, get_user_now
+from app.utils.timezone import resolve_client_date, get_user_now, is_valid_timezone
 from app.utils.security import encrypt_api_key, decrypt_api_key, mask_api_key
 
 logger = logging.getLogger("kalorii.profile")
@@ -48,9 +48,17 @@ async def update_profile(
 ):
     """Update profile parameters and daily nutrition goals with guaranteed rollback."""
     if x_client_timezone and getattr(current_user, "timezone", None) != x_client_timezone:
-        current_user.timezone = x_client_timezone
+        if is_valid_timezone(x_client_timezone):
+            current_user.timezone = x_client_timezone
 
     update_data = profile_in.model_dump(exclude_unset=True)
+
+    if "timezone" in update_data and update_data["timezone"]:
+        if not is_valid_timezone(update_data["timezone"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Некорректный часовой пояс",
+            )
 
     weight_changed = "current_weight_kg" in update_data and update_data["current_weight_kg"] is not None
 

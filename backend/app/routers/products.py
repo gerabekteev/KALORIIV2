@@ -12,6 +12,7 @@ from app.schemas.product import (
     ProductResponse,
 )
 from app.services.auth import get_current_user
+from app.utils.image import safe_unlink_upload_if_unreferenced
 
 router = APIRouter(prefix="/products", tags=["Продукты"])
 
@@ -180,6 +181,7 @@ async def delete_custom_product(
             detail="Невозможно удалить продукт, так как он используется в сохранённых рецептах.",
         )
 
+    image_url = product.image_url
     try:
         await db.delete(product)
         await db.commit()
@@ -189,4 +191,7 @@ async def delete_custom_product(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Невозможно удалить продукт, так как он используется в сохранённых рецептах.",
         )
+
+    if image_url:
+        await safe_unlink_upload_if_unreferenced(db, image_url)
     return None

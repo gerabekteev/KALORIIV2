@@ -1,12 +1,31 @@
 from datetime import datetime, date
 from typing import Optional, Literal
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=128)
     name: Optional[str] = Field(None, max_length=100)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_not_blank(cls, v: str) -> str:
+        if not v or len(v.strip()) < 6:
+            raise ValueError("Пароль должен содержать не менее 6 непробельных символов")
+        return v
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_not_blank(cls, v: str) -> str:
+        if not v or len(v.strip()) < 6:
+            raise ValueError("Новый пароль должен содержать не менее 6 непробельных символов")
+        return v
 
 
 class UserLogin(BaseModel):

@@ -15,6 +15,7 @@ from app.schemas.stats import (
     WeightHistoryPoint,
 )
 from app.services.auth import get_current_user
+from app.utils.timezone import resolve_client_date
 
 router = APIRouter(prefix="/stats", tags=["Статистика"])
 
@@ -25,11 +26,12 @@ async def get_stats(
     start_date: Optional[date] = Query(None, description="Начальная дата для custom"),
     end_date: Optional[date] = Query(None, description="Конечная дата для custom"),
     x_client_date: Optional[date] = Header(None, alias="X-Client-Date"),
+    x_client_timezone: Optional[str] = Header(None, alias="X-Client-Timezone"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get aggregated nutrition statistics and daily breakdowns for a given period."""
-    today = x_client_date or date.today()
+    today = resolve_client_date(x_client_date=x_client_date, user=current_user, tz_header=x_client_timezone)
 
     if period in ("day", "today"):
         start = today

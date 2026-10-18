@@ -5,7 +5,7 @@ import logging
 import time
 import uuid
 from collections import defaultdict, deque
-from datetime import datetime, date as dt_date
+from datetime import datetime, timezone, date as dt_date
 from typing import Optional, Dict, Any, Set
 import httpx
 from sqlalchemy import select, and_, func
@@ -18,7 +18,7 @@ from app.models.user import User
 from app.models.meal import Meal
 from app.services.ai_router import ai_router, AllProvidersFailedError
 from app.routers.ai import resolve_ai_config, check_ai_rate_limit
-from app.utils.image import process_image
+from app.utils.image import process_image, safe_unlink_upload_if_unreferenced
 from app.utils.timezone import get_user_now
 
 logger = logging.getLogger("kalorii.telegram_bot")
@@ -184,7 +184,7 @@ class TelegramBotService:
             )
             return False
 
-        if user.telegram_link_expires_at and user.telegram_link_expires_at < datetime.utcnow():
+        if user.telegram_link_expires_at and user.telegram_link_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             await self.send_message(
                 chat_id,
                 "⏳ Срок действия этого кода истёк (15 минут). Пожалуйста, нажмите «Обновить код» в профиле на сайте.",
@@ -242,18 +242,12 @@ class TelegramBotService:
                         if meal:
                             meal_name = meal.name
                             target_meal_date = meal.meal_date
-                            # Clean up photo file from disk if present
-                            if meal.photo_path:
-                                photo_name = meal.photo_path.replace("/uploads/", "")
-                                file_path = settings.UPLOAD_DIR / photo_name
-                                if file_path.exists():
-                                    try:
-                                        file_path.unlink()
-                                    except Exception:
-                                        pass
+                            photo_path = meal.photo_path
 
                             await db.delete(meal)
                             await db.commit()
+                            if photo_path:
+                                await safe_unlink_upload_if_unreferenced(db, photo_path)
                             summary_line = await self._get_daily_summary_line(db, user, target_meal_date)
                             safe_m_name = html.escape(str(meal_name))
                             await self.edit_message(
@@ -466,7 +460,7 @@ class TelegramBotService:
                         return
 
                     try:
-                        result, prov_used, mod_used = await ai_router.recognize_food_voice(
+                        result, prov_used, mod_used = await ai_router.recognize_food_by_voice(
                             audio_bytes=raw_audio,
                             mime_type="audio/ogg",
                             custom_gemini_key=custom_gemini,
@@ -478,7 +472,7 @@ class TelegramBotService:
                         await self.edit_message(chat_id, status_msg_id or 0, f"❌ Ошибка распознавания голоса: {safe_err}")
                         return
 
-                    transcription_text = (result.raw_response or result.name or "").strip()
+                    transcription_text = (result.transcription or result.name or "").strip()
                     meal = Meal(
                         user_id=user.id,
                         name=result.name,

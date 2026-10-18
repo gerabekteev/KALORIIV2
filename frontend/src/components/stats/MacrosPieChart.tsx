@@ -5,43 +5,56 @@ interface MacrosPieChartProps {
   protein: number
   fat: number
   carbs: number
+  mode?: 'grams' | 'calories'
 }
 
 export const MacrosPieChart: React.FC<MacrosPieChartProps> = ({
   protein,
   fat,
   carbs,
+  mode = 'grams',
 }) => {
-  const proteinKcal = Math.round(protein * 4)
-  const fatKcal = Math.round(fat * 9)
-  const carbsKcal = Math.round(carbs * 4)
-  const totalKcal = proteinKcal + fatKcal + carbsKcal || 1
+  const pGrams = Math.round(protein)
+  const fGrams = Math.round(fat)
+  const cGrams = Math.round(carbs)
+
+  const pKcal = Math.round(protein * 4)
+  const fKcal = Math.round(fat * 9)
+  const cKcal = Math.round(carbs * 4)
+
+  const totalGrams = pGrams + fGrams + cGrams || 1
+  const totalKcal = pKcal + fKcal + cKcal || 1
+
+  const isCalories = mode === 'calories'
 
   const data = [
     {
       name: 'Белки',
-      grams: Math.round(protein),
-      value: proteinKcal,
-      percentage: Math.round((proteinKcal / totalKcal) * 100),
+      grams: pGrams,
+      kcal: pKcal,
+      value: isCalories ? pKcal : pGrams,
+      percentage: Math.round(((isCalories ? pKcal : pGrams) / (isCalories ? totalKcal : totalGrams)) * 100),
       color: '#3b82f6', // blue-500
     },
     {
       name: 'Жиры',
-      grams: Math.round(fat),
-      value: fatKcal,
-      percentage: Math.round((fatKcal / totalKcal) * 100),
+      grams: fGrams,
+      kcal: fKcal,
+      value: isCalories ? fKcal : fGrams,
+      percentage: Math.round(((isCalories ? fKcal : fGrams) / (isCalories ? totalKcal : totalGrams)) * 100),
       color: '#f59e0b', // amber-500
     },
     {
       name: 'Углеводы',
-      grams: Math.round(carbs),
-      value: carbsKcal,
-      percentage: Math.round((carbsKcal / totalKcal) * 100),
+      grams: cGrams,
+      kcal: cKcal,
+      value: isCalories ? cKcal : cGrams,
+      percentage: Math.round(((isCalories ? cKcal : cGrams) / (isCalories ? totalKcal : totalGrams)) * 100),
       color: '#a855f7', // purple-500
     },
   ]
 
-  if (protein === 0 && fat === 0 && carbs === 0) {
+  if (pGrams === 0 && fGrams === 0 && cGrams === 0) {
     return (
       <div className="h-48 flex items-center justify-center text-xs text-neutral-500">
         Нет данных о БЖУ
@@ -65,10 +78,10 @@ export const MacrosPieChart: React.FC<MacrosPieChartProps> = ({
                         {item.name}
                       </p>
                       <p className="text-white">
-                        {item.grams}г ({item.value} ккал)
+                        {isCalories ? `${item.kcal} ккал (${item.grams}г)` : `${item.grams}г (${item.kcal} ккал)`}
                       </p>
                       <p className="text-neutral-400 text-[10px]">
-                        {item.percentage}% от калорий
+                        {item.percentage}% {isCalories ? 'от всех калорий' : 'от массы БЖУ'}
                       </p>
                     </div>
                   )
@@ -91,8 +104,12 @@ export const MacrosPieChart: React.FC<MacrosPieChartProps> = ({
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-xs text-neutral-400">БЖУ</span>
-          <span className="text-sm font-bold text-white">Баланс</span>
+          <span className="text-xs text-neutral-400">
+            {isCalories ? 'Калории' : 'Граммы'}
+          </span>
+          <span className="text-xs font-bold text-white">
+            {isCalories ? `${totalKcal} ккал` : `${totalGrams} г`}
+          </span>
         </div>
       </div>
 
@@ -111,7 +128,9 @@ export const MacrosPieChart: React.FC<MacrosPieChartProps> = ({
               <span className="font-medium text-neutral-200">{item.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-white">{item.grams} г</span>
+              <span className="font-semibold text-white">
+                {isCalories ? `${item.kcal} ккал` : `${item.grams} г`}
+              </span>
               <span className="text-neutral-400 text-[11px]">
                 ({item.percentage}%)
               </span>

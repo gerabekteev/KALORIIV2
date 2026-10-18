@@ -23,6 +23,7 @@ import { useMealsStore, getTodayDateString } from '../../store/mealsStore'
 import { recipesApi } from '../../api/recipes'
 import { Button } from '../ui/Button'
 import { haptics } from '../../utils/haptics'
+import { getMealTimeMeta } from '../../utils/timeSlots'
 
 interface MealCardProps {
   meal: Meal
@@ -127,7 +128,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const handleCopyMeal = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     try {
-      await copyMealToDate(meal.id, selectedDate || getTodayDateString())
+      await copyMealToDate(meal.id, getTodayDateString())
     } catch {
       // Handled in store
     }
@@ -289,12 +290,17 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   }
 
   const displayTime = meal.meal_time ? meal.meal_time.slice(0, 5) : '—:—'
+  const timeMeta = getMealTimeMeta(meal.meal_time, meal.calories)
   const photoUrl = getPhotoUrl(meal.photo_path)
   const hasIngredients = Array.isArray(meal.ingredients) && meal.ingredients.length > 0
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-2xl select-none">
+      <div
+        className={`relative rounded-2xl select-none ${
+          isMenuOpen ? 'overflow-visible z-30' : 'overflow-hidden'
+        }`}
+      >
         {/* Swipe Action Background Indicators */}
         <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none rounded-2xl bg-neutral-900 border border-neutral-800">
           <div
@@ -397,9 +403,14 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   className="flex items-center gap-1 shrink-0 -mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium mr-0.5">
-                    <Clock className="w-3 h-3 text-neutral-500" />
-                    {displayTime}
+                  <span
+                    className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium mr-0.5"
+                    title={`${timeMeta.label} (${displayTime})`}
+                  >
+                    <span className="text-xs select-none" aria-hidden="true">
+                      {timeMeta.icon}
+                    </span>
+                    <span>{displayTime}</span>
                   </span>
 
                   {/* 3-Dots Button */}
@@ -503,7 +514,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   >
                     <span
                       onClick={() => setIsEditingComment(true)}
-                      className="truncate italic text-[11px] text-neutral-300 bg-neutral-900/90 hover:bg-neutral-800 px-2 py-0.5 rounded-md border border-neutral-800 cursor-pointer transition-colors"
+                      className="truncate italic text-[11px] text-neutral-300 bg-neutral-900/90 hover:bg-neutral-800 px-2 py-1 rounded-md border border-neutral-800 cursor-pointer transition-colors"
                       title="Нажмите, чтобы изменить комментарий"
                     >
                       "{meal.user_comment}"
@@ -511,10 +522,10 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                     <button
                       type="button"
                       onClick={() => setIsEditingComment(true)}
-                      className="text-neutral-500 hover:text-emerald-400 p-0.5 transition-colors cursor-pointer"
+                      className="text-neutral-500 hover:text-emerald-400 p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center transition-colors cursor-pointer"
                       title="Изменить комментарий"
                     >
-                      <Edit2 className="w-3 h-3" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
@@ -524,9 +535,9 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                       e.stopPropagation()
                       setIsEditingComment(true)
                     }}
-                    className="text-[11px] text-neutral-500 hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer"
+                    className="text-[11px] text-neutral-500 hover:text-emerald-400 flex items-center gap-1.5 py-1 px-1.5 min-h-[32px] rounded-lg hover:bg-neutral-800/40 transition-colors cursor-pointer"
                   >
-                    <MessageSquare className="w-3 h-3 text-neutral-600" />
+                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600" />
                     <span>+ комментарий</span>
                   </button>
                 )}
@@ -547,78 +558,81 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   У: {meal.carbs}г
                 </span>
               </div>
+            </div>
+          </div>
 
-              {/* Expandable Ingredients Section (FEAT-01) */}
-              {hasIngredients && (
-                <div className="mt-2.5 pt-2 border-t border-neutral-800/60" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={() => setIsIngredientsOpen(!isIngredientsOpen)}
-                    className="w-full flex items-center justify-between py-1 px-1 -mx-1 rounded-lg hover:bg-neutral-800/40 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <span>Состав ({meal.ingredients?.length})</span>
-                    </span>
-                    {isIngredientsOpen ? (
-                      <ChevronUp className="w-4 h-4 text-neutral-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-neutral-400" />
-                    )}
-                  </button>
+          {/* Expandable Ingredients Section (FEAT-01) - Full card width */}
+          {hasIngredients && (
+            <div className="mt-2.5 pt-2 border-t border-neutral-800/60" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setIsIngredientsOpen(!isIngredientsOpen)}
+                className="w-full flex items-center justify-between py-1 px-1 -mx-1 rounded-lg hover:bg-neutral-800/40 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span>Состав ({meal.ingredients?.length})</span>
+                </span>
+                {isIngredientsOpen ? (
+                  <ChevronUp className="w-4 h-4 text-neutral-400" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-neutral-400" />
+                )}
+              </button>
 
-                  {isIngredientsOpen && (
-                    <div className="mt-2 space-y-1.5 bg-[#141417] p-2.5 rounded-xl border border-neutral-800">
-                      {meal.ingredients?.map((ing, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between text-xs py-1.5 border-b border-neutral-800/60 last:border-0 gap-2"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-neutral-200 truncate text-[12px]">
-                              {ing.name}
-                            </p>
-                            <p className="text-[10px] text-neutral-400 mt-0.5">
-                              {Math.round(ing.calories)} ккал • Б:{ing.protein} Ж:{ing.fat} У:{ing.carbs}
-                            </p>
-                          </div>
+              {isIngredientsOpen && (
+                <div className="mt-2 space-y-1.5 bg-[#141417] p-2.5 rounded-xl border border-neutral-800">
+                  {meal.ingredients?.map((ing, idx) => (
+                    <div
+                      key={idx}
+                      className="py-1.5 border-b border-neutral-800/60 last:border-0 space-y-1"
+                    >
+                      {/* Row 1: Ingredient name full width */}
+                      <p className="font-medium text-neutral-200 text-xs truncate">
+                        {ing.name}
+                      </p>
 
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleAdjustIngredientWeight(idx, -25)}
-                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-sm cursor-pointer active:scale-95 touch-manipulation"
-                              title="-25г"
-                            >
-                              -
-                            </button>
-                            <span className="w-10 text-center font-mono text-xs text-white">
-                              {ing.weight_grams}г
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleAdjustIngredientWeight(idx, 25)}
-                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-sm cursor-pointer active:scale-95 touch-manipulation"
-                              title="+25г"
-                            >
-                              +
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveIngredient(idx)}
-                              className="w-8 h-8 rounded-lg text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer ml-1.5 active:scale-95 touch-manipulation"
-                              title="Удалить ингредиент"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                      {/* Row 2: KBJU on left, buttons on right */}
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] text-neutral-400">
+                          {Math.round(ing.calories)} ккал • Б:{ing.protein} Ж:{ing.fat} У:{ing.carbs}
+                        </p>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustIngredientWeight(idx, -25)}
+                            className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 touch-manipulation"
+                            title="-25г"
+                          >
+                            -
+                          </button>
+                          <span className="min-w-[36px] text-center font-mono text-xs text-white">
+                            {ing.weight_grams}г
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustIngredientWeight(idx, 25)}
+                            className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 touch-manipulation"
+                            title="+25г"
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIngredient(idx)}
+                            className="w-7 h-7 rounded-lg text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer ml-1 active:scale-95 touch-manipulation"
+                            title="Удалить ингредиент"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
-          </div>
+          )}
 
           {/* Comment edit & AI recalculate section */}
           {isEditingComment && (
@@ -728,9 +742,9 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                 <span className="text-neutral-300">Ж: {meal.fat}г</span>
                 <span className="text-neutral-300">У: {meal.carbs}г</span>
               </div>
-              <span className="text-neutral-500 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {displayTime}
+              <span className="text-neutral-400 flex items-center gap-1 text-[11px]">
+                <span className="text-xs select-none">{timeMeta.icon}</span>
+                <span>{displayTime}</span>
               </span>
             </div>
           </div>

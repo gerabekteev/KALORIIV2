@@ -288,21 +288,35 @@ export const EditMealModal: React.FC = () => {
           </div>
 
           {ingredients.length > 0 ? (
-            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+            <div className="space-y-2">
               {ingredients.map((ing, idx) => (
                 <div
                   key={idx}
                   className="bg-[#141417] p-2.5 rounded-xl border border-neutral-800 text-xs space-y-2"
                 >
-                  <div className="flex items-center gap-2">
+                  {/* Row 1: Ingredient name + delete button */}
+                  <div className="flex items-center justify-between gap-2">
                     <input
                       type="text"
                       value={ing.name}
                       onChange={(e) => handleIngredientChange(idx, 'name', e.target.value)}
-                      placeholder="Ингредиент"
+                      placeholder="Название ингредиента"
                       className="flex-1 min-w-0 bg-transparent text-white placeholder-neutral-500 outline-none text-xs font-medium"
                     />
-                    <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveIngredient(idx)}
+                      className="p-1 text-neutral-500 hover:text-rose-400 rounded transition-colors cursor-pointer shrink-0"
+                      title="Удалить ингредиент"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Row 2: 5 columns grid (Вес, Ккал, Б, Ж, У) */}
+                  <div className="grid grid-cols-5 gap-1.5 pt-1.5 border-t border-neutral-850/70 text-[10px]">
+                    <div className="flex flex-col">
+                      <span className="text-neutral-400 font-medium text-[10px] mb-0.5 truncate">Вес (г)</span>
                       <input
                         type="number"
                         min="0"
@@ -311,9 +325,11 @@ export const EditMealModal: React.FC = () => {
                           handleIngredientChange(idx, 'weight_grams', Number(e.target.value) || 0)
                         }
                         placeholder="г"
-                        className="w-12 text-center bg-neutral-800 text-white rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                        className="w-full text-center bg-neutral-800 text-white rounded px-1 py-1 outline-none font-mono text-[11px]"
                       />
-                      <span className="text-neutral-500 text-[10px]">г</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-emerald-400 font-medium text-[10px] mb-0.5 truncate">Ккал</span>
                       <input
                         type="number"
                         min="0"
@@ -322,24 +338,11 @@ export const EditMealModal: React.FC = () => {
                           handleIngredientChange(idx, 'calories', Number(e.target.value) || 0)
                         }
                         placeholder="ккал"
-                        className="w-14 text-center bg-neutral-800 text-emerald-400 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                        className="w-full text-center bg-neutral-800 text-emerald-400 rounded px-1 py-1 outline-none font-mono text-[11px]"
                       />
-                      <span className="text-neutral-500 text-[10px]">ккал</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(idx)}
-                        className="p-1 text-neutral-500 hover:text-rose-400 rounded transition-colors cursor-pointer ml-1"
-                        title="Удалить"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
                     </div>
-                  </div>
-
-                  {/* Ingredient macros inputs (Б, Ж, У) */}
-                  <div className="flex items-center gap-3 pt-1 border-t border-neutral-850/60 text-[11px] text-neutral-400">
-                    <div className="flex items-center gap-1">
-                      <span className="text-blue-400 font-medium">Б:</span>
+                    <div className="flex flex-col">
+                      <span className="text-blue-400 font-medium text-[10px] mb-0.5 truncate">Б (г)</span>
                       <input
                         type="number"
                         step="0.1"
@@ -349,12 +352,11 @@ export const EditMealModal: React.FC = () => {
                           handleIngredientChange(idx, 'protein', Number(e.target.value) || 0)
                         }
                         placeholder="0"
-                        className="w-12 text-center bg-neutral-800/90 text-blue-300 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                        className="w-full text-center bg-neutral-800/90 text-blue-300 rounded px-1 py-1 outline-none font-mono text-[11px]"
                       />
-                      <span>г</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-amber-400 font-medium">Ж:</span>
+                    <div className="flex flex-col">
+                      <span className="text-amber-400 font-medium text-[10px] mb-0.5 truncate">Ж (г)</span>
                       <input
                         type="number"
                         step="0.1"
@@ -364,12 +366,11 @@ export const EditMealModal: React.FC = () => {
                           handleIngredientChange(idx, 'fat', Number(e.target.value) || 0)
                         }
                         placeholder="0"
-                        className="w-12 text-center bg-neutral-800/90 text-amber-300 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                        className="w-full text-center bg-neutral-800/90 text-amber-300 rounded px-1 py-1 outline-none font-mono text-[11px]"
                       />
-                      <span>г</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-purple-400 font-medium">У:</span>
+                    <div className="flex flex-col">
+                      <span className="text-purple-400 font-medium text-[10px] mb-0.5 truncate">У (г)</span>
                       <input
                         type="number"
                         step="0.1"
@@ -379,9 +380,8 @@ export const EditMealModal: React.FC = () => {
                           handleIngredientChange(idx, 'carbs', Number(e.target.value) || 0)
                         }
                         placeholder="0"
-                        className="w-12 text-center bg-neutral-800/90 text-purple-300 rounded px-1 py-0.5 outline-none font-mono text-[11px]"
+                        className="w-full text-center bg-neutral-800/90 text-purple-300 rounded px-1 py-1 outline-none font-mono text-[11px]"
                       />
-                      <span>г</span>
                     </div>
                   </div>
                 </div>
@@ -416,7 +416,7 @@ export const EditMealModal: React.FC = () => {
           placeholder="Примечание к блюду"
         />
 
-        <div className="flex gap-2 pt-2">
+        <div className="sticky bottom-0 bg-[#1a1a1e] -mx-4 sm:-mx-6 px-4 sm:px-6 -mb-4 py-3 border-t border-neutral-800 flex gap-2 z-10">
           <Button
             type="button"
             variant="secondary"

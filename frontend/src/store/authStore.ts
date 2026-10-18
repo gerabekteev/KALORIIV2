@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { User } from '../types'
 import { authApi, LoginPayload, RegisterPayload } from '../api/auth'
+import { useMealsStore } from './mealsStore'
 
 interface AuthState {
   user: User | null
@@ -10,7 +11,7 @@ interface AuthState {
   error: string | null
   login: (credentials: LoginPayload) => Promise<void>
   register: (payload: RegisterPayload) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   checkAuth: () => Promise<void>
   setUser: (user: User | null) => void
   setError: (error: string | null) => void
@@ -81,7 +82,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  logout: () => {
+  logout: async () => {
+    const token = localStorage.getItem('kalorii_token')
+    if (token) {
+      try {
+        await authApi.logout()
+      } catch {
+        // ignore logout errors
+      }
+    }
+    useMealsStore.getState().resetState()
     localStorage.removeItem('kalorii_token')
     localStorage.removeItem('kalorii_refresh_token')
     localStorage.removeItem('kalorii_ai_settings')
@@ -106,6 +116,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await authApi.getMe()
       set({ user, isAuthenticated: true, isLoading: false })
     } catch (err) {
+      useMealsStore.getState().resetState()
       localStorage.removeItem('kalorii_token')
       localStorage.removeItem('kalorii_refresh_token')
       localStorage.removeItem('kalorii_ai_settings')

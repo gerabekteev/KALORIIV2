@@ -17,8 +17,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY backend/ /app/backend/
 
 # Ensure entrypoint is executable and data dirs exist
-RUN chmod +x /app/backend/entrypoint.sh && \
-    mkdir -p /app/backend/data /app/backend/uploads
+RUN useradd -m -u 10001 appuser && \
+    chmod +x /app/backend/entrypoint.sh && \
+    mkdir -p /app/backend/data /app/backend/uploads && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 WORKDIR /app/backend
 

@@ -127,7 +127,7 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
         <button
           type="button"
           onClick={() => shiftWeek(-7)}
-          className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95"
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95 touch-manipulation shrink-0"
           title="Предыдущая неделя"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -152,7 +152,7 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
         <button
           type="button"
           onClick={() => shiftWeek(7)}
-          className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95"
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95 touch-manipulation shrink-0"
           title="Следующая неделя"
         >
           <ChevronRight className="w-4 h-4" />

@@ -4,7 +4,6 @@ import { BottomNav } from './BottomNav'
 import { Header } from './Header'
 import { AddMealModal } from '../meals/AddMealModal'
 import { EditMealModal } from '../meals/EditMealModal'
-import { AIResultModal } from '../meals/AIResultModal'
 
 export const Layout: React.FC = () => {
   return (
@@ -20,7 +19,6 @@ export const Layout: React.FC = () => {
       {/* Global Modals */}
       <AddMealModal />
       <EditMealModal />
-      <AIResultModal />
 
       {/* 3-Tab Bottom Navigation */}
       <BottomNav />

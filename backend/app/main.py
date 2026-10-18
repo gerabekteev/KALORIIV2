@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE products ADD COLUMN image_url VARCHAR(500)",
             "ALTER TABLE products ADD COLUMN package_weight_grams FLOAT DEFAULT 100.0",
             "ALTER TABLE meals ADD COLUMN ingredients_json TEXT",
+            "ALTER TABLE recipes ADD COLUMN ingredients_json TEXT",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_products_global_barcode_uniq ON products (barcode) WHERE is_custom = 0 AND barcode IS NOT NULL",
             "ALTER TABLE users ADD COLUMN telegram_chat_id BIGINT",
             "ALTER TABLE users ADD COLUMN telegram_username VARCHAR(100)",

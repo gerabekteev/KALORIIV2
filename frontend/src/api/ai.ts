@@ -7,10 +7,11 @@ export function getAIHeaders(): Record<string, string> {
     const saved = localStorage.getItem('kalorii_ai_settings')
     if (saved) {
       const parsed = JSON.parse(saved)
-      if (parsed.geminiApiKey && typeof parsed.geminiApiKey === 'string' && parsed.geminiApiKey.trim()) {
+      const isMasked = (val: string) => val.includes('...') || val.includes('•••') || val.includes('****') || val.length < 12
+      if (parsed.geminiApiKey && typeof parsed.geminiApiKey === 'string' && parsed.geminiApiKey.trim() && !isMasked(parsed.geminiApiKey.trim())) {
         headers['X-Gemini-Key'] = parsed.geminiApiKey.trim()
       }
-      if (parsed.openrouterApiKey && typeof parsed.openrouterApiKey === 'string' && parsed.openrouterApiKey.trim()) {
+      if (parsed.openrouterApiKey && typeof parsed.openrouterApiKey === 'string' && parsed.openrouterApiKey.trim() && !isMasked(parsed.openrouterApiKey.trim())) {
         headers['X-OpenRouter-Key'] = parsed.openrouterApiKey.trim()
       }
       if (Array.isArray(parsed.models) && parsed.models.length > 0) {

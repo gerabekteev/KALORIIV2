@@ -7,7 +7,11 @@ import { telegramApi } from '../../api/telegram'
 import { TelegramStatusResponse } from '../../types'
 import { useUIStore } from '../../store/uiStore'
 
-export const TelegramBotCard: React.FC = () => {
+export interface TelegramBotCardProps {
+  embedded?: boolean
+}
+
+export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = false }) => {
   const { addToast } = useUIStore()
   const [status, setStatus] = useState<TelegramStatusResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -57,8 +61,8 @@ export const TelegramBotCard: React.FC = () => {
     addToast('Код скопирован в буфер обмена', 'info', 2000)
   }
 
-  return (
-    <Card variant="default" padding="md" className="space-y-3.5">
+  const content = (
+    <div className="space-y-3.5">
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
         <div className="flex items-center gap-2">
           <Send className="w-4 h-4 text-sky-400" />
@@ -121,7 +125,7 @@ export const TelegramBotCard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => copyCode(status.link_code!)}
-                  className="inline-flex items-center gap-1 text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <span>{status.link_code}</span>
                   <Copy className="w-3 h-3" />
@@ -165,6 +169,16 @@ export const TelegramBotCard: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
+  )
+
+  if (embedded) {
+    return content
+  }
+
+  return (
+    <Card variant="default" padding="md" className="space-y-3.5">
+      {content}
     </Card>
   )
 }

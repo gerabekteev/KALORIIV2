@@ -2,7 +2,7 @@ import asyncio
 import io
 import uuid
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 from PIL import Image, ImageOps
 from fastapi import UploadFile, HTTPException, status
 
@@ -162,3 +162,48 @@ async def cleanup_orphan_uploads(db, max_age_hours: int = 24) -> int:
         return deleted_count
     except Exception:
         return 0
+
+
+async def safe_unlink_upload_if_unreferenced(
+    db,
+    url_path: Optional[str],
+    exclude_meal_id: Optional[int] = None,
+    exclude_product_id: Optional[int] = None,
+) -> None:
+    """
+    Safely delete a file from settings.UPLOAD_DIR if it is no longer referenced
+    by any Meal (excluding exclude_meal_id) or Product (excluding exclude_product_id).
+    Protects against path traversal by resolving and checking parent directory.
+    """
+    if not url_path or not isinstance(url_path, str) or not url_path.startswith("/uploads/"):
+        return
+
+    safe_name = Path(url_path).name
+    upload_root = settings.UPLOAD_DIR.resolve()
+    photo_file = (upload_root / safe_name).resolve()
+
+    if photo_file.parent != upload_root or not photo_file.is_file():
+        return
+
+    from sqlalchemy import select, and_
+    from app.models.meal import Meal
+    from app.models.product import Product
+
+    try:
+        meal_conds = [Meal.photo_path == url_path]
+        if exclude_meal_id is not None:
+            meal_conds.append(Meal.id != exclude_meal_id)
+        other_meals = await db.execute(select(Meal.id).where(and_(*meal_conds)).limit(1))
+        if other_meals.scalar_one_or_none():
+            return
+
+        prod_conds = [Product.image_url == url_path]
+        if exclude_product_id is not None:
+            prod_conds.append(Product.id != exclude_product_id)
+        other_prods = await db.execute(select(Product.id).where(and_(*prod_conds)).limit(1))
+        if other_prods.scalar_one_or_none():
+            return
+
+        photo_file.unlink()
+    except Exception:
+        pass

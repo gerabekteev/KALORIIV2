@@ -11,7 +11,7 @@ services:
       - kalorii-data:/app/backend/data
       - kalorii-uploads:/app/backend/uploads
     ports:
-      - "5100:5100"
+      - "127.0.0.1:5100:5100"
 
 volumes:
   kalorii-data:

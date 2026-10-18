@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KALORII_AI // BIO_SYS.01</title>
+<!-- Material Symbols Font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Space Grotesk & JetBrains Mono & Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration verbatim as provided -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#00686f",
+            "surface-variant": "#31353c",
+            "on-tertiary-container": "#713fda",
+            "secondary-fixed-dim": "#00dbe9",
+            "on-tertiary-fixed-variant": "#5516be",
+            "tertiary-fixed-dim": "#d0bcff",
+            "primary-fixed-dim": "#00e478",
+            "surface-bright": "#353941",
+            "outline": "#849585",
+            "on-error-container": "#ffdad6",
+            "secondary-fixed": "#7df4ff",
+            "primary-fixed": "#60ff98",
+            "surface-dim": "#0f141a",
+            "surface-container-lowest": "#0a0e15",
+            "on-surface-variant": "#b9cbb9",
+            "surface-tint": "#00e478",
+            "surface-container-high": "#262a31",
+            "background": "#0f141a",
+            "error": "#ffb4ab",
+            "on-error": "#690005",
+            "secondary": "#d3fbff",
+            "on-secondary-fixed-variant": "#004f54",
+            "on-primary-fixed": "#00210c",
+            "outline-variant": "#3b4b3d",
+            "on-tertiary": "#3c0091",
+            "on-primary-fixed-variant": "#005227",
+            "surface-container-low": "#181c23",
+            "primary": "#f1ffef",
+            "on-primary-container": "#007138",
+            "surface-container": "#1c2027",
+            "on-background": "#dfe2ec",
+            "tertiary-container": "#e5d8ff",
+            "on-tertiary-fixed": "#23005c",
+            "tertiary-fixed": "#e9ddff",
+            "surface": "#0f141a",
+            "inverse-surface": "#dfe2ec",
+            "error-container": "#93000a",
+            "inverse-primary": "#006d36",
+            "primary-container": "#00ff87",
+            "on-primary": "#003919",
+            "surface-container-highest": "#31353c",
+            "on-secondary": "#00363a",
+            "on-secondary-fixed": "#002022",
+            "tertiary": "#fff9ff",
+            "secondary-container": "#00eefc",
+            "on-surface": "#dfe2ec",
+            "inverse-on-surface": "#2c3138"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "margin-desktop": "2.5rem",
+            "space-xl": "2rem",
+            "space-xs": "0.25rem",
+            "gutter-tablet": "1rem",
+            "space-lg": "1.25rem",
+            "margin-tablet": "1.5rem",
+            "margin": "1rem",
+            "gutter-desktop": "1.5rem",
+            "gutter": "0.75rem"
+          },
+          "fontFamily": {
+            "telemetry-display-mobile": ["JetBrains Mono"],
+            "headline-lg": ["Space Grotesk"],
+            "body-lg": ["Plus Jakarta Sans"],
+            "telemetry-display": ["JetBrains Mono"],
+            "headline-md": ["Space Grotesk"],
+            "label-code": ["JetBrains Mono"],
+            "body-md": ["Plus Jakarta Sans"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "body-sm": ["Plus Jakarta Sans"],
+            "headline-xl-mobile": ["Space Grotesk"],
+            "headline-xl": ["Space Grotesk"],
+            "telemetry-md": ["JetBrains Mono"],
+            "label-sub": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "telemetry-display-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "telemetry-display": ["36px", { "lineHeight": "40px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+            "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "label-code": ["11px", { "lineHeight": "14px", "letterSpacing": "0.12em", "fontWeight": "500" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "headline-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "headline-xl-mobile": ["30px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "telemetry-md": ["16px", { "lineHeight": "22px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "label-sub": ["9px", { "lineHeight": "12px", "letterSpacing": "0.16em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Tactical Scanlines & Grid Overlay */
+    .cyber-scanlines {
+      background: linear-gradient(rgba(10, 14, 21, 0) 50%, rgba(4, 7, 13, 0.45) 50%);
+      background-size: 100% 4px;
+    }
+    .cyber-grid {
+      background-image: radial-gradient(rgba(0, 238, 252, 0.08) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+    /* Chamfered Corners */
+    .clip-chamfer-sm {
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    }
+    .clip-chamfer-btn {
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+    /* Glowing Animations */
+    @keyframes pulse-cyan {
+      0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 6px rgba(0, 238, 252, 0.7)); }
+      50% { opacity: 0.4; filter: drop-shadow(0 0 2px rgba(0, 238, 252, 0.2)); }
+    }
+    .animate-pulse-glow {
+      animation: pulse-cyan 3s infinite ease-in-out;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md text-body-md antialiased min-h-screen selection:bg-primary-container selection:text-surface-container-lowest relative pb-28">
+<!-- Background Ambience & Cyber Grid -->
+<div class="fixed inset-0 cyber-grid pointer-events-none z-0 opacity-40"></div>
+<div class="fixed inset-0 cyber-scanlines pointer-events-none z-0 opacity-25"></div>
+<!-- ========================================== -->
+<!-- SHARED COMPONENT: TopAppBar (BIO_SYS.01)   -->
+<!-- ========================================== -->
+<header class="flex justify-between items-center w-full px-4 py-3 z-50 fixed top-0 left-0 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant/30 shadow-[0_0_16px_rgba(0,255,135,0.15)]">
+<!-- Brand / Leading -->
+<div class="flex items-center gap-2">
+<button class="text-primary-fixed hover:text-primary-fixed hover:bg-surface-container-high/50 transition-colors active:scale-95 transition-transform duration-150 p-1 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]" data-icon="vital_signs">vital_signs</span>
+</button>
+<div class="font-label-code text-label-code tracking-widest text-primary-fixed-dim uppercase flex items-center gap-1 font-bold">
+<span>KALORII_AI // BIO_SYS.01</span>
+</div>
+</div>
+<!-- Trailing & Status Indicator -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-primary-container/40 bg-surface-container-low/80">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-ping"></span>
+<span class="font-label-sub text-label-sub text-primary-fixed uppercase tracking-widest font-semibold">OPTIMAL</span>
+</div>
+<button class="text-primary-fixed hover:text-primary-fixed hover:bg-surface-container-high/50 transition-colors active:scale-95 transition-transform duration-150 p-1 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]" data-icon="sensors">sensors</span>
+</button>
+</div>
+</header>
+<!-- ========================================== -->
+<!-- MAIN DASHBOARD VIEWPORT (HUD CANVAS)       -->
+<!-- ========================================== -->
+<main class="relative z-10 pt-16 px-4 max-w-md mx-auto space-y-4">
+<!-- SUB-BAR METADATA TELEMETRY -->
+<div class="flex justify-between items-center text-outline font-label-sub text-label-sub border-b border-outline-variant/20 pb-1.5 px-1">
+<div class="flex items-center gap-2">
+<span class="text-secondary-container">REC_LIVE</span>
+<span>//</span>
+<span class="text-on-surface-variant font-mono">NODE: AP-793</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-primary-fixed font-bold font-mono" id="hud-clock">14:26:09 UTC</span>
+<span class="w-1.5 h-1.5 bg-secondary-container rounded-sm"></span>
+</div>
+</div>
+<!-- SECTION 1: OPERATOR BIO-PROFILE STRIP -->
+<section class="relative bg-surface-container-low/70 border border-outline-variant/40 rounded p-3 backdrop-blur-md overflow-hidden">
+<!-- Tactical Corner Reticles -->
+<span class="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary-container"></span>
+<span class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary-container"></span>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-sm bg-surface-container-high border border-secondary-container/40 flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-secondary-container text-2xl" data-icon="person_filled">person</span>
+<div class="absolute bottom-0 w-full h-1 bg-primary-container"></div>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-label-code text-label-code text-primary uppercase font-bold tracking-wider">Alexander_V7 // OP-04</h2>
+<span class="font-label-sub text-label-sub text-secondary-fixed bg-surface-container-highest px-1 py-0.2 rounded border border-secondary-container/30">L4_MET</span>
+</div>
+<p class="font-label-sub text-label-sub text-outline tracking-wider uppercase mt-0.5">METABOLIC STATUS: THERMOGENIC_ACTIVE</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-sub text-label-sub text-outline uppercase block">7D_STREAK</span>
+<div class="flex items-center gap-1 mt-1">
+<span class="w-2 h-2 bg-primary-container shadow-[0_0_6px_#00ff87]"></span>
+<span class="w-2 h-2 bg-primary-container shadow-[0_0_6px_#00ff87]"></span>
+<span class="w-2 h-2 bg-primary-container shadow-[0_0_6px_#00ff87]"></span>
+<span class="w-2 h-2 bg-primary-container shadow-[0_0_6px_#00ff87]"></span>
+<span class="w-2 h-2 bg-primary-container shadow-[0_0_6px_#00ff87]"></span>
+<span class="w-2 h-2 bg-primary-container shadow-[0_0_6px_#00ff87]"></span>
+<span class="w-2 h-2 border border-secondary-container animate-pulse"></span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: CENTRAL HOLO-RING & ENERGY ALLOCATION MATRIX -->
+<section class="relative bg-surface-container-lowest/85 border border-outline-variant/40 rounded p-4 backdrop-blur-xl shadow-[0_0_24px_rgba(0,238,252,0.06)] overflow-hidden">
+<!-- Crosshair overlays -->
+<div class="absolute top-2 left-2 text-outline-variant font-label-sub text-[8px] tracking-widest">+ 01_ENG_MTX</div>
+<div class="absolute top-2 right-2 text-outline-variant font-label-sub text-[8px] tracking-widest">DIAG // 009-A</div>
+<div class="flex flex-col items-center justify-center pt-2">
+<!-- SVG Dual Holo Gauge -->
+<div class="relative w-52 h-52 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90 transform" viewbox="0 0 160 160">
+<!-- Background Tracks -->
+<circle cx="80" cy="80" fill="none" r="70" stroke="#1c2027" stroke-width="4"></circle>
+<circle cx="80" cy="80" fill="none" r="58" stroke="#181c23" stroke-dasharray="3 3" stroke-width="6"></circle>
+<!-- Target Outer Ring (Electric Cyan) -->
+<circle class="filter drop-shadow-[0_0_8px_rgba(0,238,252,0.8)]" cx="80" cy="80" fill="none" r="70" stroke="#00eefc" stroke-dasharray="440" stroke-dashoffset="136" stroke-linecap="round" stroke-width="4"></circle>
+<!-- Burn Rate Inner Track (Neon Lime) -->
+<circle class="filter drop-shadow-[0_0_10px_rgba(0,255,135,0.7)]" cx="80" cy="80" fill="none" r="58" stroke="#00ff87" stroke-dasharray="364" stroke-dashoffset="112" stroke-linecap="round" stroke-width="6"></circle>
+</svg>
+<!-- Metric Readout inside Gauge -->
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-label-sub text-label-sub text-secondary-fixed tracking-widest uppercase">ENERGY REMAINING</span>
+<div class="flex items-baseline gap-1 my-0.5">
+<span class="font-telemetry-display-mobile text-telemetry-display-mobile text-primary font-bold tracking-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">650</span>
+<span class="font-label-code text-label-code text-primary-fixed uppercase">KCAL</span>
+</div>
+<div class="font-label-sub text-label-sub text-outline uppercase tracking-wider flex items-center gap-1">
+<span>TARGET:</span>
+<span class="text-on-surface font-mono">2,100</span>
+</div>
+</div>
+</div>
+<!-- Telemetry Diagnostic Sub-Row -->
+<div class="grid grid-cols-3 w-full gap-2 mt-2 pt-3 border-t border-outline-variant/30">
+<div class="text-center p-1.5 bg-surface-container-low/50 rounded border border-outline-variant/20">
+<span class="font-label-sub text-label-sub text-outline uppercase block">INTAKE</span>
+<span class="font-telemetry-md text-telemetry-md text-secondary-container font-bold font-mono">1,450</span>
+<span class="font-label-sub text-[8px] text-outline block">KCAL</span>
+</div>
+<div class="text-center p-1.5 bg-surface-container-low/50 rounded border border-outline-variant/20">
+<span class="font-label-sub text-label-sub text-outline uppercase block">BURNED</span>
+<span class="font-telemetry-md text-telemetry-md text-primary-fixed-dim font-bold font-mono">1,820</span>
+<span class="font-label-sub text-[8px] text-outline block">ACTIVE_EST</span>
+</div>
+<div class="text-center p-1.5 bg-surface-container-low/50 rounded border border-outline-variant/20">
+<span class="font-label-sub text-label-sub text-outline uppercase block">DEFICIT</span>
+<span class="font-telemetry-md text-telemetry-md text-primary-fixed font-bold font-mono">-370</span>
+<span class="font-label-sub text-[8px] text-primary-fixed block">CATABOLIC</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: TACTICAL MACRO HUD GAUGES -->
+<section class="bg-surface-container-low/60 border border-outline-variant/30 rounded p-3.5 backdrop-blur-md space-y-3">
+<div class="flex justify-between items-center border-b border-outline-variant/20 pb-1.5">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-3 bg-secondary-container"></span>
+<span class="font-label-code text-label-code text-on-surface uppercase tracking-wider font-semibold">MACRO_ALLOCATION // GAUGES</span>
+</div>
+<span class="font-label-sub text-label-sub text-outline">AUTO_SYNCED</span>
+</div>
+<!-- Macro 1: Protein -->
+<div class="space-y-1">
+<div class="flex justify-between items-center text-xs">
+<span class="font-label-code text-label-code text-primary-fixed tracking-wide flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="fitness_center">fitness_center</span>
+            PROTEIN [SYNTHESIS]
+          </span>
+<span class="font-label-code text-label-code text-on-surface font-mono font-bold">110g <span class="text-outline font-normal">/ 140g</span> <span class="text-primary-fixed ml-1">(78%)</span></span>
+</div>
+<!-- Segmented Glow Meter -->
+<div class="grid grid-cols-12 gap-1 h-2 bg-surface-container-lowest p-0.5 rounded border border-outline-variant/40">
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-primary-container shadow-[0_0_6px_#00ff87]"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+</div>
+</div>
+<!-- Macro 2: Lipids -->
+<div class="space-y-1">
+<div class="flex justify-between items-center text-xs">
+<span class="font-label-code text-label-code text-secondary-fixed-dim tracking-wide flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="opacity">opacity</span>
+            LIPIDS [ESSENTIAL]
+          </span>
+<span class="font-label-code text-label-code text-on-surface font-mono font-bold">45g <span class="text-outline font-normal">/ 65g</span> <span class="text-secondary-fixed ml-1">(69%)</span></span>
+</div>
+<div class="grid grid-cols-12 gap-1 h-2 bg-surface-container-lowest p-0.5 rounded border border-outline-variant/40">
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-secondary-container shadow-[0_0_6px_#00eefc]"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+</div>
+</div>
+<!-- Macro 3: Carbs -->
+<div class="space-y-1">
+<div class="flex justify-between items-center text-xs">
+<span class="font-label-code text-label-code text-tertiary-fixed-dim tracking-wide flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="bolt">bolt</span>
+            GLUCIDS [GLYCOGEN]
+          </span>
+<span class="font-label-code text-label-code text-on-surface font-mono font-bold">165g <span class="text-outline font-normal">/ 220g</span> <span class="text-tertiary-fixed-dim ml-1">(75%)</span></span>
+</div>
+<div class="grid grid-cols-12 gap-1 h-2 bg-surface-container-lowest p-0.5 rounded border border-outline-variant/40">
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-tertiary-container shadow-[0_0_6px_#d0bcff]"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+<div class="h-full bg-surface-container-high"></div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: NUTRITION RADAR & MICRONUTRIENT MATRIX -->
+<section class="relative bg-surface-container-low/70 border border-outline-variant/30 rounded p-3.5 backdrop-blur-md">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary-container text-sm" data-icon="radar">radar</span>
+<span class="font-label-code text-label-code text-on-surface uppercase tracking-wider font-semibold">BIO_NUTRIENT RADAR // 6-AXIS</span>
+</div>
+<span class="font-label-sub text-label-sub text-primary-fixed bg-surface-container-lowest px-1.5 py-0.5 rounded border border-primary-container/30">SCORE: 91.4</span>
+</div>
+<div class="flex items-center justify-center py-2 relative">
+<!-- Hexagon Radar Vector Graphic -->
+<svg class="w-48 h-48" viewbox="0 0 200 200">
+<!-- Radar Concentric Grids -->
+<polygon fill="none" points="100,20 169,60 169,140 100,180 31,140 31,60" stroke="#262a31" stroke-width="1"></polygon>
+<polygon fill="none" points="100,45 147,72 147,128 100,155 53,128 53,72" stroke="#262a31" stroke-width="1"></polygon>
+<polygon fill="none" points="100,70 126,85 126,115 100,130 74,115 74,85" stroke="#262a31" stroke-width="1"></polygon>
+<!-- Axis Lines -->
+<line stroke="#31353c" stroke-dasharray="2 2" stroke-width="1" x1="100" x2="100" y1="20" y2="180"></line>
+<line stroke="#31353c" stroke-dasharray="2 2" stroke-width="1" x1="31" x2="169" y1="60" y2="140"></line>
+<line stroke="#31353c" stroke-dasharray="2 2" stroke-width="1" x1="31" x2="169" y1="140" y2="60"></line>
+<!-- Active Polygon Bio-Reading (Glowing Neon Polygon) -->
+<polygon class="filter drop-shadow-[0_0_8px_rgba(0,255,135,0.6)]" fill="rgba(0, 255, 135, 0.18)" points="100,32 158,68 142,130 100,165 42,122 48,70" stroke="#00ff87" stroke-width="1.8"></polygon>
+<!-- Telemetry Vertices Dots -->
+<circle cx="100" cy="32" fill="#00eefc" r="3"></circle>
+<circle cx="158" cy="68" fill="#00eefc" r="3"></circle>
+<circle cx="142" cy="130" fill="#00eefc" r="3"></circle>
+<circle cx="100" cy="165" fill="#00eefc" r="3"></circle>
+<circle cx="42" cy="122" fill="#00eefc" r="3"></circle>
+<circle cx="48" cy="70" fill="#00eefc" r="3"></circle>
+<!-- Labels on Vertices -->
+<text fill="#00eefc" font-family="JetBrains Mono" font-size="7" text-anchor="middle" x="100" y="14">SYNTHESIS</text>
+<text fill="#849585" font-family="JetBrains Mono" font-size="7" text-anchor="start" x="175" y="62">GLYCOGEN</text>
+<text fill="#849585" font-family="JetBrains Mono" font-size="7" text-anchor="start" x="175" y="145">LIPID_IDX</text>
+<text fill="#00eefc" font-family="JetBrains Mono" font-size="7" text-anchor="middle" x="100" y="194">FIBER_ABS</text>
+<text fill="#849585" font-family="JetBrains Mono" font-size="7" text-anchor="end" x="25" y="145">ELECTRO</text>
+<text fill="#849585" font-family="JetBrains Mono" font-size="7" text-anchor="end" x="25" y="62">MICRONUT</text>
+</svg>
+</div>
+<!-- Quick Micro Telemetry Grid -->
+<div class="grid grid-cols-2 gap-2 text-[10px] font-mono mt-1 pt-2 border-t border-outline-variant/20">
+<div class="flex justify-between items-center text-outline">
+<span>ELECTROLYTE_BAL:</span>
+<span class="text-primary-fixed">94% [HIGH]</span>
+</div>
+<div class="flex justify-between items-center text-outline">
+<span>MICRO_DENSITY:</span>
+<span class="text-secondary-fixed">88% [STABLE]</span>
+</div>
+</div>
+</section>
+<!-- SECTION 5: HYDRATION & METABOLIC BURN DUAL TILES -->
+<section class="grid grid-cols-2 gap-3">
+<!-- Tile 1: Hydration Plasma -->
+<div class="bg-surface-container-low/70 border border-outline-variant/30 rounded p-3 relative flex flex-col justify-between">
+<span class="absolute top-1 right-2 font-label-sub text-[8px] text-secondary-fixed">H2O_PLASMA</span>
+<div>
+<div class="flex items-center gap-1.5 text-secondary-fixed mb-1">
+<span class="material-symbols-outlined text-base" data-icon="water_drop">water_drop</span>
+<span class="font-label-code text-label-code font-bold uppercase">HYDRATION</span>
+</div>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="font-telemetry-md text-telemetry-md text-on-surface font-bold" id="hydration-val">2,150</span>
+<span class="font-label-sub text-label-sub text-outline">/ 3000 ML</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-1.5 rounded mt-2 overflow-hidden border border-outline-variant/30">
+<div class="h-full bg-secondary-container shadow-[0_0_8px_#00eefc]" id="hydration-bar" style="width: 71%;"></div>
+</div>
+</div>
+<!-- Injection Action Button -->
+<button class="mt-3 w-full py-1.5 px-2 bg-surface-container-high hover:bg-surface-container-highest border border-secondary-container/50 text-secondary-container font-label-code text-[10px] tracking-wider uppercase rounded clip-chamfer-btn flex items-center justify-center gap-1 transition-all active:scale-95" id="add-water-btn">
+<span class="material-symbols-outlined text-[12px]" data-icon="add">add</span>
+<span>+250ML INJECT</span>
+</button>
+</div>
+<!-- Tile 2: Active Metabolic Burn Rate -->
+<div class="bg-surface-container-low/70 border border-outline-variant/30 rounded p-3 relative flex flex-col justify-between">
+<span class="absolute top-1 right-2 font-label-sub text-[8px] text-primary-fixed">MET_BURN</span>
+<div>
+<div class="flex items-center gap-1.5 text-primary-fixed mb-1">
+<span class="material-symbols-outlined text-base" data-icon="local_fire_department">local_fire_department</span>
+<span class="font-label-code text-label-code font-bold uppercase">THERMIC_FLUX</span>
+</div>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="font-telemetry-md text-telemetry-md text-on-surface font-bold">1,820</span>
+<span class="font-label-sub text-label-sub text-outline">KCAL EXP</span>
+</div>
+<!-- Mini Sparkline / Cardiogram Graph -->
+<div class="mt-2 h-5 w-full flex items-end gap-1">
+<div class="w-1/6 bg-primary-container/40 h-2"></div>
+<div class="w-1/6 bg-primary-container/60 h-3"></div>
+<div class="w-1/6 bg-primary-container/50 h-2.5"></div>
+<div class="w-1/6 bg-primary-container/80 h-4"></div>
+<div class="w-1/6 bg-primary-container h-5 shadow-[0_0_6px_#00ff87]"></div>
+<div class="w-1/6 bg-primary-container/90 h-4.5"></div>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between text-[9px] font-mono text-outline border-t border-outline-variant/20 pt-1">
+<span>VO2_PEAK: 48.2</span>
+<span class="text-primary-fixed">ZONE 2 [64m]</span>
+</div>
+</div>
+</section>
+<!-- SECTION 6: CHRONOLOGICAL INTAKE TERMINAL FEED -->
+<section class="bg-surface-container-low/60 border border-outline-variant/30 rounded p-3.5 backdrop-blur-md space-y-3">
+<div class="flex justify-between items-center border-b border-outline-variant/20 pb-1.5">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="list_alt">list_alt</span>
+<span class="font-label-code text-label-code text-on-surface uppercase tracking-wider font-semibold">INTAKE_LEDGER // CHRONO</span>
+</div>
+<span class="font-label-sub text-label-sub text-secondary-fixed">ENTRIES: 02/03</span>
+</div>
+<!-- Meal Log Item 1: Breakfast -->
+<div class="p-2.5 bg-surface-container-lowest/80 border border-outline-variant/20 rounded flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded bg-surface-container border border-primary-container/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-fixed text-[16px]" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-label-code text-label-code text-on-surface font-bold uppercase">01 // HYPER_OMEGA BOWL</span>
+<span class="font-label-sub text-[8px] text-outline">08:15</span>
+</div>
+<p class="font-label-sub text-label-sub text-outline tracking-wider uppercase mt-0.5">P: 42g | C: 58g | L: 18g</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-telemetry-md text-sm text-primary-fixed font-bold font-mono">560</span>
+<span class="font-label-sub text-[8px] text-outline block">KCAL</span>
+</div>
+</div>
+<!-- Meal Log Item 2: Lunch -->
+<div class="p-2.5 bg-surface-container-lowest/80 border border-outline-variant/20 rounded flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded bg-surface-container border border-secondary-container/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary-fixed text-[16px]" data-icon="lunch_dining">lunch_dining</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-label-code text-label-code text-on-surface font-bold uppercase">02 // BIO_PEPTIDE STEAK + GREENS</span>
+<span class="font-label-sub text-[8px] text-outline">12:45</span>
+</div>
+<p class="font-label-sub text-label-sub text-outline tracking-wider uppercase mt-0.5">P: 68g | C: 45g | L: 27g</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-telemetry-md text-sm text-secondary-container font-bold font-mono">890</span>
+<span class="font-label-sub text-[8px] text-outline block">KCAL</span>
+</div>
+</div>
+<!-- Meal Log Item 3: Dinner Pending Action -->
+<div class="p-2.5 bg-surface-container-lowest/40 border border-dashed border-outline-variant/40 rounded flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded bg-surface-container-high border border-outline-variant/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-[16px]" data-icon="schedule">schedule</span>
+</div>
+<div>
+<span class="font-label-code text-label-code text-outline font-semibold uppercase">03 // EVENING FUEL MATRIX</span>
+<p class="font-label-sub text-label-sub text-primary-fixed/80 uppercase mt-0.5">REMAINING BUDGET: 650 KCAL</p>
+</div>
+</div>
+<button class="px-2 py-1 bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container text-primary-fixed font-label-code text-[10px] rounded uppercase font-bold tracking-wider active:scale-95 transition-transform flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="add">add</span>
+<span>LOG</span>
+</button>
+</div>
+<!-- Cyberpunk Full Meal Scan CTA Button -->
+<button class="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-primary-container to-[#00d06c] text-surface-container-lowest font-label-code text-xs font-bold uppercase tracking-widest clip-chamfer-btn shadow-[0_0_16px_rgba(0,255,135,0.4)] hover:shadow-[0_0_22px_rgba(0,255,135,0.6)] active:scale-98 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span>&gt;&gt; INITIALIZE_SPECTROMETER_SCAN</span>
+</button>
+</section>
+</main>
+<!-- ========================================== -->
+<!-- SHARED COMPONENT: BottomNavBar (HUD DOCK)  -->
+<!-- ========================================== -->
+<!-- 
+    Authority rules applied from JSON:
+    - active_state: Current screen is HUD (matched to "HUD")
+    - style_active_navigation: "flex flex-col items-center justify-center text-primary-fixed-dim font-bold drop-shadow-[0_0_8px_rgba(0,255,135,0.6)] py-1 px-3 border-b border-primary-fixed"
+    - style_inactive_navigation: "flex flex-col items-center justify-center text-outline py-1 px-3 opacity-60"
+    - labels: ["HUD", "TELEMETRY", "TARGETS", "SYS_CONFIG"]
+    - icons: ["dataset", "monitoring", "adjust", "tune"]
+  -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-2 border-t border-outline-variant/30 bg-surface-container-lowest/95 backdrop-blur-xl pb-safe shadow-[0_-4px_20px_rgba(0,238,252,0.12)]">
+<!-- Tab 1: HUD (ACTIVE) -->
+<a class="flex flex-col items-center justify-center text-primary-fixed-dim font-bold drop-shadow-[0_0_8px_rgba(0,255,135,0.6)] py-1 px-3 border-b border-primary-fixed active:scale-95 transition-all duration-150" href="#hud">
+<span class="material-symbols-outlined text-[20px]" data-icon="dataset">dataset</span>
+<span class="font-label-sub text-label-sub uppercase tracking-widest mt-0.5">HUD</span>
+</a>
+<!-- Tab 2: TELEMETRY -->
+<a class="flex flex-col items-center justify-center text-outline py-1 px-3 opacity-60 hover:text-secondary-fixed hover:bg-surface-container-high/40 transition-all active:scale-95 duration-150" href="#telemetry">
+<span class="material-symbols-outlined text-[20px]" data-icon="monitoring">monitoring</span>
+<span class="font-label-sub text-label-sub uppercase tracking-widest mt-0.5">TELEMETRY</span>
+</a>
+<!-- Tab 3: TARGETS -->
+<a class="flex flex-col items-center justify-center text-outline py-1 px-3 opacity-60 hover:text-secondary-fixed hover:bg-surface-container-high/40 transition-all active:scale-95 duration-150" href="#targets">
+<span class="material-symbols-outlined text-[20px]" data-icon="adjust">adjust</span>
+<span class="font-label-sub text-label-sub uppercase tracking-widest mt-0.5">TARGETS</span>
+</a>
+<!-- Tab 4: SYS_CONFIG -->
+<a class="flex flex-col items-center justify-center text-outline py-1 px-3 opacity-60 hover:text-secondary-fixed hover:bg-surface-container-high/40 transition-all active:scale-95 duration-150" href="#config">
+<span class="material-symbols-outlined text-[20px]" data-icon="tune">tune</span>
+<span class="font-label-sub text-label-sub uppercase tracking-widest mt-0.5">SYS_CONFIG</span>
+</a>
+</nav>
+<!-- Lightweight Micro-Interaction Vanilla JS -->
+<script>
+    // Live HUD Clock Simulation
+    function updateClock() {
+      const now = new Date();
+      const hrs = String(now.getUTCHours()).padStart(2, '0');
+      const mins = String(now.getUTCMinutes()).padStart(2, '0');
+      const secs = String(now.getUTCSeconds()).padStart(2, '0');
+      const clockEl = document.getElementById('hud-clock');
+      if (clockEl) {
+        clockEl.textContent = `${hrs}:${mins}:${secs} UTC`;
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Hydration Fast-Inject Button Action
+    const waterBtn = document.getElementById('add-water-btn');
+    const waterVal = document.getElementById('hydration-val');
+    const waterBar = document.getElementById('hydration-bar');
+    let currentWater = 2150;
+    const maxWater = 3000;
+
+    if (waterBtn && waterVal && waterBar) {
+      waterBtn.addEventListener('click', () => {
+        if (currentWater < maxWater) {
+          currentWater = Math.min(maxWater, currentWater + 250);
+          waterVal.textContent = currentWater.toLocaleString();
+          const percent = (currentWater / maxWater) * 100;
+          waterBar.style.width = `${percent}%`;
+          
+          // Haptic photon flash effect
+          waterBtn.classList.add('bg-secondary-container', 'text-surface-container-lowest');
+          setTimeout(() => {
+            waterBtn.classList.remove('bg-secondary-container', 'text-surface-container-lowest');
+          }, 200);
+        }
+      });
+    }
+  </script>
+</body></html>

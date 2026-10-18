@@ -45,3 +45,50 @@ export function getSlotForTime(timeStr?: string): 'breakfast' | 'lunch' | 'snack
   if (t >= '16:30' && t <= '18:29') return 'snack'
   return 'dinner'
 }
+
+export interface MealTimeMeta {
+  slot: 'breakfast' | 'lunch' | 'snack' | 'dinner'
+  icon: string
+  label: string
+}
+
+export function getMealTimeMeta(timeStr?: string, calories?: number): MealTimeMeta {
+  const slot = getSlotForTime(timeStr)
+
+  // Under small meal volume (<= 160 kcal) during daytime, classify as snack icon
+  if (calories !== undefined && calories > 0 && calories <= 160 && slot === 'lunch') {
+    return {
+      slot: 'snack',
+      icon: '🍏',
+      label: 'Перекус',
+    }
+  }
+
+  switch (slot) {
+    case 'breakfast':
+      return {
+        slot: 'breakfast',
+        icon: '☀️',
+        label: 'Завтрак',
+      }
+    case 'lunch':
+      return {
+        slot: 'lunch',
+        icon: '🍲',
+        label: 'Обед',
+      }
+    case 'snack':
+      return {
+        slot: 'snack',
+        icon: '🍏',
+        label: 'Перекус',
+      }
+    case 'dinner':
+      return {
+        slot: 'dinner',
+        icon: '🪐',
+        label: 'Ужин',
+      }
+  }
+}
+

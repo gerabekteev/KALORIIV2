@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
 
 from app.schemas.product import ProductResponse
+from app.schemas.ai import MealIngredientItem
 
 
 class RecipeItemCreate(BaseModel):
@@ -24,6 +25,7 @@ class RecipeCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     items: List[RecipeItemCreate] = Field(default_factory=list)
+    ingredients: List[MealIngredientItem] = Field(default_factory=list)
     total_calories: Optional[float] = None
     total_protein: Optional[float] = None
     total_fat: Optional[float] = None
@@ -35,6 +37,7 @@ class RecipeUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     items: Optional[List[RecipeItemCreate]] = None
+    ingredients: Optional[List[MealIngredientItem]] = None
     is_favorite: Optional[bool] = None
 
 
@@ -53,3 +56,4 @@ class RecipeResponse(BaseModel):
     is_favorite: bool
     created_at: datetime
     items: List[RecipeItemResponse] = Field(default_factory=list)
+    ingredients: List[MealIngredientItem] = Field(default_factory=list)

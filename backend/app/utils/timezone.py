@@ -56,3 +56,22 @@ def resolve_client_date(
     if x_client_date:
         return x_client_date
     return get_user_now(user, tz_header).date()
+
+
+def is_valid_timezone(tz_str: Optional[str]) -> bool:
+    """Validate whether a timezone string is valid and safe."""
+    if not tz_str or not isinstance(tz_str, str):
+        return False
+    tz_str = tz_str.strip()
+    if len(tz_str) > 64 or len(tz_str) < 2:
+        return False
+    if ZoneInfo:
+        try:
+            ZoneInfo(tz_str)
+            return True
+        except Exception:
+            pass
+    import re
+    if re.match(r"^[a-zA-Z0-9_\-+]+(/[a-zA-Z0-9_\-+]+)*$", tz_str):
+        return True
+    return False

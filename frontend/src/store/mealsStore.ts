@@ -50,18 +50,24 @@ function computeUpdatedSummary(
 // In-memory timers for undo delete
 const pendingDeletes = new Map<number, ReturnType<typeof setTimeout>>()
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('pagehide', () => {
-    for (const [mealId, timer] of pendingDeletes.entries()) {
-      clearTimeout(timer)
-      pendingDeletes.delete(mealId)
-      const token = localStorage.getItem('kalorii_token')
+export function flushOrCancelPendingDeletes(): void {
+  for (const [mealId, timer] of pendingDeletes.entries()) {
+    clearTimeout(timer)
+    pendingDeletes.delete(mealId)
+    const token = localStorage.getItem('kalorii_token')
+    if (token) {
       fetch(`/api/meals/${mealId}`, {
         method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
         keepalive: true,
       }).catch(() => {})
     }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    flushOrCancelPendingDeletes()
   })
 }
 
@@ -106,6 +112,7 @@ interface MealsState {
   ) => void
   retryPendingMeal: (id: string) => Promise<void>
   dismissPendingMeal: (id: string) => void
+  resetState: () => void
 }
 
 export const useMealsStore = create<MealsState>((set, get) => ({
@@ -116,6 +123,18 @@ export const useMealsStore = create<MealsState>((set, get) => ({
   selectedDate: getTodayDateString(),
   isLoading: false,
   error: null,
+
+  resetState: () => {
+    flushOrCancelPendingDeletes()
+    set({
+      meals: [],
+      dailySummary: null,
+      previousDayMeals: [],
+      pendingMeals: [],
+      isLoading: false,
+      error: null,
+    })
+  },
 
   setSelectedDate: (date: string) => {
     set({ selectedDate: date })

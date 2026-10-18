@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import String, Float, Integer, Boolean, DateTime, ForeignKey, Text, func
@@ -27,6 +28,7 @@ class Recipe(Base):
     total_weight_grams: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
     is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ingredients_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
 
     # Relationships
@@ -34,6 +36,25 @@ class Recipe(Base):
     items: Mapped[List["RecipeItem"]] = relationship(
         "RecipeItem", back_populates="recipe", cascade="all, delete-orphan", lazy="selectin"
     )
+
+    @property
+    def ingredients(self) -> list:
+        if not self.ingredients_json:
+            return []
+        try:
+            data = json.loads(self.ingredients_json)
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    @ingredients.setter
+    def ingredients(self, value) -> None:
+        if value is None:
+            self.ingredients_json = None
+        elif isinstance(value, str):
+            self.ingredients_json = value
+        else:
+            self.ingredients_json = json.dumps(value, ensure_ascii=False)
 
 
 class RecipeItem(Base):

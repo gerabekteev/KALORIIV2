@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KaloriiAI — Neo-Brutalist Fitness &amp; Calorie Tracker</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Space Grotesk Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN with forms & container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-fixed-variant": "#891933",
+            "error": "#ba1a1a",
+            "outline-variant": "#c2cab0",
+            "on-primary-fixed": "#121f00",
+            "tertiary-fixed-dim": "#7bd0ff",
+            "surface-container-low": "#f5f4ec",
+            "surface-container": "#f0eee6",
+            "on-primary": "#ffffff",
+            "on-primary-fixed-variant": "#334f00",
+            "on-error-container": "#93000a",
+            "primary-fixed": "#b2f746",
+            "on-tertiary-container": "#006184",
+            "surface-container-high": "#eae8e0",
+            "on-secondary-fixed": "#400010",
+            "surface-bright": "#fbf9f1",
+            "on-tertiary-fixed": "#001e2c",
+            "on-secondary-container": "#730425",
+            "on-primary-container": "#416400",
+            "tertiary": "#00668a",
+            "secondary-fixed": "#ffdadc",
+            "surface-variant": "#e4e3db",
+            "on-surface-variant": "#424936",
+            "on-background": "#1b1c17",
+            "outline": "#727a64",
+            "on-secondary": "#ffffff",
+            "background": "#fbf9f1",
+            "error-container": "#ffdad6",
+            "tertiary-fixed": "#c4e7ff",
+            "inverse-primary": "#98da27",
+            "inverse-on-surface": "#f3f1e9",
+            "secondary": "#a93349",
+            "surface-dim": "#dcdad2",
+            "secondary-fixed-dim": "#ffb2b9",
+            "tertiary-container": "#9ddaff",
+            "surface-container-highest": "#e4e3db",
+            "on-tertiary": "#ffffff",
+            "on-surface": "#1b1c17",
+            "secondary-container": "#fe7488",
+            "primary-container": "#a3e635",
+            "surface-tint": "#446900",
+            "on-tertiary-fixed-variant": "#004c69",
+            "surface-container-lowest": "#ffffff",
+            "inverse-surface": "#30312c",
+            "primary-fixed-dim": "#98da27",
+            "on-error": "#ffffff",
+            "surface": "#fbf9f1",
+            "primary": "#446900"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter": "1rem",
+            "margin-mobile": "1rem",
+            "space-xl": "2.25rem",
+            "space-sm": "0.5rem",
+            "space-lg": "1.5rem",
+            "gutter-mobile": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-md": "1rem",
+            "margin": "1.25rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "body-sm": ["Space Grotesk", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "body-md": ["Space Grotesk", "sans-serif"],
+            "display-hero": ["Space Grotesk", "sans-serif"],
+            "label-sticker": ["Space Grotesk", "sans-serif"],
+            "label-lg": ["Space Grotesk", "sans-serif"],
+            "headline-sm": ["Space Grotesk", "sans-serif"],
+            "label-md": ["Space Grotesk", "sans-serif"],
+            "headline-lg-mobile": ["Space Grotesk", "sans-serif"],
+            "display-hero-mobile": ["Space Grotesk", "sans-serif"],
+            "body-lg": ["Space Grotesk", "sans-serif"]
+          },
+          "fontSize": {
+            "headline-lg": ["36px", { "lineHeight": "40px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-md": ["22px", { "lineHeight": "26px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "display-hero": ["56px", { "lineHeight": "56px", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+            "label-sticker": ["10px", { "lineHeight": "10px", "letterSpacing": "0.12em", "fontWeight": "700" }],
+            "label-lg": ["14px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "headline-sm": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "label-md": ["11px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "700" }],
+            "headline-lg-mobile": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "display-hero-mobile": ["44px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Neo-Brutalist Barber/Candy Striping */
+    .candy-stripes {
+      background-image: repeating-linear-gradient(
+        -45deg,
+        #000000 0px,
+        #000000 7px,
+        #b2f746 7px,
+        #b2f746 14px
+      );
+    }
+    .custom-scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .custom-scroll {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .tactile-click {
+      transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tactile-click:active {
+      transform: translate(3px, 3px) !important;
+      box-shadow: 1px 1px 0px #000000 !important;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen pb-32 selection:bg-primary-container selection:text-on-surface">
+<!-- Mobile Viewport Wrapper (390px Max) -->
+<div class="max-w-[420px] mx-auto min-h-screen bg-background relative flex flex-col">
+<!-- TopAppBar (from Shared Components JSON specifications) -->
+<header class="bg-surface border-b-[3px] border-on-surface shadow-[0px_4px_0px_#000000] sticky top-0 z-40 w-full px-margin-mobile py-space-sm flex justify-between items-center">
+<div class="flex items-center gap-space-sm">
+<!-- Leading Avatar: Athlete with headband -->
+<div class="w-10 h-10 rounded-full border-[2.5px] border-on-surface shadow-[2px_2px_0px_#000000] overflow-hidden bg-primary-fixed flex items-center justify-center relative">
+<img class="w-full h-full object-cover" data-alt="A stylized retro neo-brutalist 3D avatar of an athletic gen-z boxer wearing a bold yellow headband, captured against an energetic pop art chartreuse lime background, crisp ink outline styling with punchy high key studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAujEg0SilRcHeuKM07MBRWwOetsvSZ9RvAgsgP1djLuiO-fOUEXxlAFFSH_MNcmMFfJ3bcsZNE5j-PjKAeq9e4kOxDDAXR5ct6YR-a9CyPrLodWSRI1Kxi2_9aYI1ff9iLeXZGhp7ByHJuWR8gPavnUUqymmI7yF24_gqUiMwOVw-vG4XLYm4SPjCo0uaHa3RL_lsk6E8-ndj4caXttKIhVvDgvfFxV6eG2nWE43Da_3M6dzOHsWfw-q_lt_fhiQEiCZ75vnxyqg"/>
+</div>
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm text-on-surface uppercase tracking-tight leading-none">
+            PUNCH TRACKER
+          </span>
+<span class="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mt-0.5">
+            KALORII•AI v2.4
+          </span>
+</div>
+</div>
+<!-- Trailing Action Streak Badge -->
+<div class="bg-primary-container text-on-primary-container border-[2.5px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl px-2.5 py-1 flex items-center gap-1 tactile-click cursor-pointer">
+<span class="material-symbols-outlined text-base leading-none text-on-surface" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="text-label-md font-label-md tracking-wider">
+          7 DAYS STREAK
+        </span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="px-margin-mobile pt-space-md flex flex-col gap-space-lg">
+<!-- User Welcome & Energy Tagline -->
+<section class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface uppercase tracking-tight flex items-center gap-1.5">
+            ХЕЙ, АЛЕКСАНДР! 
+            <span class="inline-block animate-pulse text-2xl">⚡</span>
+</h1>
+<div class="bg-secondary-container text-on-secondary-fixed border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-lg px-2 py-0.5 transform rotate-1">
+<span class="text-label-sticker font-label-sticker uppercase">В УДАРЕ</span>
+</div>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant font-bold">
+          Сегодня отличный день, чтобы зарядить батарею на 100%!
+        </p>
+</section>
+<!-- 7-Day Interactive Week Selector -->
+<section class="w-full">
+<div class="flex items-center justify-between gap-1 custom-scroll overflow-x-auto pb-1">
+<!-- Mon 18 -->
+<div class="flex-1 min-w-[44px] bg-surface-container-lowest border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex flex-col items-center justify-center tactile-click cursor-pointer">
+<span class="text-[10px] font-extrabold text-on-surface-variant">ПН</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">18</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container border border-on-surface mt-1"></span>
+</div>
+<!-- Tue 19 -->
+<div class="flex-1 min-w-[44px] bg-surface-container-lowest border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex flex-col items-center justify-center tactile-click cursor-pointer">
+<span class="text-[10px] font-extrabold text-on-surface-variant">ВТ</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">19</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container border border-on-surface mt-1"></span>
+</div>
+<!-- Wed 20 -->
+<div class="flex-1 min-w-[44px] bg-surface-container-lowest border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex flex-col items-center justify-center tactile-click cursor-pointer">
+<span class="text-[10px] font-extrabold text-on-surface-variant">СР</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">20</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container border border-on-surface mt-1"></span>
+</div>
+<!-- Thu 21 (TODAY - ACTIVE) -->
+<div class="flex-1 min-w-[48px] bg-primary-fixed border-[2.5px] border-on-surface shadow-[3px_3px_0px_#000000] rounded-xl py-2.5 flex flex-col items-center justify-center transform -translate-y-1 relative ring-1 ring-black">
+<span class="text-[10px] font-black text-on-surface tracking-wider">ЧТ</span>
+<span class="text-headline-sm font-headline-sm text-on-surface font-black">21</span>
+<span class="w-2 h-2 rounded-full bg-on-surface mt-1"></span>
+<div class="absolute -top-2 bg-on-surface text-surface-container-lowest text-[8px] font-black px-1 rounded-sm tracking-tighter">
+              СЕГОДНЯ
+            </div>
+</div>
+<!-- Fri 22 -->
+<div class="flex-1 min-w-[44px] bg-surface-container-lowest border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex flex-col items-center justify-center tactile-click cursor-pointer">
+<span class="text-[10px] font-extrabold text-on-surface-variant">ПТ</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">22</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant mt-1"></span>
+</div>
+<!-- Sat 23 -->
+<div class="flex-1 min-w-[44px] bg-surface-container-lowest border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex flex-col items-center justify-center tactile-click cursor-pointer opacity-80">
+<span class="text-[10px] font-extrabold text-on-surface-variant">СБ</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">23</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant mt-1"></span>
+</div>
+<!-- Sun 24 -->
+<div class="flex-1 min-w-[44px] bg-surface-container-lowest border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex flex-col items-center justify-center tactile-click cursor-pointer opacity-80">
+<span class="text-[10px] font-extrabold text-on-surface-variant">ВС</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">24</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant mt-1"></span>
+</div>
+</div>
+</section>
+<!-- Energy Battery & Calorie Hero Card -->
+<section class="bg-[#FDE047] border-[3px] border-on-surface shadow-[5px_5px_0px_#000000] rounded-2xl p-5 relative overflow-hidden flex flex-col gap-4">
+<!-- Comic Pop Floating Badge -->
+<div class="absolute -right-2 top-3 bg-secondary-container border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-md px-2.5 py-1 transform rotate-3 z-10">
+<span class="text-label-sticker font-label-sticker uppercase text-on-secondary-container tracking-wider">
+            БОДРЫЙ ДЕНЬ 🔥
+          </span>
+</div>
+<!-- Top Indicator Header -->
+<div class="flex items-center gap-2">
+<span class="bg-on-surface text-surface-container-lowest text-label-sticker font-label-sticker uppercase px-2 py-1 rounded border border-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] leading-none text-[#FDE047]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+            ЭНЕРГИЯ ДНЯ
+          </span>
+<span class="text-body-sm font-body-sm font-bold text-on-surface tracking-tight">
+            из нормы 2 100 ккал
+          </span>
+</div>
+<!-- Huge typography readout -->
+<div class="flex flex-col -my-1">
+<div class="text-[11px] font-extrabold tracking-widest text-on-surface/80 uppercase">
+            ОСТАТОК КВОТЫ
+          </div>
+<div class="flex items-baseline gap-2">
+<h2 class="text-display-hero-mobile font-display-hero-mobile text-on-surface leading-none tracking-tight">
+              650
+            </h2>
+<span class="text-headline-md font-headline-md text-on-surface uppercase font-black">
+              ККАЛ
+            </span>
+</div>
+</div>
+<!-- Energy Battery Thick Bar -->
+<div class="flex flex-col gap-1.5">
+<div class="w-full h-8 bg-surface-container-lowest border-[2.5px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-lg p-0.5 flex relative overflow-hidden">
+<div class="h-full candy-stripes border-r-[2.5px] border-on-surface rounded-sm transition-all duration-500 flex items-center justify-end pr-2" style="width: 69%;">
+<span class="bg-on-surface text-surface-bright text-[9px] font-black uppercase px-1.5 py-0.5 rounded shadow-[1px_1px_0px_#000000]">
+                69%
+              </span>
+</div>
+</div>
+<div class="flex justify-between items-center text-[11px] font-black text-on-surface uppercase">
+<span class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary border border-on-surface"></span>
+              1 450 ККАЛ СЪЕДЕНО
+            </span>
+<span class="text-on-surface/70">
+              ЦЕЛЬ: 2 100
+            </span>
+</div>
+</div>
+<!-- 3 High-Contrast Chunky Macro Blocks -->
+<div class="grid grid-cols-3 gap-2 pt-1">
+<!-- Protein Block -->
+<div class="bg-[#FB7185] border-[2.5px] border-on-surface shadow-[3px_3px_0px_#000000] rounded-xl p-2.5 flex flex-col justify-between tactile-click">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-black text-on-surface uppercase tracking-tight">БЕЛКИ</span>
+<span class="text-[9px] font-extrabold bg-surface-container-lowest px-1 rounded border border-on-surface">78%</span>
+</div>
+<div class="text-headline-sm font-headline-sm text-on-surface leading-tight mb-1">
+              110 <span class="text-[11px] font-bold">/ 140Г</span>
+</div>
+<div class="w-full h-2 bg-surface-container-lowest border-[1.5px] border-on-surface rounded-full overflow-hidden">
+<div class="h-full bg-on-surface rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+<!-- Fat Block -->
+<div class="bg-[#FB923C] border-[2.5px] border-on-surface shadow-[3px_3px_0px_#000000] rounded-xl p-2.5 flex flex-col justify-between tactile-click">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-black text-on-surface uppercase tracking-tight">ЖИРЫ</span>
+<span class="text-[9px] font-extrabold bg-surface-container-lowest px-1 rounded border border-on-surface">69%</span>
+</div>
+<div class="text-headline-sm font-headline-sm text-on-surface leading-tight mb-1">
+              45 <span class="text-[11px] font-bold">/ 65Г</span>
+</div>
+<div class="w-full h-2 bg-surface-container-lowest border-[1.5px] border-on-surface rounded-full overflow-hidden">
+<div class="h-full bg-on-surface rounded-full" style="width: 69%;"></div>
+</div>
+</div>
+<!-- Carbs Block -->
+<div class="bg-[#38BDF8] border-[2.5px] border-on-surface shadow-[3px_3px_0px_#000000] rounded-xl p-2.5 flex flex-col justify-between tactile-click">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-black text-on-surface uppercase tracking-tight">УГЛЕВ.</span>
+<span class="text-[9px] font-extrabold bg-surface-container-lowest px-1 rounded border border-on-surface">75%</span>
+</div>
+<div class="text-headline-sm font-headline-sm text-on-surface leading-tight mb-1">
+              165 <span class="text-[11px] font-bold">/ 220Г</span>
+</div>
+<div class="w-full h-2 bg-surface-container-lowest border-[1.5px] border-on-surface rounded-full overflow-hidden">
+<div class="h-full bg-on-surface rounded-full" style="width: 75%;"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tactile Water & Activity Dual Grid -->
+<section class="grid grid-cols-2 gap-space-md">
+<!-- Water Card -->
+<div class="bg-[#BAE6FD] border-[2.5px] border-on-surface shadow-[4px_4px_0px_#000000] rounded-2xl p-3.5 flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="bg-surface-container-lowest text-on-surface text-[10px] font-black px-2 py-0.5 rounded border-[2px] border-on-surface uppercase tracking-wider">
+              ВОДА
+            </span>
+<span class="material-symbols-outlined text-tertiary text-xl leading-none" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+<div class="my-3">
+<div class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface leading-none">
+              1.8 <span class="text-headline-sm font-headline-sm">/ 2.5 Л</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-lowest border-[2px] border-on-surface rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 72%;"></div>
+</div>
+</div>
+<button class="w-full bg-surface-container-lowest text-on-surface border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-2 flex items-center justify-center gap-1 tactile-click font-label-lg font-label-lg uppercase">
+<span class="material-symbols-outlined text-base">add</span>
+            + 250 МЛ
+          </button>
+</div>
+<!-- Activity / Steps Card -->
+<div class="bg-[#BEF264] border-[2.5px] border-on-surface shadow-[4px_4px_0px_#000000] rounded-2xl p-3.5 flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="bg-surface-container-lowest text-on-surface text-[10px] font-black px-2 py-0.5 rounded border-[2px] border-on-surface uppercase tracking-wider">
+              ШАГИ
+            </span>
+<span class="material-symbols-outlined text-on-surface text-xl leading-none">directions_run</span>
+</div>
+<div class="my-3">
+<div class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface leading-none">
+              8 450
+            </div>
+<div class="text-[10px] font-black text-on-surface/80 uppercase mt-0.5">
+              ЦЕЛЬ: 10 000 ШАГОВ
+            </div>
+<div class="w-full h-2.5 bg-surface-container-lowest border-[2px] border-on-surface rounded-full mt-1.5 overflow-hidden">
+<div class="h-full bg-on-surface rounded-full" style="width: 84%;"></div>
+</div>
+</div>
+<div class="w-full bg-surface-container-lowest text-on-surface border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl py-1.5 flex items-center justify-center gap-1 font-label-md font-label-md">
+<span class="material-symbols-outlined text-secondary-container text-sm leading-none" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span>🔥 420 ККАЛ</span>
+</div>
+</div>
+</section>
+<!-- Chunky Food Feed Section -->
+<section class="flex flex-col gap-space-md">
+<!-- Section Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="text-headline-md font-headline-md text-on-surface uppercase tracking-tight flex items-center gap-1">
+<span class="material-symbols-outlined text-xl">restaurant</span>
+              ПРИЁМЫ ПИЩИ
+            </span>
+<span class="bg-[#FDE047] text-on-surface text-[10px] font-black px-2 py-0.5 rounded-full border-[2px] border-on-surface shadow-[1px_1px_0px_#000000]">
+              3 ИЗ 4
+            </span>
+</div>
+<button class="text-label-md font-label-md text-primary font-black uppercase underline tactile-click">
+            ИСТОРИЯ
+          </button>
+</div>
+<!-- Meal 1: Breakfast -->
+<div class="bg-surface-container-lowest border-[2.5px] border-on-surface shadow-[3px_3px_0px_#000000] rounded-2xl p-4 flex flex-col gap-3">
+<div class="flex justify-between items-center border-b-[2px] border-surface-container-high pb-2">
+<div class="flex items-center gap-2">
+<span class="text-2xl leading-none">🍳</span>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface uppercase leading-none">
+                  ЗАВТРАК
+                </h3>
+<span class="text-[11px] font-bold text-on-surface-variant">08:30 • 2 блюда</span>
+</div>
+</div>
+<div class="bg-[#FDE047] text-on-surface border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-lg px-2.5 py-1">
+<span class="text-label-lg font-label-lg font-black uppercase">540 ККАЛ</span>
+</div>
+</div>
+<!-- Dishes List -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center bg-surface-container-low p-2 rounded-xl border-[1.5px] border-on-surface/30">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-body-md font-body-md font-bold text-on-surface">Овсяная каша с черникой</span>
+</div>
+<span class="text-[12px] font-black text-on-surface bg-surface-container-lowest px-1.5 py-0.5 rounded border border-on-surface">380 ккал</span>
+</div>
+<div class="flex justify-between items-center bg-surface-container-low p-2 rounded-xl border-[1.5px] border-on-surface/30">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary-container"></span>
+<span class="text-body-md font-body-md font-bold text-on-surface">Кофе с молоком без сахара</span>
+</div>
+<span class="text-[12px] font-black text-on-surface bg-surface-container-lowest px-1.5 py-0.5 rounded border border-on-surface">160 ккал</span>
+</div>
+</div>
+</div>
+<!-- Meal 2: Lunch -->
+<div class="bg-surface-container-lowest border-[2.5px] border-on-surface shadow-[3px_3px_0px_#000000] rounded-2xl p-4 flex flex-col gap-3">
+<div class="flex justify-between items-center border-b-[2px] border-surface-container-high pb-2">
+<div class="flex items-center gap-2">
+<span class="text-2xl leading-none">🥗</span>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface uppercase leading-none">
+                  ОБЕД
+                </h3>
+<span class="text-[11px] font-bold text-on-surface-variant">13:45 • 2 блюда</span>
+</div>
+</div>
+<div class="bg-primary-container text-on-surface border-[2px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-lg px-2.5 py-1">
+<span class="text-label-lg font-label-lg font-black uppercase">720 ККАЛ</span>
+</div>
+</div>
+<!-- Dishes List -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center bg-surface-container-low p-2 rounded-xl border-[1.5px] border-on-surface/30">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-body-md font-body-md font-bold text-on-surface">Стейк индейки гриль с овощами</span>
+</div>
+<span class="text-[12px] font-black text-on-surface bg-surface-container-lowest px-1.5 py-0.5 rounded border border-on-surface">490 ккал</span>
+</div>
+<div class="flex justify-between items-center bg-surface-container-low p-2 rounded-xl border-[1.5px] border-on-surface/30">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-body-md font-body-md font-bold text-on-surface">Гречневая каша</span>
+</div>
+<span class="text-[12px] font-black text-on-surface bg-surface-container-lowest px-1.5 py-0.5 rounded border border-on-surface">230 ккал</span>
+</div>
+</div>
+</div>
+<!-- Add Meal 3: Tactile Dashed Action Button -->
+<button class="w-full border-[2.5px] border-dashed border-on-surface bg-surface-bright hover:bg-surface-container-low rounded-2xl py-4 flex items-center justify-center gap-2 shadow-[3px_3px_0px_#000000] tactile-click cursor-pointer">
+<div class="w-7 h-7 rounded-full bg-primary-container border-[2px] border-on-surface flex items-center justify-center shadow-[1px_1px_0px_#000000]">
+<span class="material-symbols-outlined text-lg font-black">add</span>
+</div>
+<span class="text-headline-sm font-headline-sm text-on-surface uppercase tracking-tight">
+            ЗАПИСАТЬ УЖИН
+          </span>
+</button>
+</section>
+<!-- Motivation Arcade Banner -->
+<section class="bg-surface-container border-[2.5px] border-on-surface shadow-[4px_4px_0px_#000000] rounded-2xl p-4 flex items-center gap-3">
+<div class="text-3xl">🥊</div>
+<div class="flex flex-col">
+<div class="text-label-sticker font-label-sticker text-primary font-black uppercase">
+            СОВЕТ ТРЕНЕРА
+          </div>
+<p class="text-body-sm font-body-sm font-bold text-on-surface mt-0.5">
+            У тебя в запасе ещё 30г белка. Идеально закрыть творогом или казеиновым протеином на ночь!
+          </p>
+</div>
+</section>
+</main>
+<!-- Retro-Pop Bottom Navigation Dock (Implementing Shared Component BottomNavBar specifications) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter-mobile py-space-sm max-w-md mx-auto bg-surface-container-lowest border-t-[3px] border-on-surface shadow-[0px_-4px_0px_#000000]">
+<!-- 1: FEED (Active navigation tab mapped per Primary Intent) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container border-[2.5px] border-on-surface shadow-[2px_2px_0px_#000000] rounded-xl px-3 py-1 tactile-click" href="#">
+<span class="material-symbols-outlined text-xl leading-none text-on-surface" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="text-label-md font-label-md uppercase mt-0.5 font-black text-on-surface">FEED</span>
+</a>
+<!-- 2: MACROS (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface px-2 py-1 tactile-click hover:-translate-y-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-xl leading-none">nutrition</span>
+<span class="text-label-md font-label-md uppercase mt-0.5 font-bold">MACROS</span>
+</a>
+<!-- 3: CENTRAL SCANNER PUNCH BUTTON (Arcade AI Scanner CTA) -->
+<div class="relative -top-5">
+<button class="w-14 h-14 rounded-2xl bg-[#FDE047] border-[3px] border-on-surface shadow-[4px_4px_0px_#000000] flex flex-col items-center justify-center text-on-surface tactile-click cursor-pointer">
+<span class="material-symbols-outlined text-2xl font-black" style="font-variation-settings: 'FILL' 1;">center_focus_strong</span>
+<span class="text-[8px] font-black uppercase tracking-tighter mt-0.5">СКАНЕР</span>
+</button>
+</div>
+<!-- 4: STATS (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface px-2 py-1 tactile-click hover:-translate-y-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-xl leading-none">bar_chart</span>
+<span class="text-label-md font-label-md uppercase mt-0.5 font-bold">STATS</span>
+</a>
+<!-- 5: PROFILE (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface px-2 py-1 tactile-click hover:-translate-y-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-xl leading-none">person</span>
+<span class="text-label-md font-label-md uppercase mt-0.5 font-bold">ПРОФИЛЬ</span>
+</a>
+</nav>
+</div>
+<!-- Inline Vanilla Interaction Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Tactile sound click simulator / tactile feedback
+      const buttons = document.querySelectorAll('.tactile-click');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(25);
+          }
+        });
+      });
+    });
+  </script>
+</body></html>

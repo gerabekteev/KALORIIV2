@@ -127,6 +127,8 @@ async def create_recipe(
         total_weight_grams=total_weight,
         is_favorite=False,
     )
+    if recipe_in.ingredients:
+        recipe.ingredients = [i.model_dump() for i in recipe_in.ingredients]
     recipe.items = items
     db.add(recipe)
     await db.commit()
@@ -195,6 +197,8 @@ async def update_recipe(
         recipe.description = recipe_in.description
     if recipe_in.is_favorite is not None:
         recipe.is_favorite = recipe_in.is_favorite
+    if recipe_in.ingredients is not None:
+        recipe.ingredients = [i.model_dump() for i in recipe_in.ingredients]
 
     if recipe_in.items is not None:
         # Recompute totals and replace items

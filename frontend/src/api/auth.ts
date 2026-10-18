@@ -12,6 +12,11 @@ export interface RegisterPayload {
   name: string
 }
 
+export interface PasswordChangePayload {
+  current_password: string
+  new_password: string
+}
+
 export const authApi = {
   async login(payload: LoginPayload): Promise<AuthResponse> {
     return apiClient<AuthResponse>('/auth/login', {
@@ -38,6 +43,19 @@ export const authApi = {
   async getMe(): Promise<User> {
     return apiClient<User>('/auth/me', {
       method: 'GET',
+    })
+  },
+
+  async logout(): Promise<void> {
+    await apiClient<{ message: string }>('/auth/logout', {
+      method: 'POST',
+    })
+  },
+
+  async changePassword(payload: PasswordChangePayload): Promise<AuthResponse> {
+    return apiClient<AuthResponse>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     })
   },
 }

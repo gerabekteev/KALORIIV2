@@ -120,7 +120,7 @@ export const MealPlanPage: React.FC = () => {
           setTargetCalories(String(remCal >= 200 ? remCal : goalCal))
           setTargetProtein(String(remCal >= 200 ? remProt : goalProt))
           setTargetFat(String(remCal >= 200 ? remFat : goalFat))
-          setTargetCarbs(String(remCarbs >= 200 ? remCarbs : goalCarbs))
+          setTargetCarbs(String(remCal >= 200 ? remCarbs : goalCarbs))
         }
       } catch {
         // Fallback на дневные нормы
@@ -160,18 +160,35 @@ export const MealPlanPage: React.FC = () => {
   // Elastic Weekly Calorie Bank balancer (GC-02)
   const handleBalanceWeek = async () => {
     try {
-      const stats = await statsApi.getStats('week')
-      const trackedDays = stats?.tracked_days || (stats?.days?.length || 0)
-      const totalCaloriesSoFar = stats?.total_calories || 0
-      const daysInWeek = 7
-      const remainingDays = Math.max(1, daysInWeek - trackedDays)
-      const weeklyBudget = goalCal * 7
-      const remainingBudget = Math.max(300, weeklyBudget - totalCaloriesSoFar)
-      const balancedDaily = Math.round(remainingBudget / remainingDays)
+      const [y, m, d] = planDate.split('-').map(Number)
+      const dateObj = new Date(y, m - 1, d)
+      const dayOfWeek = dateObj.getDay() // 0 = Sun, 1 = Mon .. 6 = Sat
+      const diffToMonday = dateObj.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
+      const monday = new Date(y, m - 1, diffToMonday)
+      const fmt = (dt: Date) =>
+        `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+      const weekDates = Array.from({ length: 7 }, (_, i) =>
+        fmt(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i))
+      )
+      const stats = await statsApi.getStats('custom', weekDates[0], weekDates[6])
+      const trackedPriorDays = (stats.daily_stats || []).filter(
+        (item) => item.date < planDate && item.calories > 0
+      )
+      const netBankPrior = trackedPriorDays.reduce(
+        (acc, item) => acc + (goalCal - item.calories),
+        0
+      )
+      const dayIndex = Math.max(0, weekDates.indexOf(planDate)) // 0..6
+      const remainingDaysInWeek = Math.max(1, 7 - dayIndex)
+      const balancedDaily = Math.max(
+        1000,
+        Math.min(4500, Math.round(goalCal + netBankPrior / remainingDaysInWeek))
+      )
+      const remToday = Math.max(200, balancedDaily - eatenStats.calories)
 
-      setTargetCalories(String(balancedDaily))
+      setTargetCalories(String(remToday))
       addToast(
-        `Неделя сбалансирована: ${balancedDaily} ккал/день на оставшиеся ${remainingDays} дн.`,
+        `С учётом банка недели норма на день: ${balancedDaily} ккал (остаток: ${remToday} ккал)`,
         'success',
         3500
       )
@@ -251,7 +268,17 @@ export const MealPlanPage: React.FC = () => {
     })
   }
 
-  const handleAddMealToDiary = async (item: PlannedMealItem) => {
+  const resolvePlannedMealTime = (label: string, index: number): string => {
+    const low = (label || '').toLowerCase()
+    if (low.includes('завтрак') || low.includes('приём пищи 1')) return '09:00'
+    if (low.includes('обед') || low.includes('приём пищи 2')) return '13:30'
+    if (low.includes('перекус')) return '17:00'
+    if (low.includes('ужин') || low.includes('приём пищи 3')) return '19:30'
+    const fallbackTimes = ['09:00', '13:30', '17:00', '19:30', '21:00', '22:00']
+    return fallbackTimes[index % fallbackTimes.length]
+  }
+
+  const handleAddMealToDiary = async (item: PlannedMealItem, index: number = 0) => {
     setAddingMealId(item.id)
     try {
       await addMeal({
@@ -264,7 +291,7 @@ export const MealPlanPage: React.FC = () => {
         ingredients: item.ingredients || [],
         user_comment: `Из AI-плана питания (${item.meal_label})`,
         meal_date: planDate,
-        meal_time: new Date().toTimeString().slice(0, 5),
+        meal_time: resolvePlannedMealTime(item.meal_label, index),
         is_manually_edited: false,
       })
       await markMealAddedToDiary(planDate, item.id)
@@ -529,7 +556,7 @@ export const MealPlanPage: React.FC = () => {
           </Card>
 
           {/* Planned Meal Cards */}
-          {currentPlan.meals.map((meal) => (
+          {currentPlan.meals.map((meal, idx) => (
             <Card
               key={meal.id}
               variant="default"
@@ -622,7 +649,7 @@ export const MealPlanPage: React.FC = () => {
                   size="sm"
                   variant={meal.added_to_diary ? 'secondary' : 'primary'}
                   isLoading={addingMealId === meal.id}
-                  onClick={() => handleAddMealToDiary(meal)}
+                  onClick={() => handleAddMealToDiary(meal, idx)}
                   leftIcon={
                     meal.added_to_diary ? (
                       <Check className="w-3.5 h-3.5 text-emerald-400" />

@@ -7,6 +7,7 @@ import {
   Trash2,
   ChevronDown,
   Check,
+  Edit2,
 } from 'lucide-react'
 import { Recipe } from '../../types'
 import { recipesApi } from '../../api/recipes'
@@ -48,6 +49,7 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
   const [expandedRecipeId, setExpandedRecipeId] = useState<number | null>(null)
   const [portionWeight, setPortionWeight] = useState<string>('100')
   const [recipeToDelete, setRecipeToDelete] = useState<{ id: number; name: string } | null>(null)
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
 
   const fetchRecipes = React.useCallback(async () => {
     setIsLoading(true)
@@ -97,8 +99,15 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
     }
   }
 
-  const handleRecipeCreated = (newRecipe: Recipe) => {
-    setRecipes((prev) => [newRecipe, ...prev])
+  const handleRecipeCreated = (recipe: Recipe) => {
+    setRecipes((prev) => {
+      const exists = prev.some((r) => r.id === recipe.id)
+      if (exists) {
+        return prev.map((r) => (r.id === recipe.id ? recipe : r))
+      }
+      return [recipe, ...prev]
+    })
+    setEditingRecipe(null)
   }
 
   // Filtered recipes
@@ -113,18 +122,30 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
   }, [recipes, searchQuery, filterFavorite])
 
   const buildIngredients = (recipe: Recipe, ratio: number) => {
-    if (!recipe.items || recipe.items.length === 0) return undefined
-    return recipe.items.map((it) => {
-      const ingRatio = (it.weight_grams * ratio) / 100.0
-      return {
-        name: it.product?.name || 'Ингредиент',
-        weight_grams: Math.round(it.weight_grams * ratio),
-        calories: Math.round((it.product?.calories_per_100g || 0) * ingRatio),
-        protein: Math.round((it.product?.protein_per_100g || 0) * ingRatio * 10) / 10,
-        fat: Math.round((it.product?.fat_per_100g || 0) * ingRatio * 10) / 10,
-        carbs: Math.round((it.product?.carbs_per_100g || 0) * ingRatio * 10) / 10,
-      }
-    })
+    if (recipe.items && recipe.items.length > 0) {
+      return recipe.items.map((it) => {
+        const ingRatio = (it.weight_grams * ratio) / 100.0
+        return {
+          name: it.product?.name || 'Ингредиент',
+          weight_grams: Math.round(it.weight_grams * ratio),
+          calories: Math.round((it.product?.calories_per_100g || 0) * ingRatio),
+          protein: Math.round((it.product?.protein_per_100g || 0) * ingRatio * 10) / 10,
+          fat: Math.round((it.product?.fat_per_100g || 0) * ingRatio * 10) / 10,
+          carbs: Math.round((it.product?.carbs_per_100g || 0) * ingRatio * 10) / 10,
+        }
+      })
+    }
+    if (recipe.ingredients && recipe.ingredients.length > 0) {
+      return recipe.ingredients.map((ing) => ({
+        name: ing.name,
+        weight_grams: Math.round(ing.weight_grams * ratio),
+        calories: Math.round(ing.calories * ratio),
+        protein: Math.round(ing.protein * ratio * 10) / 10,
+        fat: Math.round(ing.fat * ratio * 10) / 10,
+        carbs: Math.round(ing.carbs * ratio * 10) / 10,
+      }))
+    }
+    return undefined
   }
 
   const handleQuickLogFullPortion = (recipe: Recipe) => {
@@ -343,6 +364,19 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
+                          setEditingRecipe(recipe)
+                          setIsCreateModalOpen(true)
+                        }}
+                        className="text-neutral-500 hover:text-white p-1 rounded transition-colors cursor-pointer"
+                        title="Редактировать рецепт"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setRecipeToDelete({ id: recipe.id, name: recipe.name })
                         }}
                         className="text-neutral-500 hover:text-red-400 p-1 rounded transition-colors cursor-pointer"
@@ -424,11 +458,15 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
         </div>
       )}
 
-      {/* Modal for creating a new recipe */}
+      {/* Modal for creating / editing a recipe */}
       <CreateRecipeModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false)
+          setEditingRecipe(null)
+        }}
         onRecipeCreated={handleRecipeCreated}
+        editingRecipe={editingRecipe}
       />
 
       {/* Confirmation modal for recipe deletion */}
