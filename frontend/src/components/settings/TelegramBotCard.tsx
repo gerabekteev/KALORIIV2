@@ -6,6 +6,7 @@ import { ConfirmModal } from '../ui/ConfirmModal'
 import { telegramApi } from '../../api/telegram'
 import { TelegramStatusResponse } from '../../types'
 import { useUIStore } from '../../store/uiStore'
+import { openExternalUrl } from '../../utils/platform'
 
 export interface TelegramBotCardProps {
   embedded?: boolean
@@ -133,15 +134,14 @@ export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = fal
               </div>
 
               {status.deep_link_url && (
-                <a
-                  href={status.deep_link_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition-colors"
+                <button
+                  type="button"
+                  onClick={() => openExternalUrl(status.deep_link_url!)}
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Открыть бота в Telegram и привязать в 1 клик</span>
-                </a>
+                </button>
               )}
             </div>
           ) : null}

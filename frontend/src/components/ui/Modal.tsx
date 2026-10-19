@@ -2,6 +2,38 @@ import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
 
 const modalStack: Array<() => void> = []
+const customBackHandlers: Array<() => boolean> = []
+
+/**
+ * Регистрирует приоритетный обработчик кнопки «Назад» (например, для возврата из подрежима в хаб AddMealModal или закрытия лайтбокса).
+ */
+export function registerBackHandler(handler: () => boolean): () => void {
+  customBackHandlers.push(handler)
+  return () => {
+    const idx = customBackHandlers.lastIndexOf(handler)
+    if (idx !== -1) customBackHandlers.splice(idx, 1)
+  }
+}
+
+/**
+ * Закрывает верхний активный слой (подрежим или модальное окно).
+ * Возвращает true, если что-то было закрыто, иначе false.
+ */
+export function closeTopModal(): boolean {
+  for (let i = customBackHandlers.length - 1; i >= 0; i--) {
+    if (customBackHandlers[i]()) {
+      return true
+    }
+  }
+  if (modalStack.length > 0) {
+    const topClose = modalStack[modalStack.length - 1]
+    if (topClose) {
+      topClose()
+      return true
+    }
+  }
+  return false
+}
 
 export interface ModalProps {
   isOpen: boolean

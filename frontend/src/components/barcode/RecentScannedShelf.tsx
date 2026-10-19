@@ -10,6 +10,7 @@ import {
 import { RecentScannedProductItem, BarcodeProductResult } from '../../types'
 import { barcodeApi } from '../../api/barcode'
 import { pluralizeRu } from '../../utils/pluralize'
+import { resolveMediaUrl } from '../../utils/platform'
 
 interface RecentScannedShelfProps {
   onSelectProduct: (product: BarcodeProductResult) => void
@@ -167,7 +168,7 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
               <div className="w-16 h-16 rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden flex items-center justify-center mb-2 shrink-0">
                 {item.image_url ? (
                   <img
-                    src={item.image_url}
+                    src={resolveMediaUrl(item.image_url)}
                     alt={item.name}
                     className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform"
                     onError={(e) => {

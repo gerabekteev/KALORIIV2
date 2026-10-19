@@ -24,6 +24,7 @@ import { useUIStore } from '../../store/uiStore'
 import { barcodeApi } from '../../api/barcode'
 import { BarcodeProductResult } from '../../types'
 import { decodeBarcodeFromImageFile } from '../../utils/barcodeDecoder'
+import { isNativeApp, pickImageNative } from '../../utils/platform'
 
 interface BarcodeScannerViewProps {
   onProductFound: (product: BarcodeProductResult) => void
@@ -549,6 +550,19 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
     return () => window.removeEventListener('paste', handlePaste)
   }, [addToast])
 
+  const handleOpenGalleryUpload = async () => {
+    if (isNativeApp()) {
+      try {
+        const file = await pickImageNative('gallery')
+        if (file) handleProcessImageFile(file)
+      } catch {
+        addToast('Не удалось открыть галерею', 'error')
+      }
+      return
+    }
+    fileInputRef.current?.click()
+  }
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = manualCode.trim()
@@ -834,7 +848,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                   handleProcessImageFile(file)
                 }
               }}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleOpenGalleryUpload}
               className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center transition-all flex flex-col items-center justify-center gap-3 cursor-pointer ${
                 isDragging
                   ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]'

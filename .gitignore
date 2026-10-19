@@ -103,3 +103,21 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# ==========================================
+# Android & Capacitor build artifacts
+# ==========================================
+frontend/android/.gradle/
+frontend/android/.idea/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/capacitor-cordova-android-plugins/
+frontend/android/local.properties
+frontend/android/app/src/main/assets/public/
+frontend/android/gradle/wrapper/*.zip
+*.jks
+*.keystore
+kalorii-ai-debug.apk
+/kalorii-ai.apk
+!backend/static/kalorii-ai.apk
+

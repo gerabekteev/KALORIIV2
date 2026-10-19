@@ -96,6 +96,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('kalorii_refresh_token')
     localStorage.removeItem('kalorii_ai_settings')
     localStorage.removeItem('kalorii_meal_plans_cache')
+    localStorage.removeItem('kalorii_meals_cache_v1')
+    localStorage.removeItem('kalorii_offline_meals_queue')
     set({
       user: null,
       token: null,

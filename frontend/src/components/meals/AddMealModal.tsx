@@ -16,7 +16,7 @@ import {
   Mic,
   Square,
 } from 'lucide-react'
-import { Modal } from '../ui/Modal'
+import { Modal, registerBackHandler } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { ProductSearch } from '../products/ProductSearch'
@@ -29,6 +29,7 @@ import { useMealsStore } from '../../store/mealsStore'
 import { aiApi } from '../../api/ai'
 import { barcodeApi } from '../../api/barcode'
 import { BarcodeProductResult } from '../../types'
+import { isNativeApp, pickImageNative } from '../../utils/platform'
 
 type ModalMode = 'hub' | 'barcode' | 'ai_photo' | 'text_ai' | 'voice_ai' | 'search' | 'recipes' | 'manual'
 
@@ -108,6 +109,14 @@ export const AddMealModal: React.FC = () => {
       setIsRecording(false)
     }
   }, [isAddMealOpen, addMealPresetTime])
+
+  useEffect(() => {
+    if (!isAddMealOpen || mode === 'hub' || isPortionModalOpen) return
+    return registerBackHandler(() => {
+      setMode('hub')
+      return true
+    })
+  }, [isAddMealOpen, mode, isPortionModalOpen])
 
   useEffect(() => {
     let interval: any
@@ -378,6 +387,32 @@ export const AddMealModal: React.FC = () => {
     }
   }
 
+  const handleOpenCamera = async () => {
+    if (isNativeApp()) {
+      try {
+        const file = await pickImageNative('camera')
+        if (file) setSelectedPhoto(file)
+      } catch {
+        addToast('Разрешите доступ к камере в настройках приложения', 'error')
+      }
+      return
+    }
+    cameraInputRef.current?.click()
+  }
+
+  const handleOpenGallery = async () => {
+    if (isNativeApp()) {
+      try {
+        const file = await pickImageNative('gallery')
+        if (file) setSelectedPhoto(file)
+      } catch {
+        addToast('Не удалось открыть галерею', 'error')
+      }
+      return
+    }
+    galleryInputRef.current?.click()
+  }
+
   // Titles for sub-views
   const modeTitles: Record<ModalMode, string> = {
     hub: 'Добавить еду',
@@ -611,7 +646,7 @@ export const AddMealModal: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
+                    onClick={handleOpenCamera}
                     className="flex flex-col items-center justify-center p-5 rounded-2xl bg-[#202025] hover:bg-[#27272d] border border-neutral-800 transition-all cursor-pointer group active:scale-[0.98]"
                   >
                     <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform mb-2">
@@ -625,7 +660,7 @@ export const AddMealModal: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => galleryInputRef.current?.click()}
+                    onClick={handleOpenGallery}
                     className="flex flex-col items-center justify-center p-5 rounded-2xl bg-[#202025] hover:bg-[#27272d] border border-neutral-800 transition-all cursor-pointer group active:scale-[0.98]"
                   >
                     <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform mb-2">
@@ -642,7 +677,7 @@ export const AddMealModal: React.FC = () => {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  onClick={() => galleryInputRef.current?.click()}
+                  onClick={handleOpenGallery}
                   className={`border-2 border-dashed rounded-2xl p-4 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
                     isDragging
                       ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]'

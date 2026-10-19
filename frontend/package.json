@@ -6,11 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:sync-static": "tsc -b && vite build && rm -rf ../backend/static/assets && cp -r dist/* ../backend/static/",
+    "cap:sync": "npm run build && npx cap sync android",
+    "apk:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../../kalorii-ai-debug.apk",
+    "apk:release": "npm run cap:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../../kalorii-ai.apk && cp app/build/outputs/apk/release/app-release.apk ../../backend/static/kalorii-ai.apk",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/camera": "^8.2.6",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/status-bar": "^8.0.4",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.104.2",
     "@zxing/library": "^0.23.0",
@@ -24,6 +34,8 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

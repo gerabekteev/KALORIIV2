@@ -23,20 +23,38 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/assets/index-B0xYhNcU.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DazVQgEQ.css">
+    <script type="module" crossorigin src="/assets/index-DrYCXCE8.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-xYPRRVk-.css">
   </head>
   <body class="bg-[#0f0f0f] text-neutral-100 antialiased selection:bg-emerald-500 selection:text-white">
     <div id="root"></div>
     <script>
-      // Register service worker if supported
-      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.log('SW registration skipped or failed:', err);
+      (function () {
+        var isCapacitorNative =
+          window.Capacitor &&
+          typeof window.Capacitor.isNativePlatform === 'function' &&
+          window.Capacitor.isNativePlatform();
+
+        if (!('serviceWorker' in navigator)) return;
+
+        if (isCapacitorNative) {
+          // Внутри Android APK ассеты уже локальные — удаляем любые SW, чтобы не залипал старый кэш
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) {
+              reg.unregister();
+            });
           });
-        });
-      }
+          return;
+        }
+
+        if (window.location.protocol.startsWith('http')) {
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function (err) {
+              console.log('SW registration skipped or failed:', err);
+            });
+          });
+        }
+      })();
     </script>
   </body>
 </html>

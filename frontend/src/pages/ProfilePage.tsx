@@ -10,6 +10,7 @@ import {
   Send,
   Cpu,
   Lock,
+  Smartphone,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
@@ -21,6 +22,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { AISettingsCard } from '../components/settings/AISettingsCard'
 import { TelegramBotCard } from '../components/settings/TelegramBotCard'
+import { isNativeApp } from '../utils/platform'
 
 interface AccordionSectionProps {
   id: string
@@ -338,6 +340,29 @@ export const ProfilePage: React.FC = () => {
           <span>Выйти</span>
         </button>
       </Card>
+
+      {!isNativeApp() && (
+        <div className="bg-gradient-to-r from-emerald-500/10 via-[#18181c] to-[#18181c] border border-emerald-500/25 rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-white my-0">Приложение KaloriiAI для Android</h3>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Установите APK на телефон — мгновенный запуск, сканер и синхронизация с вашим аккаунтом
+              </p>
+            </div>
+          </div>
+          <a
+            href="/kalorii-ai.apk"
+            download="KaloriiAI.apk"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-colors"
+          >
+            Скачать APK
+          </a>
+        </div>
+      )}
 
       {/* 1. Accordion: Body Parameters */}
       <AccordionSection

@@ -17,6 +17,7 @@ import { BarcodeProductResult } from '../../types'
 import { barcodeApi } from '../../api/barcode'
 import { useMealsStore } from '../../store/mealsStore'
 import { useUIStore } from '../../store/uiStore'
+import { resolveMediaUrl } from '../../utils/platform'
 
 interface BarcodePortionModalProps {
   product: BarcodeProductResult | null
@@ -290,7 +291,7 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
             {product.image_url ? (
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-neutral-900 border border-neutral-700/80 overflow-hidden shrink-0 flex items-center justify-center">
                 <img
-                  src={product.image_url}
+                  src={resolveMediaUrl(product.image_url)}
                   alt={product.name}
                   className="w-full h-full object-contain p-1"
                   onError={(e) => {

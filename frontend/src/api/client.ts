@@ -1,4 +1,4 @@
-const API_BASE_URL = '/api'
+import { API_BASE_URL } from '../utils/platform'
 
 export class ApiError extends Error {
   status: number

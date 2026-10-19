@@ -98,23 +98,39 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://kalorii.lopni.fun",
+        "https://localhost",
+        "http://localhost",
+        "capacitor://localhost",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Any) -> List[str]:
+        origins: List[str] = []
         if isinstance(v, str):
             v_str = v.strip()
             if v_str.startswith("[") and v_str.endswith("]"):
                 import json
                 try:
-                    return json.loads(v_str)
+                    origins = json.loads(v_str)
                 except Exception:
-                    pass
-            return [i.strip() for i in v_str.split(",") if i.strip()]
+                    origins = []
+            else:
+                origins = [i.strip() for i in v_str.split(",") if i.strip()]
         elif isinstance(v, list):
-            return v
-        return []
+            origins = [str(i).strip() for i in v if str(i).strip()]
+
+        # Обязательные origin-ы для работы Android APK (Capacitor WebView) и продакшен-домена
+        required_mobile_origins = [
+            "https://kalorii.lopni.fun",
+            "https://localhost",
+            "http://localhost",
+            "capacitor://localhost",
+        ]
+        for req_origin in required_mobile_origins:
+            if req_origin not in origins:
+                origins.append(req_origin)
+        return origins
 
     # Rate Limiting
     RATE_LIMIT_AI_PER_MINUTE: int = 10

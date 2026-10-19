@@ -28,14 +28,32 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register service worker if supported
-      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.log('SW registration skipped or failed:', err);
+      (function () {
+        var isCapacitorNative =
+          window.Capacitor &&
+          typeof window.Capacitor.isNativePlatform === 'function' &&
+          window.Capacitor.isNativePlatform();
+
+        if (!('serviceWorker' in navigator)) return;
+
+        if (isCapacitorNative) {
+          // Внутри Android APK ассеты уже локальные — удаляем любые SW, чтобы не залипал старый кэш
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) {
+              reg.unregister();
+            });
           });
-        });
-      }
+          return;
+        }
+
+        if (window.location.protocol.startsWith('http')) {
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function (err) {
+              console.log('SW registration skipped or failed:', err);
+            });
+          });
+        }
+      })();
     </script>
   </body>
 </html>

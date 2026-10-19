@@ -9,6 +9,7 @@ import {
 import { mealsApi } from '../api/meals'
 import { aiApi } from '../api/ai'
 import { useUIStore } from './uiStore'
+import { API_BASE_URL } from '../utils/platform'
 
 export function getTodayDateString(): string {
   const now = new Date()
@@ -47,6 +48,58 @@ function computeUpdatedSummary(
   }
 }
 
+const MEALS_CACHE_KEY = 'kalorii_meals_cache_v1'
+const OFFLINE_QUEUE_KEY = 'kalorii_offline_meals_queue'
+
+function loadCachedDayMeals(dateStr: string): DailyMealsSummary | null {
+  try {
+    const raw = localStorage.getItem(MEALS_CACHE_KEY)
+    if (!raw) return null
+    const map = JSON.parse(raw)
+    return map?.[dateStr] || null
+  } catch {
+    return null
+  }
+}
+
+function saveCachedDayMeals(dateStr: string, summary: DailyMealsSummary): void {
+  try {
+    const raw = localStorage.getItem(MEALS_CACHE_KEY)
+    const map = raw ? JSON.parse(raw) : {}
+    map[dateStr] = summary
+    // Храним не более 14 последних дат для экономии места
+    const keys = Object.keys(map).sort()
+    while (keys.length > 14) {
+      const oldest = keys.shift()
+      if (oldest) delete map[oldest]
+    }
+    localStorage.setItem(MEALS_CACHE_KEY, JSON.stringify(map))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function getOfflineQueue(): CreateMealPayload[] {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function setOfflineQueue(queue: CreateMealPayload[]): void {
+  try {
+    if (queue.length === 0) {
+      localStorage.removeItem(OFFLINE_QUEUE_KEY)
+    } else {
+      localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue))
+    }
+  } catch {
+    // ignore
+  }
+}
+
 // In-memory timers for undo delete
 const pendingDeletes = new Map<number, ReturnType<typeof setTimeout>>()
 
@@ -55,8 +108,8 @@ export function flushOrCancelPendingDeletes(): void {
     clearTimeout(timer)
     pendingDeletes.delete(mealId)
     const token = localStorage.getItem('kalorii_token')
-    if (token) {
-      fetch(`/api/meals/${mealId}`, {
+    if (token && mealId > 0) {
+      fetch(`${API_BASE_URL}/meals/${mealId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
         keepalive: true,
@@ -112,6 +165,7 @@ interface MealsState {
   ) => void
   retryPendingMeal: (id: string) => Promise<void>
   dismissPendingMeal: (id: string) => void
+  syncOfflineMeals: () => Promise<void>
   resetState: () => void
 }
 
@@ -136,6 +190,25 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     })
   },
 
+  syncOfflineMeals: async () => {
+    const queue = getOfflineQueue()
+    const token = localStorage.getItem('kalorii_token')
+    if (!queue.length || !token) return
+
+    const remaining: CreateMealPayload[] = []
+    for (const item of queue) {
+      try {
+        await mealsApi.createMeal(item)
+      } catch {
+        remaining.push(item)
+      }
+    }
+    setOfflineQueue(remaining)
+    if (remaining.length < queue.length) {
+      await get().fetchMeals()
+    }
+  },
+
   setSelectedDate: (date: string) => {
     set({ selectedDate: date })
     get().fetchMeals(date)
@@ -153,16 +226,31 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       const rawList = Array.isArray(data) ? data : (data?.meals || [])
       const filteredList = rawList.filter((m) => !pendingDeletes.has(m.id))
       const mealList = sortMealsByTime(filteredList)
+      const summaryObj: DailyMealsSummary | null = data && !Array.isArray(data)
+        ? (filteredList.length !== rawList.length ? computeUpdatedSummary(data, mealList) : data)
+        : null
       set({
         meals: mealList,
-        dailySummary: data && !Array.isArray(data)
-          ? (filteredList.length !== rawList.length ? computeUpdatedSummary(data, mealList) : data)
-          : null,
+        dailySummary: summaryObj,
         isLoading: false,
       })
+      if (summaryObj) {
+        saveCachedDayMeals(targetDate, summaryObj)
+      }
       get().fetchPreviousDayMeals(targetDate)
     } catch (err: any) {
       if (requestId !== latestFetchRequestId) return
+      const cached = loadCachedDayMeals(targetDate)
+      if (cached && get().meals.length === 0) {
+        const cachedMeals = sortMealsByTime(cached.meals || [])
+        set({
+          meals: cachedMeals,
+          dailySummary: cached,
+          error: null,
+          isLoading: false,
+        })
+        return
+      }
       set({
         error: err.message || 'Ошибка загрузки приемов пищи',
         isLoading: false,
@@ -206,6 +294,52 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       }
       return newMeal
     } catch (err: any) {
+      const isNetworkError =
+        (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        err?.name === 'TypeError' ||
+        String(err?.message || '').toLowerCase().includes('failed to fetch') ||
+        String(err?.message || '').toLowerCase().includes('network')
+
+      if (isNetworkError) {
+        const targetDate = payload.meal_date || get().selectedDate
+        const tempId = -Date.now()
+        const offlineMeal: Meal = {
+          id: tempId,
+          user_id: 0,
+          name: payload.name,
+          calories: payload.calories,
+          protein: payload.protein,
+          fat: payload.fat,
+          carbs: payload.carbs,
+          weight_grams: payload.weight_grams,
+          meal_date: targetDate,
+          meal_time: payload.meal_time || new Date().toTimeString().slice(0, 5),
+          photo_path: null,
+          ai_raw_response: null,
+          is_manually_edited: true,
+          created_at: new Date().toISOString(),
+        }
+
+        setOfflineQueue([...getOfflineQueue(), { ...payload, meal_date: targetDate }])
+
+        if (targetDate === get().selectedDate) {
+          set((state) => {
+            const updatedMeals = sortMealsByTime([offlineMeal, ...state.meals])
+            return {
+              meals: updatedMeals,
+              dailySummary: computeUpdatedSummary(state.dailySummary, updatedMeals),
+              isLoading: false,
+              error: null,
+            }
+          })
+        } else {
+          set({ isLoading: false, error: null })
+        }
+
+        useUIStore.getState().addToast('Сохранено локально (синхронизируется при появлении сети)', 'info')
+        return offlineMeal
+      }
+
       set({
         error: err.message || 'Ошибка добавления еды',
         isLoading: false,

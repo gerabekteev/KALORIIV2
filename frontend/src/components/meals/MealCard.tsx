@@ -23,6 +23,8 @@ import { useMealsStore, getTodayDateString } from '../../store/mealsStore'
 import { recipesApi } from '../../api/recipes'
 import { Button } from '../ui/Button'
 import { haptics } from '../../utils/haptics'
+import { resolveMediaUrl } from '../../utils/platform'
+import { registerBackHandler } from '../ui/Modal'
 import { getMealTimeMeta } from '../../utils/timeSlots'
 
 interface MealCardProps {
@@ -88,22 +90,25 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     setCommentText(meal.user_comment || '')
   }, [meal.user_comment])
 
-  // Close lightbox on Escape key
+  // Close lightbox on Escape key or Android Back button
   useEffect(() => {
     if (!isLightboxOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsLightboxOpen(false)
     }
+    const unregisterBack = registerBackHandler(() => {
+      setIsLightboxOpen(false)
+      return true
+    })
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      unregisterBack()
+    }
   }, [isLightboxOpen])
 
   const getPhotoUrl = (path: string | null | undefined) => {
-    if (!path) return ''
-    if (path.startsWith('http://') || path.startsWith('https://')) return path
-    if (path.startsWith('/uploads/')) return path
-    if (path.startsWith('uploads/')) return `/${path}`
-    return `/uploads/${path.replace(/^\/+/, '')}`
+    return resolveMediaUrl(path)
   }
 
   const handleSaveAsRecipe = async (e: React.MouseEvent) => {

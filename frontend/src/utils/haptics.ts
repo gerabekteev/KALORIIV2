@@ -1,19 +1,17 @@
-/**
- * Centralized Haptic Engine for KaloriiAI (UX-04)
- * Provides tactile feedback for swipe triggers, threshold crossing, and confirmations.
- * Gracefully degrades on unsupported platforms / desktop browsers.
- */
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
+import { isNativeApp } from './platform'
 
 class HapticEngine {
-  private isSupported(): boolean {
+  private isWebVibrateSupported(): boolean {
     return typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'vibrate' in navigator
   }
 
-  /**
-   * Crisp tactile tick fired when a swipe gesture crosses the action trigger threshold (60px).
-   */
   threshold(): void {
-    if (this.isSupported()) {
+    if (isNativeApp()) {
+      Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
+      return
+    }
+    if (this.isWebVibrateSupported()) {
       try {
         navigator.vibrate(14)
       } catch {
@@ -22,11 +20,12 @@ class HapticEngine {
     }
   }
 
-  /**
-   * Ultra-light release tick fired when returning to origin without triggering.
-   */
   release(): void {
-    if (this.isSupported()) {
+    if (isNativeApp()) {
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+      return
+    }
+    if (this.isWebVibrateSupported()) {
       try {
         navigator.vibrate(6)
       } catch {
@@ -35,11 +34,12 @@ class HapticEngine {
     }
   }
 
-  /**
-   * Success pulse (double pulse) for added meal, saved recipe, or completed action.
-   */
   success(): void {
-    if (this.isSupported()) {
+    if (isNativeApp()) {
+      Haptics.notification({ type: NotificationType.Success }).catch(() => {})
+      return
+    }
+    if (this.isWebVibrateSupported()) {
       try {
         navigator.vibrate([12, 40, 16])
       } catch {
@@ -48,11 +48,12 @@ class HapticEngine {
     }
   }
 
-  /**
-   * Warning / Destructive action pulse for item deletion.
-   */
   warning(): void {
-    if (this.isSupported()) {
+    if (isNativeApp()) {
+      Haptics.notification({ type: NotificationType.Warning }).catch(() => {})
+      return
+    }
+    if (this.isWebVibrateSupported()) {
       try {
         navigator.vibrate([24, 50, 24])
       } catch {

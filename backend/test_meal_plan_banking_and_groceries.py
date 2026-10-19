@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timezone, timedelta
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
@@ -151,11 +152,11 @@ async def test_elastic_weekly_banking_and_stats():
         # Day 1: 1700 kcal (-300 saved)
         # Day 2: 2200 kcal (+200 over)
         # Day 3: 1800 kcal (-200 saved)
-        # Net balance = +300 kcal saved
+        today = datetime.now(timezone.utc).date()
         days_data = [
-            ("2026-10-12", 1700.0),
-            ("2026-10-13", 2200.0),
-            ("2026-10-14", 1800.0),
+            ((today - timedelta(days=2)).isoformat(), 1700.0),
+            ((today - timedelta(days=1)).isoformat(), 2200.0),
+            (today.isoformat(), 1800.0),
         ]
         for d, cal in days_data:
             await client.post(
