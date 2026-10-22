@@ -48,7 +48,7 @@ if (-not (Test-Path $KeystorePath)) {
 Write-Host "[5/5] Компиляция подписанного Release APK через Docker (ghcr.io/cirruslabs/android-sdk:35)..." -ForegroundColor Yellow
 
 $DockerMount = "${FrontendDir}:/frontend"
-docker run --rm -v $DockerMount -v kalorii-gradle-cache:/root/.gradle -w /frontend/android ghcr.io/cirruslabs/android-sdk:35 sh -c 'yes | sdkmanager --licenses > /dev/null 2>&1; sdkmanager "platforms;android-36" > /dev/null 2>&1; chmod +x ./gradlew; ./gradlew assembleRelease'
+docker run --rm -v $DockerMount -v kalorii-gradle-cache:/root/.gradle -w /frontend/android ghcr.io/cirruslabs/android-sdk:35 sh -c 'sed -i "s/\r$//" ./gradlew; yes | sdkmanager --licenses > /dev/null 2>&1; sdkmanager "platforms;android-36" > /dev/null 2>&1; chmod +x ./gradlew; ./gradlew assembleRelease'
 
 $ApkSource = Join-Path $AndroidDir "app\build\outputs\apk\release\app-release.apk"
 if (-not (Test-Path $ApkSource)) {
