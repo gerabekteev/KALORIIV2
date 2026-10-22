@@ -140,6 +140,10 @@ export interface CreateProductPayload {
   fat_per_100g: number
   carbs_per_100g: number
   category?: string | null
+  package_weight_grams?: number | null
+  barcode?: string | null
+  brand?: string | null
+  image_url?: string | null
 }
 
 export interface RecipeItem {
@@ -338,6 +342,7 @@ export interface RecentScannedProductItem {
   carbs_per_100g: number
   package_weight_grams: number
   image_url?: string | null
+  is_honest_sign?: boolean
   last_scanned_at: string
   scan_count: number
 }

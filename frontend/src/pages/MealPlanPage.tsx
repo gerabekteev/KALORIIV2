@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ChefHat,
   Sparkles,
@@ -15,6 +16,11 @@ import {
   Scale,
   CheckSquare,
   Square,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  Flame,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useMealsStore, getTodayDateString } from '../store/mealsStore'
@@ -31,6 +37,16 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { pluralizeRu } from '../utils/pluralize'
 
+const QUICK_PREFERENCE_TAGS = [
+  '⚡ Быстро до 15 мин',
+  '🛒 Из простых продуктов',
+  '🥣 Без готовки',
+  '🍗 Максимум белка',
+  '🐟 Без рыбы',
+  '🥛 Без лактозы',
+  '🥞 Сладкое ПП к чаю',
+]
+
 function getTomorrowDateString(): string {
   const now = new Date()
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
@@ -38,6 +54,7 @@ function getTomorrowDateString(): string {
 }
 
 export const MealPlanPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuthStore()
   const { addMeal } = useMealsStore()
   const { addToast } = useUIStore()
@@ -58,12 +75,14 @@ export const MealPlanPage: React.FC = () => {
   const currentPlan = plansByDate[planDate] || null
 
   // Параметры формы генерации
-  const [mealsCount, setMealsCount] = useState<number>(3)
-  const [targetCalories, setTargetCalories] = useState<string>('1500')
-  const [targetProtein, setTargetProtein] = useState<string>('110')
-  const [targetFat, setTargetFat] = useState<string>('50')
-  const [targetCarbs, setTargetCarbs] = useState<string>('160')
+  const [mealsCount, setMealsCount] = useState<number>(1)
+  const [targetCalories, setTargetCalories] = useState<string>('600')
+  const [targetProtein, setTargetProtein] = useState<string>('45')
+  const [targetFat, setTargetFat] = useState<string>('20')
+  const [targetCarbs, setTargetCarbs] = useState<string>('55')
   const [preferences, setPreferences] = useState<string>('')
+  const [showAdvancedConfig, setShowAdvancedConfig] = useState<boolean>(false)
+  const [activeScenario, setActiveScenario] = useState<'single' | 'protein' | 'remaining' | 'fullday'>('single')
 
   // Информация о съеденном за выбранный день для подсказки остатка
   const [eatenStats, setEatenStats] = useState<{
@@ -74,11 +93,25 @@ export const MealPlanPage: React.FC = () => {
   }>({ calories: 0, protein: 0, fat: 0, carbs: 0 })
 
   const [addingMealId, setAddingMealId] = useState<string | null>(null)
+  const handledPresetRef = useRef<string | null>(null)
 
   const goalCal = user?.daily_calories_goal || 2000
   const goalProt = user?.daily_protein_goal || 140
   const goalFat = user?.daily_fat_goal || 70
   const goalCarbs = user?.daily_carbs_goal || 250
+
+  const remCalActual = Math.max(0, goalCal - eatenStats.calories)
+  const remProtActual = Math.max(0, goalProt - eatenStats.protein)
+  const remFatActual = Math.max(0, goalFat - eatenStats.fat)
+  const remCarbsActual = Math.max(0, goalCarbs - eatenStats.carbs)
+
+  // Синхронизация даты из URL-параметра при переходе с главной
+  useEffect(() => {
+    const dateParam = searchParams.get('date')
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) && dateParam !== planDate) {
+      setPlanDate(dateParam)
+    }
+  }, [searchParams, planDate, setPlanDate])
 
   // Подгружаем сохранённый план и остаток КБЖУ при смене даты
   useEffect(() => {
@@ -102,9 +135,90 @@ export const MealPlanPage: React.FC = () => {
           carbs: eatenCarbs,
         })
 
+        const remCal = Math.max(200, goalCal - eatenCal)
+        const remProt = Math.max(15, goalProt - eatenProt)
+        const remFat = Math.max(10, goalFat - eatenFat)
+        const remCarbs = Math.max(15, goalCarbs - eatenCarbs)
+
+        const presetParam = searchParams.get('preset')
+        const presetKey = presetParam ? `${planDate}:${presetParam}` : null
+
+        if (presetParam && handledPresetRef.current !== presetKey) {
+          handledPresetRef.current = presetKey
+          // Очищаем query-параметр, чтобы не перезапускать при ручном обновлении
+          const nextParams = new URLSearchParams(searchParams)
+          nextParams.delete('preset')
+          setSearchParams(nextParams, { replace: true })
+
+          if (presetParam === 'single') {
+            setActiveScenario('single')
+            setMealsCount(1)
+            setTargetCalories(String(remCal))
+            setTargetProtein(String(remProt))
+            setTargetFat(String(remFat))
+            setTargetCarbs(String(remCarbs))
+            const pref = 'Сытное блюдо на ужин или перекус из простых продуктов под остаток КБЖУ'
+            setPreferences(pref)
+            await generatePlan({
+              planDate,
+              mealsCount: 1,
+              targetCalories: remCal,
+              targetProtein: remProt,
+              targetFat: remFat,
+              targetCarbs: remCarbs,
+              userPreferences: pref,
+              onlyUnlocked: false,
+            })
+            return
+          } else if (presetParam === 'protein') {
+            setActiveScenario('protein')
+            setMealsCount(1)
+            const protTarget = Math.max(30, remProt)
+            const calTarget = Math.max(250, Math.min(remCal, protTarget * 9))
+            const fatTarget = Math.max(8, Math.min(remFat, 18))
+            const carbsTarget = Math.max(10, Math.min(remCarbs, 35))
+            const pref = 'Максимум белка, минимум жиров, быстрое блюдо из простых продуктов'
+            setTargetCalories(String(calTarget))
+            setTargetProtein(String(protTarget))
+            setTargetFat(String(fatTarget))
+            setTargetCarbs(String(carbsTarget))
+            setPreferences(pref)
+            await generatePlan({
+              planDate,
+              mealsCount: 1,
+              targetCalories: calTarget,
+              targetProtein: protTarget,
+              targetFat: fatTarget,
+              targetCarbs: carbsTarget,
+              userPreferences: pref,
+              onlyUnlocked: false,
+            })
+            return
+          } else if (presetParam === 'remaining') {
+            setActiveScenario('remaining')
+            const count = remCal > 750 ? 2 : 1
+            setMealsCount(count)
+            setTargetCalories(String(remCal))
+            setTargetProtein(String(remProt))
+            setTargetFat(String(remFat))
+            setTargetCarbs(String(remCarbs))
+            await generatePlan({
+              planDate,
+              mealsCount: count,
+              targetCalories: remCal,
+              targetProtein: remProt,
+              targetFat: remFat,
+              targetCarbs: remCarbs,
+              userPreferences: preferences || 'Из простых доступных продуктов',
+              onlyUnlocked: false,
+            })
+            return
+          }
+        }
+
         // Если на этот день уже есть сохранённый план, подставляем его настройки
         if (savedPlan) {
-          setMealsCount(savedPlan.meals_count || 3)
+          setMealsCount(savedPlan.meals_count || 1)
           setTargetCalories(String(Math.round(savedPlan.target_calories)))
           setTargetProtein(String(Math.round(savedPlan.target_protein)))
           setTargetFat(String(Math.round(savedPlan.target_fat)))
@@ -112,15 +226,14 @@ export const MealPlanPage: React.FC = () => {
           setPreferences(savedPlan.user_preferences || '')
         } else {
           // Автоматически подставляем остаток КБЖУ пользователя на выбранный день
-          const remCal = Math.max(0, goalCal - eatenCal)
-          const remProt = Math.max(0, goalProt - eatenProt)
-          const remFat = Math.max(0, goalFat - eatenFat)
-          const remCarbs = Math.max(0, goalCarbs - eatenCarbs)
-
-          setTargetCalories(String(remCal >= 200 ? remCal : goalCal))
-          setTargetProtein(String(remCal >= 200 ? remProt : goalProt))
-          setTargetFat(String(remCal >= 200 ? remFat : goalFat))
-          setTargetCarbs(String(remCal >= 200 ? remCarbs : goalCarbs))
+          const rawRemCal = Math.max(0, goalCal - eatenCal)
+          const isSingleMealConvenient = rawRemCal > 0 && rawRemCal <= 850
+          setMealsCount(isSingleMealConvenient ? 1 : rawRemCal > 850 ? 2 : 3)
+          setActiveScenario(isSingleMealConvenient ? 'single' : rawRemCal >= 200 ? 'remaining' : 'fullday')
+          setTargetCalories(String(rawRemCal >= 200 ? rawRemCal : goalCal))
+          setTargetProtein(String(rawRemCal >= 200 ? Math.max(15, goalProt - eatenProt) : goalProt))
+          setTargetFat(String(rawRemCal >= 200 ? Math.max(10, goalFat - eatenFat) : goalFat))
+          setTargetCarbs(String(rawRemCal >= 200 ? Math.max(15, goalCarbs - eatenCarbs) : goalCarbs))
         }
       } catch {
         // Fallback на дневные нормы
@@ -136,6 +249,84 @@ export const MealPlanPage: React.FC = () => {
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false)
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([])
   const [isSendingTelegram, setIsSendingTelegram] = useState(false)
+
+  // Быстрый запуск сценария в 1 клик
+  const handleRunSmartScenario = async (scenario: 'single' | 'protein' | 'remaining' | 'fullday') => {
+    setActiveScenario(scenario)
+    const remCal = Math.max(220, goalCal - eatenStats.calories)
+    const remProt = Math.max(15, goalProt - eatenStats.protein)
+    const remFat = Math.max(10, goalFat - eatenStats.fat)
+    const remCarbs = Math.max(15, goalCarbs - eatenStats.carbs)
+
+    let nextCount = 1
+    let nextCal = remCal
+    let nextProt = remProt
+    let nextFat = remFat
+    let nextCarbs = remCarbs
+    let nextPref = preferences
+
+    if (scenario === 'single') {
+      nextCount = 1
+      nextCal = remCal
+      nextProt = remProt
+      nextFat = remFat
+      nextCarbs = remCarbs
+      if (!nextPref.trim()) {
+        nextPref = 'Сытное блюдо на ужин или перекус из простых продуктов'
+      }
+    } else if (scenario === 'protein') {
+      nextCount = 1
+      nextProt = Math.max(30, remProt)
+      nextCal = Math.max(250, Math.min(remCal, nextProt * 9))
+      nextFat = Math.max(8, Math.min(remFat, 18))
+      nextCarbs = Math.max(10, Math.min(remCarbs, 35))
+      nextPref = 'Максимум белка, минимум жиров, быстрое блюдо из простых продуктов'
+    } else if (scenario === 'remaining') {
+      nextCount = remCal > 700 ? 2 : 1
+      nextCal = remCal
+      nextProt = remProt
+      nextFat = remFat
+      nextCarbs = remCarbs
+    } else if (scenario === 'fullday') {
+      nextCount = 3
+      nextCal = goalCal
+      nextProt = goalProt
+      nextFat = goalFat
+      nextCarbs = goalCarbs
+    }
+
+    setMealsCount(nextCount)
+    setTargetCalories(String(nextCal))
+    setTargetProtein(String(nextProt))
+    setTargetFat(String(nextFat))
+    setTargetCarbs(String(nextCarbs))
+    setPreferences(nextPref)
+
+    await generatePlan({
+      planDate,
+      mealsCount: nextCount,
+      targetCalories: nextCal,
+      targetProtein: nextProt,
+      targetFat: nextFat,
+      targetCarbs: nextCarbs,
+      userPreferences: nextPref,
+      onlyUnlocked: false,
+    })
+  }
+
+  const handleToggleQuickPreference = (tagLabel: string) => {
+    const cleanTag = tagLabel.replace(/^[^\p{L}\p{N}]+\s*/u, '').trim()
+    const current = preferences.trim()
+    if (current.toLowerCase().includes(cleanTag.toLowerCase())) {
+      const parts = current
+        .split(',')
+        .map((p) => p.trim())
+        .filter((p) => p.toLowerCase() !== cleanTag.toLowerCase() && p.length > 0)
+      setPreferences(parts.join(', '))
+    } else {
+      setPreferences(current ? `${current}, ${cleanTag}` : cleanTag)
+    }
+  }
 
   const handleFillRemaining = () => {
     const remCal = Math.max(200, goalCal - eatenStats.calories)
@@ -307,170 +498,364 @@ export const MealPlanPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header & Date Switcher */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2 my-0">
             <ChefHat className="w-5 h-5 text-emerald-400" />
-            <span>Что съесть (Меню AI)</span>
+            <span>AI-Ассистент: Что съесть?</span>
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5">
-            Персональный подбор блюд и состава без превышения лимита калорий
+            Подбор 1 блюда на ужин или рациона под ваш точный остаток БЖУ
           </p>
+        </div>
+
+        {/* Compact Date Switcher */}
+        <div className="flex items-center gap-1 bg-[#141418] border border-white/[0.07] p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setPlanDate(todayStr)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+              planDate === todayStr
+                ? 'bg-emerald-500 text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Сегодня
+          </button>
+          <button
+            type="button"
+            onClick={() => setPlanDate(tomorrowStr)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+              planDate === tomorrowStr
+                ? 'bg-emerald-500 text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Завтра
+          </button>
         </div>
       </div>
 
-      {/* Step 1: Date & Parameters Configuration Card */}
-      <Card variant="default" padding="md" className="space-y-4">
-        {/* Date Selector */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-              <span>1. На какой день спланировать питание?</span>
-            </label>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPlanDate(todayStr)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                  planDate === todayStr
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
-                }`}
-              >
-                Сегодня
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlanDate(tomorrowStr)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                  planDate === tomorrowStr
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
-                }`}
-              >
-                Завтра
-              </button>
+      {/* Live Remaining KBJU Status Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-950/50 via-[#151c19] to-[#141418] border border-emerald-500/25 p-3.5 shadow-lg">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <Flame className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[11px] font-semibold text-emerald-300/90 uppercase tracking-wider block">
+                Свободный остаток на {planDate === todayStr ? 'сегодня' : planDate === tomorrowStr ? 'завтра' : planDate}
+              </span>
+              <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+                <span className="text-lg font-extrabold text-white tracking-tight">
+                  {remCalActual} <span className="text-xs font-semibold text-neutral-400">ккал</span>
+                </span>
+                <span className="text-[11px] text-neutral-500">
+                  (съедено {eatenStats.calories} из {goalCal})
+                </span>
+              </div>
             </div>
           </div>
 
-          <input
-            type="date"
-            value={planDate}
-            onChange={(e) => e.target.value && setPlanDate(e.target.value)}
-            className="w-full bg-[#141417] border border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-emerald-500"
-          />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] font-bold text-blue-300">
+              Б: {remProtActual}г
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-300">
+              Ж: {remFatActual}г
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-[11px] font-bold text-purple-300">
+              У: {remCarbsActual}г
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Instant 1-Click Smart Scenarios */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-0.5">
+          <span className="text-xs font-bold text-neutral-200 flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Быстрый подбор в 1 нажатие:</span>
+          </span>
+          <span className="text-[11px] text-neutral-500">Нажмите карточку для старта AI</span>
         </div>
 
-        {/* Number of Meals Selector */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleRunSmartScenario('single')}
+            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
+              activeScenario === 'single'
+                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_8px_25px_-6px_rgba(16,185,129,0.25)]'
+                : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-base">🍳</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
+                1 блюдо
+              </span>
+            </div>
+            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
+              На ужин / перекус
+            </div>
+            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
+              Под остаток {Math.max(220, remCalActual)} ккал
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleRunSmartScenario('protein')}
+            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
+              activeScenario === 'protein'
+                ? 'bg-blue-500/15 border-blue-500/50 shadow-[0_8px_25px_-6px_rgba(59,130,246,0.25)]'
+                : 'bg-[#151519] border-white/[0.07] hover:border-blue-500/30 hover:bg-[#19191f]'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-base">💪</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300">
+                Белковый буст
+              </span>
+            </div>
+            <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
+              Добрать белок
+            </div>
+            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
+              Цель ~{Math.max(30, remProtActual)}г белка, мин. жиров
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleRunSmartScenario('remaining')}
+            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
+              activeScenario === 'remaining'
+                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_8px_25px_-6px_rgba(16,185,129,0.25)]'
+                : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-base">🥗</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
+                2 блюда
+              </span>
+            </div>
+            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
+              На остаток дня
+            </div>
+            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
+              Обед + ужин на {Math.max(220, remCalActual)} ккал
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleRunSmartScenario('fullday')}
+            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
+              activeScenario === 'fullday'
+                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_8px_25px_-6px_rgba(16,185,129,0.25)]'
+                : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-base">📅</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
+                3 блюда
+              </span>
+            </div>
+            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
+              Полный рацион
+            </div>
+            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
+              Весь день на {goalCal} ккал
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Generator Card with Quick Preference Chips & Collapsible Fine-Tuning */}
+      <Card variant="default" padding="md" className="space-y-3.5">
+        {/* Quick Preference Chips */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-neutral-200 block">
-            2. Количество приёмов пищи (блюд):
+            Пожелания к блюдам (нажмите или допишите свои):
           </label>
-          <div className="grid grid-cols-5 gap-2">
-            {[1, 2, 3, 4, 5].map((cnt) => (
-              <button
-                key={cnt}
-                type="button"
-                onClick={() => setMealsCount(cnt)}
-                className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  mealsCount === cnt
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm'
-                    : 'bg-[#141417] border-neutral-800 text-neutral-400 hover:text-white'
-                }`}
-              >
-                {cnt} {pluralizeRu(cnt, ['блюдо', 'блюда', 'блюд'])}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Target KBJU Inputs (Auto-filled from remaining, freely editable) */}
-        <div className="space-y-2.5 pt-1 border-t border-neutral-800/80">
-          <div className="flex items-center justify-between flex-wrap gap-1">
-            <span className="text-xs font-semibold text-neutral-200">
-              3. Целевые КБЖУ для этих блюд:
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={handleBalanceWeek}
-                className="text-[10px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20 cursor-pointer flex items-center gap-1"
-                title="Сбалансировать остаток недельного бюджета калорий"
-              >
-                <Scale className="w-2.5 h-2.5" />
-                <span>Сбалансировать неделю</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleFillRemaining}
-                className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 cursor-pointer"
-              >
-                Остаток дня ({Math.max(0, goalCal - eatenStats.calories)} ккал)
-              </button>
-              <button
-                type="button"
-                onClick={handleFillFullDayGoal}
-                className="text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-800 px-2 py-0.5 rounded-lg cursor-pointer"
-              >
-                Вся норма ({goalCal} ккал)
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_PREFERENCE_TAGS.map((tag) => {
+              const cleanTag = tag.replace(/^[^\p{L}\p{N}]+\s*/u, '').trim()
+              const isSelected = preferences.toLowerCase().includes(cleanTag.toLowerCase())
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleToggleQuickPreference(tag)}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                      : 'bg-[#121216] border-neutral-800 text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
+                  }`}
+                >
+                  {tag}
+                </button>
+              )
+            })}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <Input
-              label="Макс. Калории *"
-              type="number"
-              min="100"
-              max="15000"
-              value={targetCalories}
-              onChange={(e) => setTargetCalories(e.target.value)}
-            />
-            <Input
-              label="Белки (г)"
-              type="number"
-              min="0"
-              value={targetProtein}
-              onChange={(e) => setTargetProtein(e.target.value)}
-            />
-            <Input
-              label="Жиры (г)"
-              type="number"
-              min="0"
-              value={targetFat}
-              onChange={(e) => setTargetFat(e.target.value)}
-            />
-            <Input
-              label="Углеводы (г)"
-              type="number"
-              min="0"
-              value={targetCarbs}
-              onChange={(e) => setTargetCarbs(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/90 bg-emerald-950/30 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-            <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span>
-              Главный приоритет AI — строго <b>не выйти за предел {targetCalories || 0} ккал</b>.
-            </span>
-          </div>
-        </div>
-
-        {/* Optional Preferences */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-300 block">
-            Пожелания или исключения (опционально)
-          </label>
           <input
             type="text"
-            placeholder="Например: из простых продуктов, без рыбы, побольше белка..."
+            placeholder="Свои пожелания: например, есть творог и яйца, без духовки..."
             value={preferences}
             onChange={(e) => setPreferences(e.target.value)}
-            className="w-full bg-[#141417] border border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-emerald-500"
+            className="w-full bg-[#121216] border border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-emerald-500 transition-colors"
           />
+        </div>
+
+        {/* Collapsible Fine-Tuning Toggle */}
+        <div className="border-t border-neutral-800/80 pt-2.5">
+          <button
+            type="button"
+            onClick={() => setShowAdvancedConfig((v) => !v)}
+            className="w-full flex items-center justify-between text-xs text-neutral-300 hover:text-white py-1 cursor-pointer transition-colors"
+          >
+            <span className="flex items-center gap-1.5 font-medium">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+              <span>
+                Точная настройка:{' '}
+                <b className="text-white">
+                  {mealsCount} {pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])}
+                </b>{' '}
+                • лимит <b className="text-emerald-400">{targetCalories} ккал</b> (Б:{targetProtein} Ж:{targetFat} У:{targetCarbs})
+              </span>
+            </span>
+            {showAdvancedConfig ? (
+              <ChevronUp className="w-4 h-4 text-neutral-400 shrink-0" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+            )}
+          </button>
+
+          {showAdvancedConfig && (
+            <div className="space-y-3.5 pt-3 mt-2 border-t border-neutral-800/60 animate-in fade-in duration-150">
+              {/* Custom Date Picker */}
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Дата плана:</span>
+                </label>
+                <input
+                  type="date"
+                  value={planDate}
+                  onChange={(e) => e.target.value && setPlanDate(e.target.value)}
+                  className="bg-[#121216] border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Number of Meals Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-neutral-300 block">
+                  Количество блюд:
+                </label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[1, 2, 3, 4, 5].map((cnt) => (
+                    <button
+                      key={cnt}
+                      type="button"
+                      onClick={() => setMealsCount(cnt)}
+                      className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        mealsCount === cnt
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm'
+                          : 'bg-[#121216] border-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      {cnt} {pluralizeRu(cnt, ['блюдо', 'блюда', 'блюд'])}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target KBJU Inputs */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <span className="text-xs font-medium text-neutral-300">
+                    Целевые КБЖУ:
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleBalanceWeek}
+                      className="text-[10px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20 cursor-pointer flex items-center gap-1"
+                      title="Сбалансировать остаток недельного бюджета калорий"
+                    >
+                      <Scale className="w-2.5 h-2.5" />
+                      <span>Баланс недели</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFillRemaining}
+                      className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 cursor-pointer"
+                    >
+                      Остаток ({remCalActual} ккал)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFillFullDayGoal}
+                      className="text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-800 px-2 py-0.5 rounded-lg cursor-pointer"
+                    >
+                      Вся норма ({goalCal} ккал)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <Input
+                    label="Макс. Калории *"
+                    type="number"
+                    min="100"
+                    max="15000"
+                    value={targetCalories}
+                    onChange={(e) => setTargetCalories(e.target.value)}
+                  />
+                  <Input
+                    label="Белки (г)"
+                    type="number"
+                    min="0"
+                    value={targetProtein}
+                    onChange={(e) => setTargetProtein(e.target.value)}
+                  />
+                  <Input
+                    label="Жиры (г)"
+                    type="number"
+                    min="0"
+                    value={targetFat}
+                    onChange={(e) => setTargetFat(e.target.value)}
+                  />
+                  <Input
+                    label="Углеводы (г)"
+                    type="number"
+                    min="0"
+                    value={targetCarbs}
+                    onChange={(e) => setTargetCarbs(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/90 bg-emerald-950/30 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>
+                    AI строго <b>не выйдет за предел {targetCalories || 0} ккал</b> и укажет граммовки.
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons: Generate All vs Regenerate Unlocked */}
@@ -485,7 +870,7 @@ export const MealPlanPage: React.FC = () => {
                 onClick={() => handleGenerate(true)}
                 leftIcon={<RefreshCw className="w-4 h-4" />}
               >
-                Перегенерировать остальные (оставить {lockedCount})
+                Заменить незакреплённые (оставить {lockedCount})
               </Button>
               <Button
                 type="button"
@@ -495,7 +880,7 @@ export const MealPlanPage: React.FC = () => {
                 onClick={() => handleGenerate(false)}
                 leftIcon={<RotateCcw className="w-4 h-4" />}
               >
-                Всё меню заново
+                Всё заново
               </Button>
             </>
           ) : (
@@ -507,7 +892,9 @@ export const MealPlanPage: React.FC = () => {
               onClick={() => handleGenerate(false)}
               leftIcon={<Sparkles className="w-4 h-4" />}
             >
-              {currentPlan ? 'Сгенерировать меню заново' : 'Сгенерировать меню через AI'}
+              {currentPlan
+                ? `Подобрать другие варианты (${mealsCount} ${pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])})`
+                : `Подобрать ${mealsCount} ${pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])} на ${targetCalories} ккал`}
             </Button>
           )}
         </div>

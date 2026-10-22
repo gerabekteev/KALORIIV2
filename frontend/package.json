@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:sync-static": "tsc -b && vite build && rm -rf ../backend/static/assets && cp -r dist/* ../backend/static/",
+    "build:sync-static": "tsc -b && vite build && node -e \"const fs = require('fs'); fs.rmSync('../backend/static/assets', { recursive: true, force: true }); fs.cpSync('dist', '../backend/static', { recursive: true });\"",
     "cap:sync": "npm run build && npx cap sync android",
     "apk:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../../kalorii-ai-debug.apk",
     "apk:release": "npm run cap:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../../kalorii-ai.apk && cp app/build/outputs/apk/release/app-release.apk ../../backend/static/kalorii-ai.apk",

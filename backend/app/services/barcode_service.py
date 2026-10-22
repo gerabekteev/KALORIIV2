@@ -287,8 +287,17 @@ async def lookup_barcode_product(
         off_data = await fetch_from_open_food_facts("0" + clean_code)
 
     if off_data:
-        # Check if already in DB (especially when force_refresh=True)
-        stmt = select(Product).where(Product.barcode.in_(search_codes)).limit(1)
+        # Check if already in DB as a global product (especially when force_refresh=True)
+        stmt = (
+            select(Product)
+            .where(
+                and_(
+                    Product.barcode.in_(search_codes),
+                    Product.is_custom.is_(False),
+                )
+            )
+            .limit(1)
+        )
         res = await db.execute(stmt)
         target_product = res.scalar_one_or_none()
 
@@ -327,7 +336,7 @@ async def lookup_barcode_product(
             raise
 
         # Record in user scanned history
-        await record_user_scan(db, user_id, target_product.id, clean_code)
+        await record_user_scan(db, user_id, target_product.id, clean_code, is_honest_sign=is_honest_sign)
 
         return BarcodeProductResult(
             product_id=target_product.id,
@@ -471,23 +480,70 @@ async def update_barcode_product(
             detail="Недопустимый источник изображения продукта",
         )
 
-    if not product.is_custom:
-        # Fork personal copy to prevent IDOR modification of global product catalog
-        product = Product(
-            name=name.strip(),
-            brand=brand.strip() if brand else product.brand,
-            barcode=product.barcode,
-            calories_per_100g=round(float(calories_per_100g), 1),
-            protein_per_100g=round(float(protein_per_100g), 1),
-            fat_per_100g=round(float(fat_per_100g), 1),
-            carbs_per_100g=round(float(carbs_per_100g), 1),
-            package_weight_grams=max(1.0, round(float(package_weight_grams), 1)) if package_weight_grams is not None else (product.package_weight_grams or 100.0),
-            image_url=clean_img or product.image_url,
-            category=product.category or "Пользовательские",
-            is_custom=True,
-            created_by_user_id=user_id,
+    # Preserve existing honest sign flag from user's scan history
+    scan_stmt = select(UserScannedProduct).where(
+        and_(
+            UserScannedProduct.user_id == user_id,
+            UserScannedProduct.product_id == product.id,
         )
-        db.add(product)
+    )
+    scan_res = await db.execute(scan_stmt)
+    old_scan = scan_res.scalar_one_or_none()
+    was_honest = bool(getattr(old_scan, "is_honest_sign", False))
+
+    if not product.is_custom:
+        orig_global_id = product.id
+        # Reuse existing personal fork for this barcode if user already created one
+        existing_fork = None
+        if product.barcode:
+            fork_stmt = (
+                select(Product)
+                .where(
+                    and_(
+                        Product.barcode == product.barcode,
+                        Product.is_custom.is_(True),
+                        Product.created_by_user_id == user_id,
+                    )
+                )
+                .limit(1)
+            )
+            fork_res = await db.execute(fork_stmt)
+            existing_fork = fork_res.scalar_one_or_none()
+
+        if existing_fork:
+            existing_fork.name = name.strip()
+            if brand is not None:
+                existing_fork.brand = brand.strip() if brand else existing_fork.brand
+            existing_fork.calories_per_100g = round(float(calories_per_100g), 1)
+            existing_fork.protein_per_100g = round(float(protein_per_100g), 1)
+            existing_fork.fat_per_100g = round(float(fat_per_100g), 1)
+            existing_fork.carbs_per_100g = round(float(carbs_per_100g), 1)
+            if package_weight_grams is not None:
+                existing_fork.package_weight_grams = max(1.0, round(float(package_weight_grams), 1))
+            if clean_img:
+                existing_fork.image_url = clean_img
+            product = existing_fork
+        else:
+            # Fork personal copy to prevent IDOR modification of global product catalog
+            product = Product(
+                name=name.strip(),
+                brand=brand.strip() if brand else product.brand,
+                barcode=product.barcode,
+                calories_per_100g=round(float(calories_per_100g), 1),
+                protein_per_100g=round(float(protein_per_100g), 1),
+                fat_per_100g=round(float(fat_per_100g), 1),
+                carbs_per_100g=round(float(carbs_per_100g), 1),
+                package_weight_grams=max(1.0, round(float(package_weight_grams), 1)) if package_weight_grams is not None else (product.package_weight_grams or 100.0),
+                image_url=clean_img or product.image_url,
+                category=product.category or "Пользовательские",
+                is_custom=True,
+                created_by_user_id=user_id,
+            )
+            db.add(product)
+
+        # Remove old global product reference from user's scan shelf to avoid duplicate cards
+        if old_scan and orig_global_id != getattr(product, "id", None):
+            await db.delete(old_scan)
     else:
         product.name = name.strip()
         if brand is not None:
@@ -509,10 +565,11 @@ async def update_barcode_product(
         logger.error(f"Error updating product {product_id}: {e}", exc_info=True)
         raise
 
-    # Ensure scan record exists and is updated
-    await record_user_scan(db, user_id, product.id, product.barcode or "")
+    _, parsed_honest = parse_and_normalize_barcode(product.barcode or "")
+    is_honest = was_honest or parsed_honest
 
-    _, is_honest = parse_and_normalize_barcode(product.barcode or "")
+    # Ensure scan record exists and is updated
+    await record_user_scan(db, user_id, product.id, product.barcode or "", is_honest_sign=is_honest)
 
     return BarcodeProductResult(
         product_id=product.id,

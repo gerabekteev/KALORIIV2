@@ -110,7 +110,7 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Dialog / Mobile Bottom Sheet */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#1a1a1e] border border-neutral-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90dvh] flex flex-col z-10 transition-transform duration-200 ease-out`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-gradient-to-b from-[#1d1d24] to-[#141419] border border-white/[0.09] rounded-t-3xl sm:rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden max-h-[90dvh] flex flex-col z-10 transition-transform duration-200 ease-out`}
         style={{
           paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
         }}

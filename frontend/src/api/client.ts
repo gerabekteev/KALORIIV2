@@ -13,15 +13,28 @@ export class ApiError extends Error {
 }
 
 let isRefreshing = false
-let refreshSubscribers: ((token: string) => void)[] = []
+let refreshSubscribers: Array<{
+  resolve: (token: string) => void
+  reject: (err: any) => void
+}> = []
 
 function onRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token))
+  const subs = [...refreshSubscribers]
   refreshSubscribers = []
+  subs.forEach((s) => s.resolve(token))
 }
 
-function addRefreshSubscriber(cb: (token: string) => void) {
-  refreshSubscribers.push(cb)
+function onRefreshFailed(err: any) {
+  const subs = [...refreshSubscribers]
+  refreshSubscribers = []
+  subs.forEach((s) => s.reject(err))
+}
+
+function addRefreshSubscriber(
+  resolve: (token: string) => void,
+  reject: (err: any) => void
+) {
+  refreshSubscribers.push({ resolve, reject })
 }
 
 export async function apiClient<T>(
@@ -120,37 +133,45 @@ export async function apiClient<T>(
           isRefreshing = false
           localStorage.removeItem('kalorii_token')
           localStorage.removeItem('kalorii_refresh_token')
+          const expiredErr = new ApiError('Session expired', 401)
+          onRefreshFailed(expiredErr)
           window.dispatchEvent(new Event('auth:unauthorized'))
-          throw new ApiError('Session expired', 401)
+          throw expiredErr
         }
       } catch (e) {
         isRefreshing = false
         localStorage.removeItem('kalorii_token')
         localStorage.removeItem('kalorii_refresh_token')
+        onRefreshFailed(e)
         window.dispatchEvent(new Event('auth:unauthorized'))
         throw e
       }
     } else {
       // Wait for token refresh
       return new Promise<T>((resolve, reject) => {
-        addRefreshSubscriber(async (newToken) => {
-          try {
-            headers['Authorization'] = `Bearer ${newToken}`
-            const retryRes = await fetch(url, { ...options, headers })
-            if (!retryRes.ok) {
-              const errorData = await retryRes.json().catch(() => ({}))
-              reject(new ApiError(errorData.detail || 'Request failed', retryRes.status, errorData))
-            } else {
-              if (retryRes.status === 204) {
-                resolve({} as T)
+        addRefreshSubscriber(
+          async (newToken) => {
+            try {
+              headers['Authorization'] = `Bearer ${newToken}`
+              const retryRes = await fetch(url, { ...options, headers })
+              if (!retryRes.ok) {
+                const errorData = await retryRes.json().catch(() => ({}))
+                reject(new ApiError(errorData.detail || 'Request failed', retryRes.status, errorData))
               } else {
-                resolve(await retryRes.json())
+                if (retryRes.status === 204) {
+                  resolve({} as T)
+                } else {
+                  resolve(await retryRes.json())
+                }
               }
+            } catch (err) {
+              reject(err)
             }
-          } catch (err) {
+          },
+          (err) => {
             reject(err)
           }
-        })
+        )
       })
     }
   }

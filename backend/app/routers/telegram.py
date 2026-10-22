@@ -58,7 +58,15 @@ async def generate_telegram_link_code(
     db: AsyncSession = Depends(get_db),
 ):
     """Generate a 15-minute one-time code for linking Telegram account to KaloriiAI."""
+    from sqlalchemy import select
+
     code = f"KLR-{secrets.randbelow(900000) + 100000}"
+    for _ in range(5):
+        existing = await db.execute(select(User.id).where(User.telegram_link_code == code).limit(1))
+        if not existing.scalar_one_or_none():
+            break
+        code = f"KLR-{secrets.randbelow(900000) + 100000}"
+
     expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
 
     current_user.telegram_link_code = code
@@ -109,6 +117,9 @@ async def send_shopping_list(
     Send formatted grocery shopping list from daily menu plan directly to user's Telegram chat.
     Requires user to have linked their Telegram bot account.
     """
+    from app.routers.ai import check_ai_rate_limit
+    check_ai_rate_limit(current_user.id)
+
     if not current_user.telegram_chat_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

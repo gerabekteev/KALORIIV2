@@ -80,6 +80,31 @@ def process_image(image_bytes: bytes) -> Tuple[bytes, str]:
     return compressed_bytes, "image/jpeg"
 
 
+async def read_upload_file_bounded(
+    file: UploadFile,
+    max_bytes: Optional[int] = None,
+    error_detail: Optional[str] = None,
+) -> bytes:
+    """Read an UploadFile in chunks, aborting immediately if size exceeds max_bytes."""
+    limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
+    chunks = []
+    total = 0
+    chunk_size = 64 * 1024  # 64 KB
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=error_detail
+                or f"Размер файла превышает лимит {limit // (1024 * 1024)} МБ",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 async def save_uploaded_file(file: UploadFile) -> Tuple[Path, str]:
     """
     Validate, process, and save uploaded meal image to uploads directory.
@@ -95,11 +120,11 @@ async def save_uploaded_file(file: UploadFile) -> Tuple[Path, str]:
             detail="Поддерживаются только изображения формата JPEG, PNG, WebP или HEIC",
         )
 
-    content = await file.read()
-    if len(content) > settings.MAX_UPLOAD_SIZE_BYTES:
+    content = await read_upload_file_bounded(file, settings.MAX_UPLOAD_SIZE_BYTES)
+    if not content:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Размер файла превышает лимит {settings.MAX_UPLOAD_SIZE_BYTES // (1024*1024)} МБ",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Загруженный файл пуст",
         )
 
     # Process and compress in thread pool to prevent blocking event loop

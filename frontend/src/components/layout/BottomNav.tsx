@@ -10,7 +10,7 @@ export const BottomNav: React.FC = () => {
   const hasAnalyzingMeals = pendingMeals.some((p) => p.status === 'analyzing')
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#141418]/95 backdrop-blur-xl border-t border-neutral-800/80 px-4 py-1.5 safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#111116]/90 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-10px_30px_rgba(0,0,0,0.45)] px-4 py-1.5 safe-bottom">
       <div className="max-w-lg mx-auto flex items-center justify-around h-14">
         {/* Tab 1: Сегодня */}
         <NavLink
@@ -27,8 +27,8 @@ export const BottomNav: React.FC = () => {
           {({ isActive }) => (
             <>
               <div
-                className={`relative p-1 rounded-xl transition-all ${
-                  isActive ? 'bg-emerald-500/10' : ''
+                className={`relative p-1.5 rounded-xl transition-all ${
+                  isActive ? 'bg-emerald-500/15 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : ''
                 }`}
               >
                 <Utensils
@@ -65,8 +65,8 @@ export const BottomNav: React.FC = () => {
           {({ isActive }) => (
             <>
               <div
-                className={`relative p-1 rounded-xl transition-all ${
-                  isActive ? 'bg-emerald-500/10' : ''
+                className={`relative p-1.5 rounded-xl transition-all ${
+                  isActive ? 'bg-emerald-500/15 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : ''
                 }`}
               >
                 <ChefHat
@@ -90,15 +90,15 @@ export const BottomNav: React.FC = () => {
           className="flex flex-col items-center justify-center flex-1 py-1 px-1 cursor-pointer group active:scale-95 transition-transform"
           title="Добавить еду в дневник"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform -mt-2 border-2 border-[#141418]">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-[0_6px_20px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform -mt-3.5 border-2 border-[#111116] ring-1 ring-white/20">
             <Plus className="w-5 h-5 stroke-[2.8]" />
           </div>
-          <span className="text-[10px] font-semibold text-emerald-400 mt-0.5 tracking-tight">
+          <span className="text-[10px] font-bold text-emerald-400 mt-0.5 tracking-tight">
             Добавить
           </span>
         </button>
 
-        {/* Tab 2: Статистика */}
+        {/* Tab 3: Статистика */}
         <NavLink
           to="/stats"
           className={({ isActive }) =>
@@ -112,8 +112,8 @@ export const BottomNav: React.FC = () => {
           {({ isActive }) => (
             <>
               <div
-                className={`relative p-1 rounded-xl transition-all ${
-                  isActive ? 'bg-emerald-500/10' : ''
+                className={`relative p-1.5 rounded-xl transition-all ${
+                  isActive ? 'bg-emerald-500/15 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : ''
                 }`}
               >
                 <BarChart3
@@ -130,7 +130,7 @@ export const BottomNav: React.FC = () => {
           )}
         </NavLink>
 
-        {/* Tab 3: Профиль */}
+        {/* Tab 4: Профиль */}
         <NavLink
           to="/profile"
           className={({ isActive }) =>
@@ -144,8 +144,8 @@ export const BottomNav: React.FC = () => {
           {({ isActive }) => (
             <>
               <div
-                className={`relative p-1 rounded-xl transition-all ${
-                  isActive ? 'bg-emerald-500/10' : ''
+                className={`relative p-1.5 rounded-xl transition-all ${
+                  isActive ? 'bg-emerald-500/15 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : ''
                 }`}
               >
                 <User

@@ -25,15 +25,15 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     primary:
-      'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20',
+      'bg-gradient-to-b from-emerald-400 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:from-emerald-600 active:to-emerald-700 text-white shadow-[0_6px_20px_-4px_rgba(16,185,129,0.4)] border border-emerald-300/25',
     secondary:
-      'bg-[#26262a] hover:bg-[#323238] active:bg-[#1f1f23] text-neutral-100 border border-neutral-700/60 shadow-sm',
+      'bg-gradient-to-b from-[#272730] to-[#1e1e26] hover:from-[#30303b] hover:to-[#25252e] active:bg-[#1a1a21] text-neutral-100 border border-white/[0.09] shadow-sm',
     outline:
-      'bg-transparent hover:bg-neutral-800/60 text-emerald-400 border border-emerald-500/50 hover:border-emerald-500 active:bg-emerald-950/30',
+      'bg-emerald-500/[0.06] hover:bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 active:bg-emerald-950/30',
     ghost:
-      'bg-transparent hover:bg-neutral-800/60 text-neutral-300 hover:text-white',
+      'bg-transparent hover:bg-white/[0.06] text-neutral-300 hover:text-white',
     danger:
-      'bg-red-500/90 hover:bg-red-600 active:bg-red-700 text-white shadow-lg shadow-red-500/20 border border-red-400/20',
+      'bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-600 active:bg-red-700 text-white shadow-[0_6px_20px_-4px_rgba(239,68,68,0.35)] border border-red-300/25',
   }
 
   const sizes = {

@@ -51,6 +51,7 @@ class RecentScannedProductItem(BaseModel):
     image_url: Optional[str] = None
     last_scanned_at: str
     scan_count: int = 1
+    is_honest_sign: bool = False
 
 
 class BarcodeScanImageResponse(BaseModel):

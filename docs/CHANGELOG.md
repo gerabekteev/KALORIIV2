@@ -4,6 +4,41 @@
 
 ---
 
+## [2026-10-23] — Релиз v1.5.0: Глубокий аудит безопасности, Калькулятор «На 100 г с пачки + Вес порции», Слайдер порций, AI OCR этикеток и Умный AI-ассистент БЖУ
+
+### 🛡️ Безопасность и исправление багов (Security & Full-Stack Audit)
+1. **Безопасность бэкенда и инфраструктуры (`SEC-01` .. `SEC-06`)**:
+   - **Защита секретов и учётных данных**: создана единая утилита шифрования [`backend/app/utils/security.py`](file:///c:/Fvus/some/KALORII/backend/app/utils/security.py) (Fernet `enc:v1:` от `JWT_SECRET` с обратной совместимостью `enc:`). Добавлен `.dockerignore` для исключения попадания `.env`, `.git`, `*.sqlite3` и `*.jks` в Docker-образ.
+   - **Закрытие SSRF и защита загрузки изображений**: в [`barcode_service.py`](file:///c:/Fvus/some/KALORII/backend/app/services/barcode_service.py) добавлена строгая проверка внешних URL картинок (`_sanitize_external_image_url` — только `http/https`, блокировка `localhost`/приватных IP). В [`image.py`](file:///c:/Fvus/some/KALORII/backend/app/utils/image.py) добавлено потоковое чтение файлов чанками по 64 КБ с жёстким лимитом `max_bytes` (защита от OOM до загрузки в RAM).
+   - **Корректный Rate Limiting за Reverse Proxy**: во всех роутерах ([`auth.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/auth.py), [`ai.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/ai.py), [`barcode.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/barcode.py), [`meal_plan.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/meal_plan.py)) извлечение IP переведено на реальный адрес клиента из `X-Real-IP` / `X-Forwarded-For`, чтобы контейнер Caddy не блокировал всех пользователей общим лимитом.
+   - **Валидация дат и времени**: в [`timezone.py`](file:///c:/Fvus/some/KALORII/backend/app/utils/timezone.py) ограничено окно `X-Client-Date` (±2 дня от UTC), в [`meals.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/meals.py) добавлена проверка календарной корректности `meal_time` (`00:00`..`23:59`).
+   - **Контент-валидация и идемпотентность**: добавлены лимиты длины строк в схемах [`barcode.py`](file:///c:/Fvus/some/KALORII/backend/app/schemas/barcode.py) и [`recipe.py`](file:///c:/Fvus/some/KALORII/backend/app/schemas/recipe.py); устранено дублирование привязанных продуктов при редактировании рецепта ([`recipes.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/recipes.py)); добавлен фоллбэк разбора JSON с незаэкранированными переводами строк от LLM ([`base.py`](file:///c:/Fvus/some/KALORII/backend/app/utils/ai_providers/base.py)); закрыта race condition в Telegram-поллинге ([`telegram_bot.py`](file:///c:/Fvus/some/KALORII/backend/app/services/telegram_bot.py)).
+   - **Очистка чувствительных кешей на клиенте**: при выходе из аккаунта (`logout()` в [`authStore.ts`](file:///c:/Fvus/some/KALORII/frontend/src/store/authStore.ts)) и истечении сессии (`401` в [`client.ts`](file:///c:/Fvus/some/KALORII/frontend/src/api/client.ts)) полностью очищаются локальные кеши дневника и офлайн-очередь.
+
+### ⚖️ Новый интерфейс ручного ввода «На 100 г (с упаковки) + Вес порции»
+1. **Двухшаговый калькулятор в [`AddMealModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/AddMealModal.tsx)**:
+   - Переключатель режимов: **«На 100 г (с упаковки)»** (по умолчанию) и **«За всю порцию»**.
+   - **Шаг 1 (С упаковки — на 100 г)**: пользователь переписывает цифры с этикетки как есть (`Ккал`, `Белки`, `Жиры`, `Углеводы` на 100 г) и при желании указывает вес всей пачки (например, `180 г`). Добавлена авто-подсказка калорийности по формуле `4 × Б + 9 × Ж + 4 × У`.
+   - **Шаг 2 (Сколько вы съели)**: крупные кнопки `+ / -` (шаг 10 г / 25 г), поле точного веса в граммах, быстрые чипы граммовок (`30г`, `50г`, `100г`, `150г`, `200г`, `250г`, `300г`) и кнопки **долей от упаковки** (`¼ пачки`, `⅓`, `½ пачки`, `1 пачка`, `1.5×`, `2×`).
+   - **Живое табло итога**: мгновенно показывает рассчитанные КБЖУ именно для выбранной порции и позволяет в 1 галочку сохранить продукт в базу (и привязать к ненайденному штрихкоду).
+2. **Умное создание продуктов и рецептов ([`ProductSearch.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/products/ProductSearch.tsx), [`CreateRecipeModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/recipes/CreateRecipeModal.tsx))**:
+   - При создании своего продукта в базе можно сразу указать вес порции (`Добавить в дневник: X г`) и в один клик сохранить продукт + записать съеденную порцию.
+   - В экспресс-создании рецепта добавлен переключатель **«Ввод на 100 г / Ввод за всё блюдо»** с автоматическим пересчётом на 100 г.
+
+### ✨ Новые функции и UX-улучшения (Wave 5)
+1. **Слайдер и множители масштабирования всей порции ([`EditMealModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/EditMealModal.tsx), [`MealCard.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/MealCard.tsx))**:
+   - В окне редактирования блюда добавлен блок **«Масштаб всей порции»**: быстрые множители (`×0.5`, `×0.75`, `×1`, `×1.25`, `×1.5`, `×2`), плавный слайдер (`25%..250%`) и кнопки точного шага (`-50г`, `-25г`, `+25г`, `+50г`), синхронно масштабирующие общий вес, КБЖУ и все ингредиенты от базового снимка (`BaselineMealState`) без накопления ошибки округления.
+   - В карточке блюда (`MealCard.tsx`) внутри раскрывающегося состава добавлены быстрые кнопки масштабирования всего блюда в 1 тап (`×0.5`, `×0.75`, `×1.5`, `×2`).
+2. **Авто-перенос фото этикетки КБЖУ в форму «На 100 г» ([`BarcodeScannerView.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/barcode/BarcodeScannerView.tsx), [`AddMealModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/AddMealModal.tsx))**:
+   - Если штрихкод не найден в базе (или прямо внутри вкладки ручного ввода «На 100 г»), кнопка **«Считать КБЖУ с фото этикетки в форму (AI)»** фотографирует таблицу пищевой ценности и автоматически заполняет название, бренд, вес упаковки и КБЖУ на 100 г.
+3. **Ускоренный AI-ассистент «Что мне съесть под остаток БЖУ?» ([`TodayPage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/TodayPage.tsx), [`MealPlanPage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/MealPlanPage.tsx))**:
+   - На главном экране под кольцом калорий добавлена панель быстрого подбора на остаток калорий с кнопками в 1 тап (`🍳 1 блюдо`, `💪 Добрать белок`, `Рацион`) и отображением точного остатка БЖУ в граммах (`ост. Xг`).
+   - На экране «Что съесть» добавлены 4 сценария мгновенного запуска в 1 клик (`🍳 На ужин / перекус (1 блюдо)`, `💪 Добрать белок`, `🥗 На остаток дня (2 блюда)`, `📅 Полный рацион`), кликабельные чипы пожеланий (`⚡ Быстро до 15 мин`, `🛒 Из простых продуктов`, `🥣 Без готовки`, `🍗 Максимум белка`, `🐟 Без рыбы`, `🥛 Без лактозы`, `🥞 Сладкое ПП к чаю`) и компактная сворачиваемая панель ручной настройки КБЖУ.
+4. **Освежение визуального стиля ([`Layout.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/layout/Layout.tsx), [`Header.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/layout/Header.tsx), [`BottomNav.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/layout/BottomNav.tsx), [`Card.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/ui/Card.tsx), [`Button.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/ui/Button.tsx), [`Modal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/ui/Modal.tsx))**:
+   - Добавлено фоновое радиальное свечение, объёмные градиентные карточки с тонким верхним бликом `border-white/[0.07]`, обновлённый стеклянный хедер и нижний док навигации.
+
+---
+
 ## [2026-10-19] — Релиз v1.4.0: Полноценное нативное мобильное приложение Android (Capacitor APK)
 
 ### 📱 Нативная интеграция Android & Capacitor

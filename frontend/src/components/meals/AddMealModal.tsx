@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Camera,
   Image as ImageIcon,
   Sparkles,
-  MessageSquare,
   Search,
   PenTool,
   X,
@@ -12,13 +11,20 @@ import {
   Barcode,
   ArrowLeft,
   ChevronRight,
-  ShieldCheck,
   Mic,
   Square,
+  Scale,
+  Package,
+  Calculator,
+  Check,
+  Plus,
+  Minus,
+  Flame,
+  Clock,
+  ScanLine,
 } from 'lucide-react'
 import { Modal, registerBackHandler } from '../ui/Modal'
 import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
 import { ProductSearch } from '../products/ProductSearch'
 import { RecipeList } from '../recipes/RecipeList'
 import { BarcodeScannerView } from '../barcode/BarcodeScannerView'
@@ -26,12 +32,22 @@ import { BarcodePortionModal } from '../barcode/BarcodePortionModal'
 import { RecentScannedShelf } from '../barcode/RecentScannedShelf'
 import { useUIStore } from '../../store/uiStore'
 import { useMealsStore } from '../../store/mealsStore'
-import { aiApi } from '../../api/ai'
+import { productsApi } from '../../api/products'
 import { barcodeApi } from '../../api/barcode'
 import { BarcodeProductResult } from '../../types'
 import { isNativeApp, pickImageNative } from '../../utils/platform'
 
 type ModalMode = 'hub' | 'barcode' | 'ai_photo' | 'text_ai' | 'voice_ai' | 'search' | 'recipes' | 'manual'
+type ManualCalcMode = 'per_100g' | 'total_portion'
+
+const PORTION_PRESETS = [30, 50, 100, 150, 200, 250, 300]
+
+function parseNumericInput(val: string): number {
+  if (!val) return 0
+  const normalized = val.replace(',', '.').trim()
+  const parsed = parseFloat(normalized)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+}
 
 export const AddMealModal: React.FC = () => {
   const { isAddMealOpen, closeAddMeal, addToast, addMealPresetTime } = useUIStore()
@@ -63,22 +79,48 @@ export const AddMealModal: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const isRecordingCancelledRef = useRef(false)
   const audioChunksRef = useRef<Blob[]>([])
 
   // Manual mode state
+  const [manualCalcMode, setManualCalcMode] = useState<ManualCalcMode>('per_100g')
+  const [manualBarcode, setManualBarcode] = useState('')
+  const [manualBrand, setManualBrand] = useState('')
+  const [manualPackageWeight, setManualPackageWeight] = useState('')
+  const [saveToCatalog, setSaveToCatalog] = useState(true)
   const [manualForm, setManualForm] = useState({
     name: '',
     calories: '',
     protein: '',
     fat: '',
     carbs: '',
-    weight_grams: '',
+    weight_grams: '100',
     meal_time: new Date().toTimeString().slice(0, 5),
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isScanningManualLabel, setIsScanningManualLabel] = useState(false)
 
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
+  const manualLabelInputRef = useRef<HTMLInputElement>(null)
+
+  const cancelVoiceRecording = useCallback(() => {
+    isRecordingCancelledRef.current = true
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop()
+      } catch {
+        // ignore
+      }
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+      mediaStreamRef.current = null
+    }
+    setIsRecording(false)
+    setRecordingSeconds(0)
+  }, [])
 
   // Reset to hub whenever modal opens
   useEffect(() => {
@@ -92,6 +134,11 @@ export const AddMealModal: React.FC = () => {
       setIsPortionModalOpen(false)
       setIsRecording(false)
       setRecordingSeconds(0)
+      setManualCalcMode('per_100g')
+      setManualBarcode('')
+      setManualBrand('')
+      setManualPackageWeight('')
+      setSaveToCatalog(true)
       const timePreset = addMealPresetTime || new Date().toTimeString().slice(0, 5)
       setManualForm({
         name: '',
@@ -99,24 +146,24 @@ export const AddMealModal: React.FC = () => {
         protein: '',
         fat: '',
         carbs: '',
-        weight_grams: '',
+        weight_grams: '100',
         meal_time: timePreset,
       })
     } else {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop()
-      }
-      setIsRecording(false)
+      cancelVoiceRecording()
     }
-  }, [isAddMealOpen, addMealPresetTime])
+  }, [isAddMealOpen, addMealPresetTime, cancelVoiceRecording])
 
   useEffect(() => {
     if (!isAddMealOpen || mode === 'hub' || isPortionModalOpen) return
     return registerBackHandler(() => {
+      if (isRecording) {
+        cancelVoiceRecording()
+      }
       setMode('hub')
       return true
     })
-  }, [isAddMealOpen, mode, isPortionModalOpen])
+  }, [isAddMealOpen, mode, isPortionModalOpen, isRecording, cancelVoiceRecording])
 
   useEffect(() => {
     let interval: any
@@ -260,7 +307,9 @@ export const AddMealModal: React.FC = () => {
 
   const startVoiceRecording = async () => {
     try {
+      isRecordingCancelledRef.current = false
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
       const recorder = new MediaRecorder(stream)
       audioChunksRef.current = []
 
@@ -270,6 +319,12 @@ export const AddMealModal: React.FC = () => {
 
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop())
+        mediaStreamRef.current = null
+        if (isRecordingCancelledRef.current) {
+          isRecordingCancelledRef.current = false
+          audioChunksRef.current = []
+          return
+        }
         const audioBlob = new Blob(audioChunksRef.current, {
           type: recorder.mimeType || 'audio/webm',
         })
@@ -294,43 +349,155 @@ export const AddMealModal: React.FC = () => {
   }
 
   const stopVoiceRecording = () => {
+    isRecordingCancelledRef.current = false
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
     }
     setIsRecording(false)
   }
 
+  // Computed values for Manual Entry
+  const rawProtein = parseNumericInput(manualForm.protein)
+  const rawFat = parseNumericInput(manualForm.fat)
+  const rawCarbs = parseNumericInput(manualForm.carbs)
+  const macroCalculatedCalories = Math.round(rawProtein * 4 + rawFat * 9 + rawCarbs * 4)
+  const hasMacroValues = rawProtein > 0 || rawFat > 0 || rawCarbs > 0
+  const enteredCalories = parseNumericInput(manualForm.calories)
+  const effectiveBaseCalories =
+    manualForm.calories.trim() !== '' ? enteredCalories : macroCalculatedCalories
+
+  const portionWeightGrams = Math.max(
+    0,
+    parseNumericInput(manualForm.weight_grams || (manualCalcMode === 'per_100g' ? '100' : '0'))
+  )
+  const packageWeightGrams = parseNumericInput(manualPackageWeight)
+  const portionRatio = manualCalcMode === 'per_100g' ? portionWeightGrams / 100 : 1
+
+  const finalPortionCalories = Math.round(effectiveBaseCalories * portionRatio)
+  const finalPortionProtein = Math.round(rawProtein * portionRatio * 10) / 10
+  const finalPortionFat = Math.round(rawFat * portionRatio * 10) / 10
+  const finalPortionCarbs = Math.round(rawCarbs * portionRatio * 10) / 10
+
+  const handleAdjustPortionWeight = (delta: number) => {
+    const current = portionWeightGrams || 100
+    const next = Math.max(5, Math.round(current + delta))
+    setManualForm((prev) => ({ ...prev, weight_grams: String(next) }))
+  }
+
+  const handleScanManualLabelFile = async (file: File) => {
+    setIsScanningManualLabel(true)
+    try {
+      const res = await barcodeApi.scanImage(file)
+      if (res.product) {
+        const p = res.product
+        setManualCalcMode('per_100g')
+        if (p.barcode && !manualBarcode) {
+          setManualBarcode(p.barcode)
+        }
+        if (p.brand) {
+          setManualBrand(p.brand)
+        }
+        const pkgW = p.package_weight_grams && p.package_weight_grams > 0 ? Math.round(p.package_weight_grams) : 0
+        if (pkgW > 0) {
+          setManualPackageWeight(String(pkgW))
+        }
+        setManualForm((prev) => ({
+          ...prev,
+          name: p.name || prev.name,
+          calories: String(Math.round(p.calories_per_100g || 0)),
+          protein: String(Math.round((p.protein_per_100g || 0) * 10) / 10),
+          fat: String(Math.round((p.fat_per_100g || 0) * 10) / 10),
+          carbs: String(Math.round((p.carbs_per_100g || 0) * 10) / 10),
+          weight_grams: pkgW > 0 ? String(pkgW) : prev.weight_grams || '100',
+        }))
+        addToast('✨ Данные с этикетки перенесены в форму! Укажите вес вашей порции.', 'success', 3500)
+      } else {
+        addToast(res.message || 'Не удалось считать таблицу КБЖУ с фото', 'warning')
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Ошибка распознавания этикетки через AI', 'error')
+    } finally {
+      setIsScanningManualLabel(false)
+    }
+  }
+
+  const handleTriggerManualLabelScan = async () => {
+    if (isNativeApp()) {
+      try {
+        const file = await pickImageNative('camera')
+        if (file) await handleScanManualLabelFile(file)
+      } catch {
+        addToast('Не удалось открыть камеру', 'error')
+      }
+      return
+    }
+    manualLabelInputRef.current?.click()
+  }
+
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!manualForm.name.trim()) {
-      addToast('Введите название блюда', 'warning')
+    const cleanName = manualForm.name.trim()
+    const cleanBrand = manualBrand.trim()
+    if (!cleanName) {
+      addToast('Введите название продукта или блюда', 'warning')
+      return
+    }
+    if (manualCalcMode === 'per_100g' && portionWeightGrams <= 0) {
+      addToast('Укажите вес съеденной порции в граммах', 'warning')
+      return
+    }
+    if (effectiveBaseCalories <= 0 && !hasMacroValues) {
+      addToast('Укажите калорийность или БЖУ', 'warning')
       return
     }
 
+    const displayMealName =
+      cleanBrand && !cleanName.toLowerCase().includes(cleanBrand.toLowerCase())
+        ? `${cleanName} (${cleanBrand})`
+        : cleanName
+
     setIsSubmitting(true)
     try {
+      // 1. Optionally save to product catalog (and recent scanned shelf if barcode is attached)
+      if (manualCalcMode === 'per_100g' && (saveToCatalog || manualBarcode.trim())) {
+        try {
+          await productsApi.createProduct({
+            name: cleanName,
+            brand: cleanBrand || null,
+            barcode: manualBarcode.trim() || null,
+            package_weight_grams: packageWeightGrams > 0 ? packageWeightGrams : null,
+            calories_per_100g: effectiveBaseCalories,
+            protein_per_100g: rawProtein,
+            fat_per_100g: rawFat,
+            carbs_per_100g: rawCarbs,
+            category: manualBarcode.trim() ? 'Штрихкоды' : 'Мои продукты',
+          })
+          setRecentRefreshTrigger((prev) => prev + 1)
+        } catch (catalogErr) {
+          console.warn('Could not save custom product to catalog:', catalogErr)
+        }
+      }
+
+      // 2. Add the actual eaten portion to the meal diary
       await addMeal({
-        name: manualForm.name.trim(),
-        calories: Number(manualForm.calories) || 0,
-        protein: Number(manualForm.protein) || 0,
-        fat: Number(manualForm.fat) || 0,
-        carbs: Number(manualForm.carbs) || 0,
-        weight_grams: manualForm.weight_grams ? Number(manualForm.weight_grams) : undefined,
+        name: displayMealName,
+        calories: finalPortionCalories,
+        protein: finalPortionProtein,
+        fat: finalPortionFat,
+        carbs: finalPortionCarbs,
+        weight_grams: portionWeightGrams > 0 ? Math.round(portionWeightGrams) : undefined,
         meal_time: manualForm.meal_time || addMealPresetTime || new Date().toTimeString().slice(0, 5),
         meal_date: selectedDate,
         is_manually_edited: true,
       })
-      addToast('Приём пищи добавлен', 'success')
+
+      addToast(
+        manualBarcode.trim()
+          ? `Товар сохранён по штрихкоду и добавлен в дневник (${finalPortionCalories} ккал)`
+          : `Добавлено в дневник: ${displayMealName} (${finalPortionCalories} ккал)`,
+        'success'
+      )
       closeAddMeal()
-      setManualForm({
-        name: '',
-        calories: '',
-        protein: '',
-        fat: '',
-        carbs: '',
-        weight_grams: '',
-        meal_time: addMealPresetTime || new Date().toTimeString().slice(0, 5),
-      })
     } catch {
       addToast('Ошибка сохранения', 'error')
     } finally {
@@ -439,7 +606,12 @@ export const AddMealModal: React.FC = () => {
           <div className="flex items-center justify-between mb-4 pb-2 border-b border-neutral-800/80">
             <button
               type="button"
-              onClick={() => setMode('hub')}
+              onClick={() => {
+                if (isRecording) {
+                  cancelVoiceRecording()
+                }
+                setMode('hub')
+              }}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-neutral-800"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -609,11 +781,45 @@ export const AddMealModal: React.FC = () => {
               if (comment) setAiComment(comment)
               setMode('ai_photo')
             }}
-            onSwitchToManual={(initialName, barcode) => {
-              setManualForm((prev) => ({
-                ...prev,
-                name: initialName || (barcode ? `Товар (${barcode})` : ''),
-              }))
+            onSwitchToManual={(initialName, barcode, prefill) => {
+              setManualCalcMode('per_100g')
+              setManualBarcode(prefill?.barcode || barcode || '')
+              setSaveToCatalog(true)
+              if (prefill) {
+                const pkgW =
+                  prefill.package_weight_grams && prefill.package_weight_grams > 0
+                    ? Math.round(prefill.package_weight_grams)
+                    : 0
+                setManualBrand(prefill.brand || '')
+                setManualPackageWeight(pkgW > 0 ? String(pkgW) : '')
+                setManualForm((prev) => ({
+                  ...prev,
+                  name: prefill.name || initialName || prev.name || '',
+                  calories:
+                    prefill.calories_per_100g !== undefined
+                      ? String(Math.round(prefill.calories_per_100g))
+                      : prev.calories,
+                  protein:
+                    prefill.protein_per_100g !== undefined
+                      ? String(Math.round(prefill.protein_per_100g * 10) / 10)
+                      : prev.protein,
+                  fat:
+                    prefill.fat_per_100g !== undefined
+                      ? String(Math.round(prefill.fat_per_100g * 10) / 10)
+                      : prev.fat,
+                  carbs:
+                    prefill.carbs_per_100g !== undefined
+                      ? String(Math.round(prefill.carbs_per_100g * 10) / 10)
+                      : prev.carbs,
+                  weight_grams: pkgW > 0 ? String(pkgW) : prev.weight_grams || '100',
+                }))
+              } else {
+                setManualForm((prev) => ({
+                  ...prev,
+                  name: initialName || prev.name || '',
+                  weight_grams: prev.weight_grams || '100',
+                }))
+              }
               setMode('manual')
             }}
             onCancel={() => setMode('hub')}
@@ -855,15 +1061,25 @@ export const AddMealModal: React.FC = () => {
               </div>
 
               {isRecording && (
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="md"
-                  onClick={stopVoiceRecording}
-                  leftIcon={<Square className="w-4 h-4 fill-white" />}
-                >
-                  Завершить и отправить в AI
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="md"
+                    onClick={stopVoiceRecording}
+                    leftIcon={<Square className="w-4 h-4 fill-white" />}
+                  >
+                    Завершить и отправить в AI
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    onClick={cancelVoiceRecording}
+                  >
+                    Отмена
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -890,95 +1106,562 @@ export const AddMealModal: React.FC = () => {
         )}
 
         {/* ======================================================== */}
-        {/* MODE: MANUAL ENTRY                                       */}
+        {/* MODE: MANUAL ENTRY (REDESIGNED SMART 100G + PORTION UX)  */}
         {/* ======================================================== */}
         {mode === 'manual' && (
-          <form onSubmit={handleManualSubmit} className="space-y-3.5">
-            <Input
-              label="Название блюда *"
-              placeholder="Например: Творог с ягодами"
-              value={manualForm.name}
-              onChange={(e) =>
-                setManualForm({ ...manualForm, name: e.target.value })
-              }
-              required
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Калории (ккал) *"
-                type="number"
-                min="0"
-                placeholder="0"
-                value={manualForm.calories}
-                onChange={(e) =>
-                  setManualForm({ ...manualForm, calories: e.target.value })
-                }
-                required
-              />
-              <Input
-                label="Вес порции (г)"
-                type="number"
-                min="0"
-                placeholder="100"
-                value={manualForm.weight_grams}
-                onChange={(e) =>
-                  setManualForm({ ...manualForm, weight_grams: e.target.value })
-                }
-              />
+          <form onSubmit={handleManualSubmit} className="space-y-4">
+            {/* 1. Calculation Mode Switcher: Per 100g (from package) vs Total Portion */}
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#131317] border border-neutral-800/90">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualCalcMode('per_100g')
+                    if (!manualForm.weight_grams || Number(manualForm.weight_grams) <= 0) {
+                      setManualForm((prev) => ({ ...prev, weight_grams: '100' }))
+                    }
+                  }}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    manualCalcMode === 'per_100g'
+                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">На 100 г (с упаковки)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setManualCalcMode('total_portion')}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    manualCalcMode === 'total_portion'
+                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'
+                  }`}
+                >
+                  <Scale className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">За всю порцию</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-neutral-400 px-1 my-0">
+                {manualCalcMode === 'per_100g'
+                  ? 'Вводите КБЖУ на 100 г как написано на пачке, а ниже укажите вес вашей порции — всё пересчитается автоматически.'
+                  : 'Вводите уже готовые итоговые КБЖУ за всё съеденное блюдо целиком.'}
+              </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                label="Белки (г)"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0"
-                value={manualForm.protein}
-                onChange={(e) =>
-                  setManualForm({ ...manualForm, protein: e.target.value })
-                }
-              />
-              <Input
-                label="Жиры (г)"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0"
-                value={manualForm.fat}
-                onChange={(e) =>
-                  setManualForm({ ...manualForm, fat: e.target.value })
-                }
-              />
-              <Input
-                label="Углеводы (г)"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0"
-                value={manualForm.carbs}
-                onChange={(e) =>
-                  setManualForm({ ...manualForm, carbs: e.target.value })
-                }
-              />
+            {/* Scanned Barcode Badge (if switched from barcode scanner) */}
+            {manualBarcode && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Barcode className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-emerald-300">
+                        Привязан штрихкод:
+                      </span>
+                      <span className="text-xs font-mono font-bold text-white truncate">
+                        {manualBarcode}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-300 block truncate">
+                      Товар сохранится в базе и появится в «Недавно отсканированных»
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setManualBarcode('')}
+                  className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800/60 transition-colors cursor-pointer shrink-0"
+                  title="Отвязать штрихкод"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Quick AI Label OCR Autofill Banner (for Per 100g mode) */}
+            {manualCalcMode === 'per_100g' && (
+              <div className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-950/35 via-[#161a1d] to-[#16161c] border border-emerald-500/25">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={manualLabelInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleScanManualLabelFile(file)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <ScanLine className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-white block truncate">
+                      Лень вводить цифры с пачки?
+                    </span>
+                    <span className="text-[10.5px] text-neutral-400 block truncate">
+                      AI сам перенесёт КБЖУ на 100 г и вес с фото этикетки
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  isLoading={isScanningManualLabel}
+                  onClick={handleTriggerManualLabelScan}
+                  className="shrink-0 text-xs border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/15"
+                >
+                  Сфотографировать
+                </Button>
+              </div>
+            )}
+
+            {/* 2. Product Name + Optional Brand & Package Weight */}
+            <div className="p-3.5 rounded-2xl bg-[#16161b] border border-neutral-800/90 space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-neutral-200 block mb-1.5">
+                  Название продукта или блюда <span className="text-emerald-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Например: Творог 5%, Греческий йогурт, Протеиновый батончик"
+                  value={manualForm.name}
+                  onChange={(e) =>
+                    setManualForm({ ...manualForm, name: e.target.value })
+                  }
+                  required
+                  autoFocus
+                  className="w-full bg-[#111115] border border-neutral-700/80 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-500 outline-none transition-colors"
+                />
+              </div>
+
+              {manualCalcMode === 'per_100g' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-medium text-neutral-400">
+                        Вес всей пачки / штуки (г)
+                      </label>
+                      {packageWeightGrams > 0 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setManualForm((prev) => ({
+                              ...prev,
+                              weight_grams: String(Math.round(packageWeightGrams)),
+                            }))
+                          }
+                          className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                        >
+                          = Вся пачка ({Math.round(packageWeightGrams)}г)
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      placeholder="Напр: 140, 180, 250 (опц.)"
+                      value={manualPackageWeight}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setManualPackageWeight(val)
+                        const parsedPkg = parseNumericInput(val)
+                        if (parsedPkg > 0 && manualForm.weight_grams === '100') {
+                          setManualForm((prev) => ({
+                            ...prev,
+                            weight_grams: String(Math.round(parsedPkg)),
+                          }))
+                        }
+                      }}
+                      className="w-full bg-[#111115] border border-neutral-800 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-neutral-400 block mb-1">
+                      Бренд / Производитель (опц.)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Напр: Савушкин, ВкусВилл"
+                      value={manualBrand}
+                      onChange={(e) => setManualBrand(e.target.value)}
+                      className="w-full bg-[#111115] border border-neutral-800 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <Input
-              label="Время приёма"
-              type="time"
-              value={manualForm.meal_time}
-              onChange={(e) =>
-                setManualForm({ ...manualForm, meal_time: e.target.value })
-              }
-            />
+            {/* 3. Nutrition Facts Input Block (Per 100g or Per Portion) */}
+            <div className="p-3.5 rounded-2xl bg-[#16161b] border border-neutral-800/90 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-xs font-bold text-white">
+                    {manualCalcMode === 'per_100g'
+                      ? 'Пищевая ценность на 100 г (с упаковки)'
+                      : 'Пищевая ценность за всю порцию'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  {manualCalcMode === 'per_100g' ? 'НА 100 ГРАММ' : 'ЗА ПОРЦИЮ'}
+                </span>
+              </div>
+
+              {/* Calories Input + Auto-calc from Macros Helper */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <label className="text-xs font-medium text-neutral-300">
+                    Калорийность ({manualCalcMode === 'per_100g' ? 'ккал на 100 г' : 'ккал всего'}) *
+                  </label>
+                  {hasMacroValues && macroCalculatedCalories > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setManualForm((prev) => ({
+                          ...prev,
+                          calories: String(macroCalculatedCalories),
+                        }))
+                      }
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                      title="Рассчитать по формуле: 4 × Белки + 9 × Жиры + 4 × Углеводы"
+                    >
+                      <Calculator className="w-3 h-3" />
+                      <span>Авто по БЖУ: {macroCalculatedCalories} ккал</span>
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder={
+                      hasMacroValues && macroCalculatedCalories > 0
+                        ? `${macroCalculatedCalories} (рассчитано по БЖУ)`
+                        : 'Например: 120'
+                    }
+                    value={manualForm.calories}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, calories: e.target.value })
+                    }
+                    className="w-full bg-[#111115] border border-neutral-700/80 focus:border-emerald-500 rounded-xl pl-3.5 pr-20 py-2.5 text-sm font-bold text-white placeholder-neutral-500 outline-none transition-colors"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-neutral-400 pointer-events-none">
+                    {manualCalcMode === 'per_100g' ? 'ккал / 100г' : 'ккал'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Macros Grid: Protein, Fat, Carbs */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-semibold text-blue-400 block mb-1">
+                    Белки {manualCalcMode === 'per_100g' ? '(на 100г)' : '(г)'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="0"
+                      value={manualForm.protein}
+                      onChange={(e) =>
+                        setManualForm({ ...manualForm, protein: e.target.value })
+                      }
+                      className="w-full bg-[#111115] border border-neutral-800 focus:border-blue-500 rounded-xl pl-3 pr-7 py-2 text-sm font-semibold text-white placeholder-neutral-500 outline-none transition-colors"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-neutral-500 pointer-events-none">
+                      г
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-amber-400 block mb-1">
+                    Жиры {manualCalcMode === 'per_100g' ? '(на 100г)' : '(г)'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="0"
+                      value={manualForm.fat}
+                      onChange={(e) =>
+                        setManualForm({ ...manualForm, fat: e.target.value })
+                      }
+                      className="w-full bg-[#111115] border border-neutral-800 focus:border-amber-500 rounded-xl pl-3 pr-7 py-2 text-sm font-semibold text-white placeholder-neutral-500 outline-none transition-colors"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-neutral-500 pointer-events-none">
+                      г
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-purple-400 block mb-1">
+                    Углеводы {manualCalcMode === 'per_100g' ? '(на 100г)' : '(г)'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="0"
+                      value={manualForm.carbs}
+                      onChange={(e) =>
+                        setManualForm({ ...manualForm, carbs: e.target.value })
+                      }
+                      className="w-full bg-[#111115] border border-neutral-800 focus:border-purple-500 rounded-xl pl-3 pr-7 py-2 text-sm font-semibold text-white placeholder-neutral-500 outline-none transition-colors"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-neutral-500 pointer-events-none">
+                      г
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Portion Weight Selector Block (Especially important for Per 100g mode!) */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-b from-[#181c20] to-[#14161a] border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-xs font-bold text-white">
+                    {manualCalcMode === 'per_100g'
+                      ? 'Сколько грамм вы съели? (Вес порции)'
+                      : 'Вес порции (опционально)'}
+                  </span>
+                </div>
+                <span className="text-xs font-extrabold text-emerald-400">
+                  {portionWeightGrams > 0 ? `${Math.round(portionWeightGrams)} г` : '—'}
+                </span>
+              </div>
+
+              {/* Weight Input + Quick Steppers (-50, -10, +10, +50) */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPortionWeight(-50)}
+                  className="px-2.5 py-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition-colors cursor-pointer active:scale-95 shrink-0"
+                >
+                  -50
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPortionWeight(-10)}
+                  className="p-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer active:scale-95 shrink-0"
+                  title="-10 г"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    placeholder="100"
+                    value={manualForm.weight_grams}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, weight_grams: e.target.value })
+                    }
+                    className="w-full bg-[#101215] border border-emerald-500/40 focus:border-emerald-400 rounded-xl px-3 py-2 text-center text-base font-extrabold text-white outline-none transition-colors"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-emerald-400 pointer-events-none">
+                    г
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPortionWeight(10)}
+                  className="p-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer active:scale-95 shrink-0"
+                  title="+10 г"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPortionWeight(50)}
+                  className="px-2.5 py-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition-colors cursor-pointer active:scale-95 shrink-0"
+                >
+                  +50
+                </button>
+              </div>
+
+              {/* Package Weight Multiplier Chips (when package weight is filled) */}
+              {manualCalcMode === 'per_100g' && packageWeightGrams > 0 && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-semibold text-neutral-400 block">
+                    От веса упаковки ({Math.round(packageWeightGrams)} г):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: '¼ пачки', mult: 0.25 },
+                      { label: '⅓ пачки', mult: 1 / 3 },
+                      { label: '½ пачки', mult: 0.5 },
+                      { label: 'Вся пачка', mult: 1 },
+                      { label: '1.5 пачки', mult: 1.5 },
+                      { label: '2 пачки', mult: 2 },
+                    ].map(({ label, mult }) => {
+                      const targetWeight = Math.round(packageWeightGrams * mult)
+                      const isSelected = Math.round(portionWeightGrams) === targetWeight
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() =>
+                            setManualForm((prev) => ({
+                              ...prev,
+                              weight_grams: String(targetWeight),
+                            }))
+                          }
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'bg-neutral-900/90 text-neutral-300 hover:text-white border border-neutral-800 hover:border-emerald-500/40'
+                          }`}
+                        >
+                          {label} ({targetWeight}г)
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Standard Gram Presets */}
+              <div className="flex flex-wrap gap-1.5">
+                {PORTION_PRESETS.map((grams) => {
+                  const isSelected = Math.round(portionWeightGrams) === grams
+                  return (
+                    <button
+                      key={grams}
+                      type="button"
+                      onClick={() =>
+                        setManualForm((prev) => ({
+                          ...prev,
+                          weight_grams: String(grams),
+                        }))
+                      }
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-500 text-white shadow-sm'
+                          : 'bg-[#111317] text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      {grams} г
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 5. Live Recalculated Total Preview Card */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-[#151c19] to-[#15171c] border border-emerald-500/35 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-300">
+                  Итого в дневник {portionWeightGrams > 0 ? `за ${Math.round(portionWeightGrams)} г` : ''}:
+                </span>
+                {manualCalcMode === 'per_100g' && (
+                  <span className="text-[11px] text-neutral-400">
+                    {effectiveBaseCalories} ккал/100г × {Math.round(portionWeightGrams)}г
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 pt-0.5">
+                <div className="p-2 rounded-xl bg-black/35 border border-emerald-500/20 text-center">
+                  <span className="text-[10px] text-neutral-400 block">Калории</span>
+                  <span className="text-sm font-extrabold text-emerald-400">
+                    {finalPortionCalories}
+                  </span>
+                  <span className="text-[9px] text-neutral-500 block">ккал</span>
+                </div>
+                <div className="p-2 rounded-xl bg-black/35 border border-neutral-800/80 text-center">
+                  <span className="text-[10px] text-blue-400 block">Белки</span>
+                  <span className="text-sm font-bold text-white">
+                    {finalPortionProtein}
+                  </span>
+                  <span className="text-[9px] text-neutral-500 block">г</span>
+                </div>
+                <div className="p-2 rounded-xl bg-black/35 border border-neutral-800/80 text-center">
+                  <span className="text-[10px] text-amber-400 block">Жиры</span>
+                  <span className="text-sm font-bold text-white">
+                    {finalPortionFat}
+                  </span>
+                  <span className="text-[9px] text-neutral-500 block">г</span>
+                </div>
+                <div className="p-2 rounded-xl bg-black/35 border border-neutral-800/80 text-center">
+                  <span className="text-[10px] text-purple-400 block">Углеводы</span>
+                  <span className="text-sm font-bold text-white">
+                    {finalPortionCarbs}
+                  </span>
+                  <span className="text-[9px] text-neutral-500 block">г</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Save to Catalog Checkbox + Meal Time */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-0.5">
+              {manualCalcMode === 'per_100g' ? (
+                <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={saveToCatalog}
+                    onClick={() => setSaveToCatalog((prev) => !prev)}
+                    className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
+                      saveToCatalog
+                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                        : 'bg-[#141418] border-neutral-700 text-transparent group-hover:border-neutral-500'
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </button>
+                  <span className="text-xs text-neutral-300 group-hover:text-white transition-colors">
+                    {manualBarcode
+                      ? 'Сохранить товар за этим штрихкодом в базу'
+                      : 'Сохранить продукт в мою базу (на 100 г)'}
+                  </span>
+                </label>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                <span className="text-xs text-neutral-400">Время:</span>
+                <input
+                  type="time"
+                  value={manualForm.meal_time}
+                  onChange={(e) =>
+                    setManualForm({ ...manualForm, meal_time: e.target.value })
+                  }
+                  className="bg-[#16161b] border border-neutral-800 focus:border-emerald-500 rounded-lg px-2.5 py-1 text-xs font-semibold text-white outline-none"
+                />
+              </div>
+            </div>
 
             <Button
               type="submit"
-              className="w-full mt-2"
+              size="lg"
+              className="w-full"
               isLoading={isSubmitting}
             >
-              Сохранить в дневник
+              {`Добавить в дневник • ${finalPortionCalories} ккал${
+                portionWeightGrams > 0 ? ` (${Math.round(portionWeightGrams)} г)` : ''
+              }`}
             </Button>
           </form>
         )}

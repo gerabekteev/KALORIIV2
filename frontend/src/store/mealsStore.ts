@@ -79,7 +79,9 @@ function saveCachedDayMeals(dateStr: string, summary: DailyMealsSummary): void {
   }
 }
 
-function getOfflineQueue(): CreateMealPayload[] {
+type OfflineQueueItem = CreateMealPayload & { _offline_id?: number }
+
+function getOfflineQueue(): OfflineQueueItem[] {
   try {
     const raw = localStorage.getItem(OFFLINE_QUEUE_KEY)
     return raw ? JSON.parse(raw) : []
@@ -88,7 +90,7 @@ function getOfflineQueue(): CreateMealPayload[] {
   }
 }
 
-function setOfflineQueue(queue: CreateMealPayload[]): void {
+function setOfflineQueue(queue: OfflineQueueItem[]): void {
   try {
     if (queue.length === 0) {
       localStorage.removeItem(OFFLINE_QUEUE_KEY)
@@ -195,10 +197,11 @@ export const useMealsStore = create<MealsState>((set, get) => ({
     const token = localStorage.getItem('kalorii_token')
     if (!queue.length || !token) return
 
-    const remaining: CreateMealPayload[] = []
+    const remaining: OfflineQueueItem[] = []
     for (const item of queue) {
       try {
-        await mealsApi.createMeal(item)
+        const { _offline_id, ...cleanPayload } = item
+        await mealsApi.createMeal(cleanPayload)
       } catch {
         remaining.push(item)
       }
@@ -320,7 +323,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
           created_at: new Date().toISOString(),
         }
 
-        setOfflineQueue([...getOfflineQueue(), { ...payload, meal_date: targetDate }])
+        setOfflineQueue([...getOfflineQueue(), { ...payload, meal_date: targetDate, _offline_id: tempId }])
 
         if (targetDate === get().selectedDate) {
           set((state) => {
@@ -378,7 +381,11 @@ export const useMealsStore = create<MealsState>((set, get) => ({
   deleteMeal: async (id: number) => {
     set({ isLoading: true, error: null })
     try {
-      await mealsApi.deleteMeal(id)
+      if (id < 0) {
+        setOfflineQueue(getOfflineQueue().filter((it) => it._offline_id !== id))
+      } else {
+        await mealsApi.deleteMeal(id)
+      }
       set((state) => {
         const updatedMeals = state.meals.filter((m) => m.id !== id)
         return {
@@ -416,6 +423,10 @@ export const useMealsStore = create<MealsState>((set, get) => ({
 
     const timer = setTimeout(async () => {
       pendingDeletes.delete(id)
+      if (id < 0) {
+        setOfflineQueue(getOfflineQueue().filter((it) => it._offline_id !== id))
+        return
+      }
       try {
         await mealsApi.deleteMeal(id)
       } catch (err: any) {

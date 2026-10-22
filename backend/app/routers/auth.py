@@ -219,8 +219,8 @@ async def refresh_token(
             detail="Пользователь не найден",
         )
 
-    token_ver = payload.get("ver")
-    if token_ver is not None and getattr(user, "token_version", 1) != token_ver:
+    token_ver = payload.get("ver", 1)
+    if getattr(user, "token_version", 1) != token_ver:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Сессия была завершена (токен отозван)",
@@ -257,10 +257,12 @@ async def get_me(current_user: User = Depends(get_current_user)):
 @router.post("/change-password", response_model=AuthResponse)
 async def change_password(
     payload: PasswordChangeRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Change current user password, invalidate old tokens, and return new tokens."""
+    _check_auth_rate_limit(request)
     if not verify_password(payload.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

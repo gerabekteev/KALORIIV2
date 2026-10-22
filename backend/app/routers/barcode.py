@@ -183,12 +183,16 @@ async def scan_barcode_image_endpoint(
             existing_prod = res.scalar_one_or_none()
 
         if existing_prod:
-            if not existing_prod.image_url:
+            if (
+                existing_prod.is_custom
+                and existing_prod.created_by_user_id == current_user.id
+                and not existing_prod.image_url
+            ):
                 existing_prod.image_url = relative_url_path
                 await db.commit()
                 await db.refresh(existing_prod)
             else:
-                # Удаляем лишний загруженный файл (BUG-B01)
+                # Удаляем лишний загруженный файл (не модифицируем глобальные продукты чужими фото)
                 if dest_path.exists():
                     try:
                         dest_path.unlink()
@@ -214,7 +218,13 @@ async def scan_barcode_image_endpoint(
             await db.refresh(new_prod)
             target_prod = new_prod
 
-        await record_user_scan(db, current_user.id, target_prod.id, barcode=detected_code or "")
+        await record_user_scan(
+            db,
+            current_user.id,
+            target_prod.id,
+            barcode=detected_code or "",
+            is_honest_sign=is_honest,
+        )
 
         product_result = BarcodeProductResult(
             product_id=target_prod.id,
@@ -226,7 +236,7 @@ async def scan_barcode_image_endpoint(
             fat_per_100g=target_prod.fat_per_100g,
             carbs_per_100g=target_prod.carbs_per_100g,
             package_weight_grams=target_prod.package_weight_grams or grams,
-            image_url=target_prod.image_url or relative_url_path,
+            image_url=target_prod.image_url,
             source="ai_vision",
             is_honest_sign=is_honest,
         )
@@ -307,6 +317,7 @@ async def get_recent_scanned_products(
                 image_url=prod.image_url,
                 last_scanned_at=scan_rec.last_scanned_at.isoformat() if scan_rec.last_scanned_at else "",
                 scan_count=scan_rec.scan_count,
+                is_honest_sign=bool(getattr(scan_rec, "is_honest_sign", False)),
             )
         )
 

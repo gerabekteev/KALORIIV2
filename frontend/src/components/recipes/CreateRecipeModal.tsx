@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Search, Loader2, X } from 'lucide-react'
+import { Plus, Trash2, Search, Loader2, X, Calculator } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -29,6 +29,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
   const { addToast } = useUIStore()
 
   const [mode, setMode] = useState<'quick' | 'ingredients'>('quick')
+  const [quickBasis, setQuickBasis] = useState<'per_100g' | 'total_weight'>('per_100g')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Quick mode form
@@ -71,6 +72,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
         )
       } else {
         setMode('quick')
+        setQuickBasis('total_weight')
         setQuickForm({
           name: editingRecipe.name,
           description: editingRecipe.description || '',
@@ -82,6 +84,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
         })
       }
     } else {
+      setQuickBasis('per_100g')
       setQuickForm({
         name: '',
         description: '',
@@ -154,6 +157,22 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
     setIngredients((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const quickWeight = Math.max(1, parseFloat(quickForm.weight_grams) || 100)
+  const quickRawProtein = Math.max(0, parseFloat(quickForm.protein) || 0)
+  const quickRawFat = Math.max(0, parseFloat(quickForm.fat) || 0)
+  const quickRawCarbs = Math.max(0, parseFloat(quickForm.carbs) || 0)
+  const quickMacroCal = Math.round(quickRawProtein * 4 + quickRawFat * 9 + quickRawCarbs * 4)
+  const quickRawCal =
+    quickForm.calories.trim() !== ''
+      ? Math.max(0, parseFloat(quickForm.calories) || 0)
+      : quickMacroCal
+
+  const quickMultiplier = quickBasis === 'per_100g' ? quickWeight / 100 : 1
+  const quickTotalCalories = Math.round(quickRawCal * quickMultiplier)
+  const quickTotalProtein = Math.round(quickRawProtein * quickMultiplier * 10) / 10
+  const quickTotalFat = Math.round(quickRawFat * quickMultiplier * 10) / 10
+  const quickTotalCarbs = Math.round(quickRawCarbs * quickMultiplier * 10) / 10
+
   const handleQuickSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!quickForm.name.trim()) {
@@ -168,22 +187,22 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
         recipe = await recipesApi.updateRecipe(editingRecipe.id, {
           name: quickForm.name.trim(),
           description: quickForm.description.trim() || undefined,
-          total_calories: parseFloat(quickForm.calories) || 0,
-          total_protein: parseFloat(quickForm.protein) || 0,
-          total_fat: parseFloat(quickForm.fat) || 0,
-          total_carbs: parseFloat(quickForm.carbs) || 0,
-          total_weight_grams: parseFloat(quickForm.weight_grams) || 100,
+          total_calories: quickTotalCalories,
+          total_protein: quickTotalProtein,
+          total_fat: quickTotalFat,
+          total_carbs: quickTotalCarbs,
+          total_weight_grams: quickWeight,
         })
         addToast(`Рецепт "${recipe.name}" успешно обновлён!`, 'success')
       } else {
         recipe = await recipesApi.createQuickRecipe({
           name: quickForm.name.trim(),
           description: quickForm.description.trim() || undefined,
-          calories: parseFloat(quickForm.calories) || 0,
-          protein: parseFloat(quickForm.protein) || 0,
-          fat: parseFloat(quickForm.fat) || 0,
-          carbs: parseFloat(quickForm.carbs) || 0,
-          weight_grams: parseFloat(quickForm.weight_grams) || 100,
+          calories: quickTotalCalories,
+          protein: quickTotalProtein,
+          fat: quickTotalFat,
+          carbs: quickTotalCarbs,
+          weight_grams: quickWeight,
         })
         addToast(`Рецепт "${recipe.name}" успешно создан!`, 'success')
       }
@@ -312,63 +331,116 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
               }
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Калории (ккал) *"
-                type="number"
-                min="0"
-                placeholder="0"
-                value={quickForm.calories}
-                onChange={(e) =>
-                  setQuickForm({ ...quickForm, calories: e.target.value })
-                }
-                required
-              />
-              <Input
-                label="Общий вес (г)"
-                type="number"
-                placeholder="100"
-                value={quickForm.weight_grams}
-                onChange={(e) =>
-                  setQuickForm({ ...quickForm, weight_grams: e.target.value })
-                }
-              />
-            </div>
+            {/* Sub-toggle: Per 100g vs Total Recipe Weight */}
+            <div className="p-2.5 rounded-xl bg-[#16161b] border border-neutral-800 space-y-2">
+              <div className="grid grid-cols-2 gap-1 bg-[#111115] p-1 rounded-lg border border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setQuickBasis('per_100g')}
+                  className={`py-1.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                    quickBasis === 'per_100g'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  КБЖУ на 100 г
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickBasis('total_weight')}
+                  className={`py-1.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                    quickBasis === 'total_weight'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  За весь вес рецепта
+                </button>
+              </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                label="Белки (г)"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0"
-                value={quickForm.protein}
-                onChange={(e) =>
-                  setQuickForm({ ...quickForm, protein: e.target.value })
-                }
-              />
-              <Input
-                label="Жиры (г)"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0"
-                value={quickForm.fat}
-                onChange={(e) =>
-                  setQuickForm({ ...quickForm, fat: e.target.value })
-                }
-              />
-              <Input
-                label="Углеводы (г)"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0"
-                value={quickForm.carbs}
-                onChange={(e) =>
-                  setQuickForm({ ...quickForm, carbs: e.target.value })
-                }
-              />
+              {quickMacroCal > 0 && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuickForm((prev) => ({ ...prev, calories: String(quickMacroCal) }))
+                    }
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-lg cursor-pointer"
+                  >
+                    <Calculator className="w-3 h-3" />
+                    <span>Авто по БЖУ: {quickMacroCal} ккал</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label={quickBasis === 'per_100g' ? 'Калории (на 100г) *' : 'Калории (всего) *'}
+                  type="number"
+                  min="0"
+                  placeholder={quickMacroCal > 0 ? String(quickMacroCal) : '0'}
+                  value={quickForm.calories}
+                  onChange={(e) =>
+                    setQuickForm({ ...quickForm, calories: e.target.value })
+                  }
+                />
+                <Input
+                  label="Вес рецепта / порции (г)"
+                  type="number"
+                  min="1"
+                  placeholder="100"
+                  value={quickForm.weight_grams}
+                  onChange={(e) =>
+                    setQuickForm({ ...quickForm, weight_grams: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  label={quickBasis === 'per_100g' ? 'Белки / 100г' : 'Белки (г)'}
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="0"
+                  value={quickForm.protein}
+                  onChange={(e) =>
+                    setQuickForm({ ...quickForm, protein: e.target.value })
+                  }
+                />
+                <Input
+                  label={quickBasis === 'per_100g' ? 'Жиры / 100г' : 'Жиры (г)'}
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="0"
+                  value={quickForm.fat}
+                  onChange={(e) =>
+                    setQuickForm({ ...quickForm, fat: e.target.value })
+                  }
+                />
+                <Input
+                  label={quickBasis === 'per_100g' ? 'Углеводы / 100г' : 'Углеводы (г)'}
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="0"
+                  value={quickForm.carbs}
+                  onChange={(e) =>
+                    setQuickForm({ ...quickForm, carbs: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1 text-xs border-t border-neutral-800/80">
+                <span className="text-neutral-400">
+                  Итого за рецепт ({Math.round(quickWeight)} г):
+                </span>
+                <span className="font-bold text-emerald-400">
+                  {quickTotalCalories} ккал • Б: {quickTotalProtein}г • Ж: {quickTotalFat}г • У:{' '}
+                  {quickTotalCarbs}г
+                </span>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -381,7 +453,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                 Отмена
               </Button>
               <Button type="submit" className="w-1/2" isLoading={isSubmitting}>
-                Сохранить
+                Сохранить ({quickTotalCalories} ккал)
               </Button>
             </div>
           </form>

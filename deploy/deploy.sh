@@ -43,7 +43,7 @@ python -m alembic upgrade head
 echo "[4/6] Installing frontend dependencies and building production bundle..."
 cd "${FRONTEND_DIR}"
 npm ci || npm install
-npm run build
+npm run build:sync-static
 
 # 5. Copy systemd service and restart backend
 echo "[5/6] Updating systemd service..."

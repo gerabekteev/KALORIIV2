@@ -40,18 +40,23 @@ class Settings(BaseSettings):
         default="kaloriiai_super_secure_jwt_secret_change_in_production_2026",
         description="Secret key for JWT token encoding/decoding",
     )
+    ENCRYPTION_KEY: str = Field(
+        default="",
+        description="Optional dedicated secret key for encrypting user BYOK API keys",
+    )
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     @field_validator("JWT_SECRET", mode="after")
     @classmethod
-    def validate_jwt_secret(cls, v: str) -> str:
+    def validate_jwt_secret(cls, v: str, info: Any) -> str:
         clean = (v or "").strip()
         if clean in _INSECURE_DEFAULT_SECRETS or len(clean) < 32:
-            import os
-            is_test = bool(os.environ.get("PYTEST_CURRENT_TEST"))
-            is_debug = os.environ.get("DEBUG", "false").lower() in ("true", "1")
+            import sys
+            is_test = bool(os.environ.get("PYTEST_CURRENT_TEST")) or ("pytest" in sys.modules)
+            debug_from_data = bool(info.data.get("DEBUG", False)) if hasattr(info, "data") and info.data else False
+            is_debug = debug_from_data or os.environ.get("DEBUG", "false").lower() in ("true", "1")
             if not is_debug and not is_test:
                 raise ValueError(
                     "CRITICAL SECURITY ERROR: Небезопасный или короткий JWT_SECRET в продакшене! "

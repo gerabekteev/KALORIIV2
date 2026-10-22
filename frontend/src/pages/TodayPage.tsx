@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
-import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp, ChefHat } from 'lucide-react'
 import { useMeals } from '../hooks/useMeals'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
 import { useMealsStore } from '../store/mealsStore'
+import { useMealPlanStore } from '../store/mealPlanStore'
 import { ProgressRing } from '../components/ui/ProgressRing'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { Card } from '../components/ui/Card'
@@ -12,8 +14,10 @@ import { WeekStripCalendar } from '../components/meals/WeekStripCalendar'
 import { pluralizeRu } from '../utils/pluralize'
 
 export const TodayPage: React.FC = () => {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const { openAddMeal } = useUIStore()
+  const { setPlanDate } = useMealPlanStore()
   const {
     meals,
     selectedDate,
@@ -39,6 +43,14 @@ export const TodayPage: React.FC = () => {
   const dailyGoalCarbs = user?.daily_carbs_goal || 250
 
   const remainingCalories = Math.max(dailyGoalCalories - totals.calories, 0)
+  const remainingProtein = Math.max(Math.round(dailyGoalProtein - totals.protein), 0)
+  const remainingFat = Math.max(Math.round(dailyGoalFat - totals.fat), 0)
+  const remainingCarbs = Math.max(Math.round(dailyGoalCarbs - totals.carbs), 0)
+
+  const handleOpenSmartMealAssistant = (preset: 'single' | 'protein' | 'remaining') => {
+    setPlanDate(selectedDate)
+    navigate(`/meal-plan?preset=${preset}&date=${selectedDate}`)
+  }
 
   // Pending AI meals calculations
   const pendingForCurrentDate = pendingMeals.filter((p) => p.targetDate === selectedDate)
@@ -86,19 +98,20 @@ export const TodayPage: React.FC = () => {
         </div>
       )}
 
-      {/* Daily Progress Card — Compact side-by-side layout */}
+      {/* Daily Progress Card — Elevated Glass & Gradient Surface */}
       <Card
         variant="default"
         padding="sm"
-        className="bg-[#18181c]/90 border border-neutral-800/80 rounded-2xl shadow-md p-3 sm:p-4"
+        className="relative overflow-hidden bg-gradient-to-b from-[#1b1c22]/95 to-[#14151a]/95 border border-white/[0.08] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-3.5 sm:p-4"
       >
-        <div className="flex items-center justify-between gap-3 sm:gap-6">
+        <div className="pointer-events-none absolute -top-16 -left-16 w-44 h-44 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative flex items-center justify-between gap-3 sm:gap-6">
           {/* Compact Circular Calorie Ring */}
           <div className="shrink-0 flex items-center justify-center pl-1 sm:pl-2">
             <ProgressRing
               current={totals.calories}
               target={dailyGoalCalories}
-              size={114}
+              size={116}
               strokeWidth={9}
             >
               <div className="flex flex-col items-center justify-center text-center">
@@ -106,13 +119,13 @@ export const TodayPage: React.FC = () => {
                   {totals.calories}
                 </span>
                 <span className="text-[10px] text-neutral-400 font-medium mt-0.5">
-                  ккал
+                  из {dailyGoalCalories}
                 </span>
                 <span
-                  className={`text-[9px] font-semibold mt-1 px-1.5 py-0.5 rounded-full ${
+                  className={`text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded-full ${
                     totals.calories > dailyGoalCalories
-                      ? 'bg-amber-500/15 text-amber-300'
-                      : 'bg-emerald-500/15 text-emerald-400'
+                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
+                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                   }`}
                 >
                   {totals.calories > dailyGoalCalories
@@ -124,11 +137,11 @@ export const TodayPage: React.FC = () => {
           </div>
 
           {/* Macros Progress Bars */}
-          <div className="flex-1 min-w-0 space-y-2 sm:space-y-2.5 pr-1">
+          <div className="flex-1 min-w-0 space-y-2.5 pr-1">
             <ProgressBar
               current={totals.protein}
               target={dailyGoalProtein}
-              label="Белки"
+              label={`Белки (ост. ${remainingProtein}г)`}
               color="blue"
               size="sm"
               unit="г"
@@ -136,7 +149,7 @@ export const TodayPage: React.FC = () => {
             <ProgressBar
               current={totals.fat}
               target={dailyGoalFat}
-              label="Жиры"
+              label={`Жиры (ост. ${remainingFat}г)`}
               color="amber"
               size="sm"
               unit="г"
@@ -144,7 +157,7 @@ export const TodayPage: React.FC = () => {
             <ProgressBar
               current={totals.carbs}
               target={dailyGoalCarbs}
-              label="Углеводы"
+              label={`Углеводы (ост. ${remainingCarbs}г)`}
               color="purple"
               size="sm"
               unit="г"
@@ -152,9 +165,48 @@ export const TodayPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Smart AI Assistant Bar: "What to eat for remaining macros?" */}
+        {remainingCalories >= 120 && (
+          <div className="mt-3.5 pt-3 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <ChefHat className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[11.5px] font-medium text-neutral-300 truncate">
+                Что съесть на остаток <b className="text-emerald-400">{remainingCalories} ккал</b>?
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleOpenSmartMealAssistant('single')}
+                className="flex-1 sm:flex-initial px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer active:scale-95"
+              >
+                🍳 1 блюдо
+              </button>
+              {remainingProtein >= 20 && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenSmartMealAssistant('protein')}
+                  className="flex-1 sm:flex-initial px-2.5 py-1 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[11px] font-semibold text-blue-300 transition-all cursor-pointer active:scale-95"
+                >
+                  💪 Добрать {remainingProtein}г белка
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleOpenSmartMealAssistant('remaining')}
+                className="flex-1 sm:flex-initial px-2.5 py-1 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-[11px] font-medium text-neutral-300 hover:text-white transition-all cursor-pointer active:scale-95"
+              >
+                Рацион
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Weekly Bank Supportive Status (GC-02) */}
         {totals.calories > dailyGoalCalories && weeklyBank && weeklyBank.isPositive && (
-          <div className="mt-3 pt-2.5 border-t border-neutral-800/80 flex items-center justify-between text-xs text-emerald-400">
+          <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs text-emerald-400">
             <span className="flex items-center gap-1.5 font-medium">
               <span>🛡️</span>
               <span>Превышение покрыто банком недели</span>

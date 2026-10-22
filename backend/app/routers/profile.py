@@ -270,6 +270,18 @@ async def delete_weight_log(
             detail="Запись журнала веса не найдена",
         )
     await db.delete(entry)
+    await db.flush()
+
+    latest_res = await db.execute(
+        select(WeightLog)
+        .where(WeightLog.user_id == current_user.id)
+        .order_by(WeightLog.log_date.desc(), WeightLog.id.desc())
+        .limit(1)
+    )
+    latest_entry = latest_res.scalar_one_or_none()
+    if latest_entry:
+        current_user.current_weight_kg = latest_entry.weight_kg
+
     await db.commit()
     return None
 

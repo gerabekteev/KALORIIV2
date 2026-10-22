@@ -132,14 +132,33 @@ flowchart TD
 - **Backend Resilience Developer (`pro`)**: Актуализировал цепочку `DEFAULT_MODEL_CHAIN` (приоритет скоростной `gemini-3.5-flash-lite`), устранил задержки при 429 rate limit, добавил фильтрацию блоков `<thought>` и провел E2E тест реального распознавания еды с живым ключом Gemini API (1.8 сек отклик).
 - **Final QA Auditor (`pro`)**: Провёл аудит целостности связей `Product <-> RecipeItem`, исключил утечки сессий в `toggle_favorite`, связал заголовки пользовательских API-ключей с бэкендом и подтвердил оценку **9.8 / 10 (100% Production Ready)**.
 
-### 3. Контекстные файлы — ЧИТАЙ ИХ
+### Волна 5: Нативный Android APK (v1.4.0) и Аудит + UX 100г + Умный AI-ассистент (v1.5.0)
+- **Capacitor 8 Android (`v1.4.0`)**: Полная упаковка в нативный APK (`kalorii-ai.apk`), системная камера/галерея (`@capacitor/camera`), WebRTC сканер штрихкодов в WebView, тактильный отклик (`@capacitor/haptics`), перехват кнопки «Назад», офлайн-кеш и очередь синхронизации (`frontend/src/utils/platform.ts`).
+- **Аудит безопасности и UX v1.5.0 (`2026-10-23`)**:
+  - Единое шифрование ключей и токенов (`backend/app/utils/security.py`), защита от SSRF в `barcode_service.py`, потоковое чтение загрузок в `image.py`, учёт `X-Real-IP`/`X-Forwarded-For` в Rate Limiter, очистка чувствительных кешей при `logout()`.
+  - Двухшаговый ручной ввод **«На 100 г (с упаковки) + Вес порции»** с долями упаковки и живым пересчётом (`AddMealModal.tsx`, `ProductSearch.tsx`, `CreateRecipeModal.tsx`).
+  - Авто-перенос фото этикетки КБЖУ прямо в поля формы «На 100 г» через AI OCR (`BarcodeScannerView.tsx`, `AddMealModal.tsx`).
+  - Слайдер и быстрые кнопки масштабирования всей порции (`×0.5..×2.5`, шаги в граммах) без потери точности (`EditMealModal.tsx`, `MealCard.tsx`).
+  - Сценарии AI-меню в 1 клик (`🍳 1 блюдо под остаток`, `💪 Добрать белок`, `🥗 Остаток дня`, `📅 Полный рацион`) и быстрые теги пожеланий (`TodayPage.tsx`, `MealPlanPage.tsx`).
+
+### 3. Контекстные файлы и папки заметок — ЧИТАЙ ИХ
 
 Перед работой ОБЯЗАТЕЛЬНО прочитай:
 - `docs/AI-GUIDE.md` (этот файл) — общий контекст
-- `docs/ARCHITECTURE.md` — архитектурные решения и почему так сделано
-- `docs/CHANGELOG.md` — что уже было изменено
-- `PLAN-KaloriiAI.md` — исходный план (если нужно понять требования)
-- `AI-MODELS-CATALOG.md` — если работаешь с AI провайдерами
+- `docs/CHANGELOG.md` — полный хронологический лог всех релизов (`v0.1.0` .. `v1.5.0`)
+- `сделано/` — подробные технические спецификации и отчёты о выполненных этапах:
+  - `сделано/01_kalorii_bugs_and_security_fixes_spec.md`
+  - `сделано/02_kalorii_new_features_ai_planner_and_tg_voice_spec.md`
+  - `сделано/03_v1.5.0_security_audit_100g_ux_and_smart_ai_assistant.md`
+- `надо сделать/ROADMAP_AND_FUTURE_IDEAS.md` — бэклог идей для будущих релизов
+- `docs/ARCHITECTURE.md` и `docs/DEPLOYMENT.md` — архитектура и деплой на сервер `62.60.186.12` (`/opt/kalorii`)
+
+### 4. Важная особенность: как обновляются Сайт и Мобильное приложение (Android APK)
+
+- **Веб-версия (`https://kalorii.lopni.fun`)**: раздаётся контейнером `kalorii` из папки `backend/static/`. После изменений во `frontend/` нужно выполнить `npm run build:sync-static` и пересобрать/перезапустить контейнер на сервере `62.60.186.12` в `/opt/kalorii`.
+- **Android-приложение (`kalorii-ai.apk`)**: работает на базе Capacitor с локальным бандлом `webDir: 'dist'` внутри самого APK, а к серверу обращается только по API (`https://kalorii.lopni.fun/api`). Поэтому:
+  - Изменения **бэкенда и AI-логики** применяются в мобильном приложении **сразу** после выкатки на сервер.
+  - Изменения **интерфейса (React/TS/CSS)** требуют пересборки `kalorii-ai.apk` (скрипт `scripts/build_apk_docker.sh` на сервере или `scripts/build_apk_docker.ps1`) и установки нового APK поверх старого (ключ подписи `kalorii-release-key.jks` единый, поэтому данные и авторизация сохраняются). Свежий APK также кладётся в `backend/static/kalorii-ai.apk` для скачивания из профиля на сайте.
 
 ### 4. После завершения работы
 

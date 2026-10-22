@@ -54,11 +54,13 @@ self.addEventListener('fetch', (event) => {
         }
         return response
       })
-      .catch(() => {
+      .catch(async () => {
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html')
+          const cachedIndex = await caches.match('/index.html')
+          if (cachedIndex) return cachedIndex
         }
-        return caches.match(event.request)
+        const cachedAsset = await caches.match(event.request)
+        return cachedAsset || Response.error()
       })
   )
 })

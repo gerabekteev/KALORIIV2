@@ -65,24 +65,77 @@ async def create_custom_product(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Add a custom product for the current user."""
-    product = Product(
-        name=product_in.name.strip(),
-        calories_per_100g=round(product_in.calories_per_100g, 1),
-        protein_per_100g=round(product_in.protein_per_100g, 1),
-        fat_per_100g=round(product_in.fat_per_100g, 1),
-        carbs_per_100g=round(product_in.carbs_per_100g, 1),
-        category=product_in.category,
-        barcode=product_in.barcode.strip() if product_in.barcode else None,
-        brand=product_in.brand.strip() if product_in.brand else None,
-        image_url=product_in.image_url.strip() if product_in.image_url else None,
-        package_weight_grams=round(product_in.package_weight_grams or 100.0, 1),
-        is_custom=True,
-        created_by_user_id=current_user.id,
-    )
-    db.add(product)
+    """Add a custom product for the current user.
+    If a barcode is provided, normalizes it (EAN / Chestny ZNAK), deduplicates against
+    the user's existing custom products, and records it in user_scanned_products.
+    """
+    from app.services.barcode_service import parse_and_normalize_barcode, record_user_scan
+
+    raw_barcode = product_in.barcode.strip() if product_in.barcode else None
+    clean_barcode = None
+    is_honest = False
+    if raw_barcode:
+        parsed_code, parsed_honest = parse_and_normalize_barcode(raw_barcode)
+        clean_barcode = parsed_code or raw_barcode[:100]
+        is_honest = parsed_honest
+
+    product = None
+    if clean_barcode:
+        existing_res = await db.execute(
+            select(Product)
+            .where(
+                and_(
+                    Product.barcode == clean_barcode,
+                    Product.is_custom.is_(True),
+                    Product.created_by_user_id == current_user.id,
+                )
+            )
+            .limit(1)
+        )
+        product = existing_res.scalar_one_or_none()
+
+    if product:
+        product.name = product_in.name.strip()
+        product.calories_per_100g = round(product_in.calories_per_100g, 1)
+        product.protein_per_100g = round(product_in.protein_per_100g, 1)
+        product.fat_per_100g = round(product_in.fat_per_100g, 1)
+        product.carbs_per_100g = round(product_in.carbs_per_100g, 1)
+        if product_in.category:
+            product.category = product_in.category
+        if product_in.brand is not None:
+            product.brand = product_in.brand.strip() if product_in.brand else None
+        if product_in.image_url is not None:
+            product.image_url = product_in.image_url.strip() if product_in.image_url else None
+        if product_in.package_weight_grams is not None:
+            product.package_weight_grams = max(1.0, round(product_in.package_weight_grams, 1))
+    else:
+        product = Product(
+            name=product_in.name.strip(),
+            calories_per_100g=round(product_in.calories_per_100g, 1),
+            protein_per_100g=round(product_in.protein_per_100g, 1),
+            fat_per_100g=round(product_in.fat_per_100g, 1),
+            carbs_per_100g=round(product_in.carbs_per_100g, 1),
+            category=product_in.category,
+            barcode=clean_barcode,
+            brand=product_in.brand.strip() if product_in.brand else None,
+            image_url=product_in.image_url.strip() if product_in.image_url else None,
+            package_weight_grams=max(1.0, round(product_in.package_weight_grams or 100.0, 1)),
+            is_custom=True,
+            created_by_user_id=current_user.id,
+        )
+        db.add(product)
+
     await db.commit()
     await db.refresh(product)
+
+    if clean_barcode:
+        await record_user_scan(
+            db,
+            user_id=current_user.id,
+            product_id=product.id,
+            barcode=clean_barcode,
+            is_honest_sign=is_honest,
+        )
 
     return ProductResponse.model_validate(product)
 
@@ -137,15 +190,20 @@ async def update_custom_product(
             detail="Продукт не найден или недоступен для редактирования",
         )
 
+    old_image_url = product.image_url
     update_data = product_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        if value is not None:
+        if value is not None or field in ("brand", "image_url", "barcode", "category"):
             if isinstance(value, float):
                 value = round(value, 1)
             setattr(product, field, value)
 
     await db.commit()
     await db.refresh(product)
+
+    if old_image_url and old_image_url != product.image_url:
+        await safe_unlink_upload_if_unreferenced(db, old_image_url, exclude_product_id=product.id)
+
     return ProductResponse.model_validate(product)
 
 

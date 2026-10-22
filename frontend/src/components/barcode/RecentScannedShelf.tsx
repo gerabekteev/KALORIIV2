@@ -66,7 +66,7 @@ export const RecentScannedShelf: React.FC<RecentScannedShelfProps> = ({
       package_weight_grams: item.package_weight_grams || 100.0,
       image_url: item.image_url,
       source: 'local',
-      is_honest_sign: Boolean(item.barcode && item.barcode.length > 13),
+      is_honest_sign: Boolean(item.is_honest_sign || (item.barcode && item.barcode.length > 13)),
     }
     onSelectProduct(result)
   }

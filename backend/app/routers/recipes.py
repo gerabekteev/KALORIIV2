@@ -217,6 +217,17 @@ async def update_recipe(
         recipe.total_carbs = total_carb
         recipe.total_weight_grams = total_weight
         recipe.items = new_items
+    else:
+        if recipe_in.total_calories is not None:
+            recipe.total_calories = round(float(recipe_in.total_calories), 1)
+        if recipe_in.total_protein is not None:
+            recipe.total_protein = round(float(recipe_in.total_protein), 1)
+        if recipe_in.total_fat is not None:
+            recipe.total_fat = round(float(recipe_in.total_fat), 1)
+        if recipe_in.total_carbs is not None:
+            recipe.total_carbs = round(float(recipe_in.total_carbs), 1)
+        if recipe_in.total_weight_grams is not None:
+            recipe.total_weight_grams = max(1.0, round(float(recipe_in.total_weight_grams), 1))
 
     await db.commit()
 

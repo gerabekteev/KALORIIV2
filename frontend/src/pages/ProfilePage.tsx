@@ -246,10 +246,11 @@ export const ProfilePage: React.FC = () => {
 
     setIsChangingPassword(true)
     try {
-      await authApi.changePassword({
+      const authRes = await authApi.changePassword({
         current_password: currentPassword,
         new_password: newPassword,
       })
+      useAuthStore.getState().updateSessionFromAuthResponse(authRes)
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')

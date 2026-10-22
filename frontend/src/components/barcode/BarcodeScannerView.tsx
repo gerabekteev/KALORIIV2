@@ -26,10 +26,25 @@ import { BarcodeProductResult } from '../../types'
 import { decodeBarcodeFromImageFile } from '../../utils/barcodeDecoder'
 import { isNativeApp, pickImageNative } from '../../utils/platform'
 
+export interface ManualPrefillData {
+  name?: string
+  barcode?: string
+  brand?: string | null
+  calories_per_100g?: number
+  protein_per_100g?: number
+  fat_per_100g?: number
+  carbs_per_100g?: number
+  package_weight_grams?: number | null
+}
+
 interface BarcodeScannerViewProps {
   onProductFound: (product: BarcodeProductResult) => void
   onSwitchToAI: (file?: File | null, initialComment?: string) => void
-  onSwitchToManual: (initialName?: string, initialBarcode?: string) => void
+  onSwitchToManual: (
+    initialName?: string,
+    initialBarcode?: string,
+    prefill?: ManualPrefillData
+  ) => void
   onCancel: () => void
 }
 
@@ -90,6 +105,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
   const scannerRegionId = 'kalorii-html5-qrcode-reader'
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const labelOcrInputRef = useRef<HTMLInputElement>(null)
 
   // Explicit helper: forcefully stop all video tracks on any active MediaStreams in DOM
   const stopAllMediaTracks = useCallback(() => {
@@ -495,16 +511,34 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
     }
   }
 
-  const handleScanLabelViaAI = async (file: File) => {
+  const handleScanLabelViaAI = async (file: File, attachBarcode?: string) => {
     setIsScanningOcr(true)
     try {
       const res = await barcodeApi.scanImage(file)
       if (res.product) {
         if (navigator.vibrate) navigator.vibrate(60)
-        addToast('Этикетка успешно распознана через AI!', 'success', 2500)
-        onProductFound(res.product)
+        const resolvedBarcode = attachBarcode || notFoundState?.code || res.product.barcode || ''
+        addToast(
+          '✨ Этикетка считана! Проверьте данные на 100 г и укажите вес порции.',
+          'success',
+          3500
+        )
+        onSwitchToManual(res.product.name, resolvedBarcode, {
+          name: res.product.name,
+          barcode: resolvedBarcode,
+          brand: res.product.brand,
+          calories_per_100g: res.product.calories_per_100g,
+          protein_per_100g: res.product.protein_per_100g,
+          fat_per_100g: res.product.fat_per_100g,
+          carbs_per_100g: res.product.carbs_per_100g,
+          package_weight_grams: res.product.package_weight_grams,
+        })
       } else {
-        addToast(res.message || 'Не удалось распознать пищевую ценность на упаковке', 'warning', 3500)
+        addToast(
+          res.message || 'Не удалось распознать пищевую ценность на упаковке',
+          'warning',
+          3500
+        )
       }
     } catch (err: any) {
       console.warn('AI OCR scan error:', err)
@@ -512,6 +546,19 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
     } finally {
       setIsScanningOcr(false)
     }
+  }
+
+  const handleTriggerLabelPhotoOcr = async () => {
+    if (isNativeApp()) {
+      try {
+        const file = await pickImageNative('camera')
+        if (file) await handleScanLabelViaAI(file, notFoundState?.code)
+      } catch {
+        addToast('Не удалось открыть камеру для съёмки этикетки', 'error')
+      }
+      return
+    }
+    labelOcrInputRef.current?.click()
   }
 
   // Clipboard paste (Ctrl+V) listener
@@ -602,6 +649,20 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
       }}
     >
       {/* Format info banner */}
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        ref={labelOcrInputRef}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) {
+            handleScanLabelViaAI(file, notFoundState?.code)
+          }
+          e.target.value = ''
+        }}
+        className="hidden"
+      />
       <div className="flex items-center justify-between text-[11px] text-neutral-400 px-1 pb-1">
         <span>Штрихкоды: EAN-13, EAN-8, UPC</span>
         <span className="text-emerald-400 flex items-center gap-1 font-medium">
@@ -776,24 +837,36 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
               <p className="text-xs text-neutral-300">
                 Штрихкод <span className="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-neutral-700">{notFoundState.code}</span> пока отсутствует в каталоге.
               </p>
-              <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <div className="space-y-2 pt-0.5">
                 <Button
                   size="sm"
-                  variant="outline"
-                  onClick={() => onSwitchToAI(null, `Штрихкод: ${notFoundState.code}`)}
-                  className="flex items-center justify-center gap-1.5"
+                  variant="secondary"
+                  isLoading={isScanningOcr}
+                  onClick={handleTriggerLabelPhotoOcr}
+                  className="w-full flex items-center justify-center gap-1.5 border-emerald-500/40 text-emerald-300"
                 >
-                  <Camera className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="truncate">Фото упаковки</span>
+                  <ScanLine className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="truncate">Считать КБЖУ с фото этикетки в форму (AI)</span>
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => onSwitchToManual('', notFoundState.code)}
-                  className="flex items-center justify-center gap-1.5"
-                >
-                  <PenTool className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Ввести КБЖУ</span>
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onSwitchToAI(null, `Штрихкод: ${notFoundState.code}`)}
+                    className="flex items-center justify-center gap-1.5"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate">Фото блюда AI</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => onSwitchToManual('', notFoundState.code)}
+                    className="flex items-center justify-center gap-1.5"
+                  >
+                    <PenTool className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Ввести с пачки (100г)</span>
+                  </Button>
+                </div>
               </div>
               <button
                 type="button"
@@ -959,24 +1032,41 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                       <p className="text-xs text-neutral-300">
                         Код <span className="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-neutral-700">{notFoundState.code}</span> отсутствует в каталоге. Определить КБЖУ по фото через AI?
                       </p>
-                      <div className="grid grid-cols-2 gap-2 pt-0.5">
-                        <Button
-                          size="sm"
-                          onClick={() => onSwitchToAI(notFoundState.file, `Штрихкод: ${notFoundState.code}`)}
-                          className="flex items-center justify-center gap-1.5"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-                          <span className="truncate">Анализ через AI</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onSwitchToManual('', notFoundState.code)}
-                          className="flex items-center justify-center gap-1.5"
-                        >
-                          <PenTool className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">Вручную</span>
-                        </Button>
+                      <div className="space-y-2 pt-0.5">
+                        {notFoundState.file && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            isLoading={isScanningOcr}
+                            onClick={() =>
+                              notFoundState.file &&
+                              handleScanLabelViaAI(notFoundState.file, notFoundState.code)
+                            }
+                            className="w-full flex items-center justify-center gap-1.5 border-emerald-500/40 text-emerald-300"
+                          >
+                            <ScanLine className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="truncate">Считать КБЖУ с этикетки в форму (AI)</span>
+                          </Button>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onSwitchToAI(notFoundState.file, `Штрихкод: ${notFoundState.code}`)}
+                            className="flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                            <span className="truncate">Фото блюда AI</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => onSwitchToManual('', notFoundState.code)}
+                            className="flex items-center justify-center gap-1.5"
+                          >
+                            <PenTool className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">Ввести с пачки (100г)</span>
+                          </Button>
+                        </div>
                       </div>
                     </>
                   )}
@@ -1019,24 +1109,36 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
               <p className="text-xs text-neutral-300">
                 Код <span className="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-neutral-700">{notFoundState.code}</span> отсутствует в каталоге.
               </p>
-              <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <div className="space-y-2 pt-0.5">
                 <Button
                   size="sm"
-                  variant="outline"
-                  onClick={() => onSwitchToAI(null, `Штрихкод: ${notFoundState.code}`)}
-                  className="flex items-center justify-center gap-1.5"
+                  variant="secondary"
+                  isLoading={isScanningOcr}
+                  onClick={handleTriggerLabelPhotoOcr}
+                  className="w-full flex items-center justify-center gap-1.5 border-emerald-500/40 text-emerald-300"
                 >
-                  <Camera className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="truncate">Фото упаковки</span>
+                  <ScanLine className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="truncate">Считать КБЖУ с фото этикетки в форму (AI)</span>
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => onSwitchToManual('', notFoundState.code)}
-                  className="flex items-center justify-center gap-1.5"
-                >
-                  <PenTool className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Ввести КБЖУ</span>
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onSwitchToAI(null, `Штрихкод: ${notFoundState.code}`)}
+                    className="flex items-center justify-center gap-1.5"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate">Фото блюда AI</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => onSwitchToManual('', notFoundState.code)}
+                    className="flex items-center justify-center gap-1.5"
+                  >
+                    <PenTool className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Ввести с пачки (100г)</span>
+                  </Button>
+                </div>
               </div>
             </div>
           )}

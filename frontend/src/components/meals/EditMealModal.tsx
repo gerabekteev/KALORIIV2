@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Layers, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Layers, RefreshCw, Scale, Minus } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { useUIStore } from '../../store/uiStore'
 import { useMealsStore } from '../../store/mealsStore'
 import { MealIngredient } from '../../types'
+
+interface BaselineMealState {
+  weight_grams: number
+  calories: number
+  protein: number
+  fat: number
+  carbs: number
+  ingredients: MealIngredient[]
+}
+
+const SCALE_MULTIPLIERS = [
+  { label: '½ (×0.5)', value: 0.5 },
+  { label: '¾ (×0.75)', value: 0.75 },
+  { label: '100% (×1)', value: 1 },
+  { label: '×1.25', value: 1.25 },
+  { label: '×1.5', value: 1.5 },
+  { label: '×2', value: 2 },
+]
 
 export const EditMealModal: React.FC = () => {
   const { isEditMealOpen, closeEditMeal, editingMeal, addToast } = useUIStore()
@@ -23,65 +41,107 @@ export const EditMealModal: React.FC = () => {
     user_comment: '',
   })
   const [ingredients, setIngredients] = useState<MealIngredient[]>([])
+  const [baseline, setBaseline] = useState<BaselineMealState | null>(null)
+  const [scaleMultiplier, setScaleMultiplier] = useState<number>(1)
   const [scaleProportionally, setScaleProportionally] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (editingMeal) {
+      const initialIngredients = Array.isArray(editingMeal.ingredients)
+        ? editingMeal.ingredients.map((ing) => ({ ...ing }))
+        : []
+      const sumIngWeight = initialIngredients.reduce(
+        (s, i) => s + (Number(i.weight_grams) || 0),
+        0
+      )
+      const initialWeight =
+        editingMeal.weight_grams && editingMeal.weight_grams > 0
+          ? editingMeal.weight_grams
+          : sumIngWeight > 0
+          ? sumIngWeight
+          : 100
+
       setForm({
         name: editingMeal.name || '',
         calories: editingMeal.calories?.toString() || '0',
         protein: editingMeal.protein?.toString() || '0',
         fat: editingMeal.fat?.toString() || '0',
         carbs: editingMeal.carbs?.toString() || '0',
-        weight_grams: editingMeal.weight_grams?.toString() || '',
+        weight_grams: initialWeight.toString(),
         meal_date: editingMeal.meal_date || '',
         meal_time: editingMeal.meal_time ? editingMeal.meal_time.slice(0, 5) : '',
         user_comment: editingMeal.user_comment || '',
       })
-      setIngredients(
-        Array.isArray(editingMeal.ingredients) ? [...editingMeal.ingredients] : []
-      )
+      setIngredients(initialIngredients)
+      setBaseline({
+        weight_grams: initialWeight,
+        calories: Number(editingMeal.calories) || 0,
+        protein: Number(editingMeal.protein) || 0,
+        fat: Number(editingMeal.fat) || 0,
+        carbs: Number(editingMeal.carbs) || 0,
+        ingredients: initialIngredients.map((ing) => ({ ...ing })),
+      })
+      setScaleMultiplier(1)
     }
   }, [editingMeal])
 
+  // Apply a scale factor relative to the baseline meal state
+  const applyScaleFactor = (factor: number, customWeightStr?: string) => {
+    if (!baseline || factor <= 0) return
+    const clampedFactor = Math.max(0.05, Math.min(10, factor))
+    setScaleMultiplier(Math.round(clampedFactor * 100) / 100)
+
+    const newWeight = Math.max(1, Math.round(baseline.weight_grams * clampedFactor))
+    const newCal = Math.round(baseline.calories * clampedFactor)
+    const newProt = Math.round(baseline.protein * clampedFactor * 10) / 10
+    const newFat = Math.round(baseline.fat * clampedFactor * 10) / 10
+    const newCarb = Math.round(baseline.carbs * clampedFactor * 10) / 10
+
+    setForm((prev) => ({
+      ...prev,
+      weight_grams: customWeightStr !== undefined ? customWeightStr : String(newWeight),
+      calories: String(newCal),
+      protein: String(newProt),
+      fat: String(newFat),
+      carbs: String(newCarb),
+    }))
+
+    if (baseline.ingredients.length > 0) {
+      setIngredients(
+        baseline.ingredients.map((ing) => ({
+          ...ing,
+          weight_grams: Math.max(1, Math.round((ing.weight_grams || 0) * clampedFactor)),
+          calories: Math.round(ing.calories * clampedFactor * 10) / 10,
+          protein: Math.round(ing.protein * clampedFactor * 10) / 10,
+          fat: Math.round(ing.fat * clampedFactor * 10) / 10,
+          carbs: Math.round(ing.carbs * clampedFactor * 10) / 10,
+        }))
+      )
+    }
+  }
+
   // Handle total weight change with optional proportional scaling
   const handleWeightChange = (newWeightStr: string) => {
-    const oldWeight = Number(form.weight_grams) || 0
-    const newWeight = Number(newWeightStr) || 0
-
-    if (scaleProportionally && oldWeight > 0 && newWeight > 0) {
-      const factor = newWeight / oldWeight
-      const newCal = Math.round((Number(form.calories) || 0) * factor)
-      const newProt = Math.round((Number(form.protein) || 0) * factor * 10) / 10
-      const newFat = Math.round((Number(form.fat) || 0) * factor * 10) / 10
-      const newCarb = Math.round((Number(form.carbs) || 0) * factor * 10) / 10
-
-      setForm((prev) => ({
-        ...prev,
-        weight_grams: newWeightStr,
-        calories: newCal.toString(),
-        protein: newProt.toString(),
-        fat: newFat.toString(),
-        carbs: newCarb.toString(),
-      }))
-
-      // Also scale individual ingredients if present
-      if (ingredients.length > 0) {
-        setIngredients((prev) =>
-          prev.map((ing) => ({
-            ...ing,
-            weight_grams: Math.round((ing.weight_grams || 0) * factor),
-            calories: Math.round(ing.calories * factor * 10) / 10,
-            protein: Math.round(ing.protein * factor * 10) / 10,
-            fat: Math.round(ing.fat * factor * 10) / 10,
-            carbs: Math.round(ing.carbs * factor * 10) / 10,
-          }))
-        )
-      }
+    const newWeight = Number(newWeightStr)
+    if (
+      scaleProportionally &&
+      baseline &&
+      baseline.weight_grams > 0 &&
+      Number.isFinite(newWeight) &&
+      newWeight > 0
+    ) {
+      const factor = newWeight / baseline.weight_grams
+      applyScaleFactor(factor, newWeightStr)
     } else {
       setForm((prev) => ({ ...prev, weight_grams: newWeightStr }))
     }
+  }
+
+  const handleStepWeight = (deltaGrams: number) => {
+    const currentW = Number(form.weight_grams) || baseline?.weight_grams || 100
+    const nextW = Math.max(10, Math.round(currentW + deltaGrams))
+    handleWeightChange(String(nextW))
   }
 
   // Update ingredient field
@@ -201,7 +261,125 @@ export const EditMealModal: React.FC = () => {
           required
         />
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* Portion Scaling Slider & Multipliers Block */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-[#181c22] to-[#131519] border border-emerald-500/30 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Scale className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-xs font-bold text-white">
+                Масштаб порции и общий вес
+              </span>
+            </div>
+            <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+              {Math.round(scaleMultiplier * 100)}% ({form.weight_grams || 0} г • {form.calories || 0} ккал)
+            </span>
+          </div>
+
+          {/* Multiplier Quick Pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {SCALE_MULTIPLIERS.map((m) => {
+              const isSelected = Math.abs(scaleMultiplier - m.value) < 0.03
+              return (
+                <button
+                  key={m.label}
+                  type="button"
+                  onClick={() => applyScaleFactor(m.value)}
+                  className={`flex-1 min-w-[64px] py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                      : 'bg-[#111317] text-neutral-300 hover:text-white border border-neutral-800 hover:border-emerald-500/40'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Smooth Range Slider (0.25x .. 2.5x) */}
+          <div className="space-y-1 pt-0.5">
+            <input
+              type="range"
+              min="0.25"
+              max="2.5"
+              step="0.05"
+              value={Math.min(2.5, Math.max(0.25, scaleMultiplier))}
+              onChange={(e) => applyScaleFactor(parseFloat(e.target.value))}
+              className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+            />
+            <div className="flex justify-between text-[10px] text-neutral-500 font-medium px-0.5">
+              <span>¼ порции</span>
+              <span>Половина</span>
+              <span>Исходная (100%)</span>
+              <span>×1.5</span>
+              <span>×2.5</span>
+            </div>
+          </div>
+
+          {/* Exact Weight Input with Steppers */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <span className="text-xs text-neutral-300 font-medium">
+              Точный вес съеденного:
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleStepWeight(-50)}
+                className="px-2 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold cursor-pointer active:scale-95"
+              >
+                -50
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStepWeight(-25)}
+                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer active:scale-95"
+                title="-25 г"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <div className="relative w-24">
+                <input
+                  type="number"
+                  min="1"
+                  value={form.weight_grams}
+                  onChange={(e) => handleWeightChange(e.target.value)}
+                  className="w-full bg-[#0f1115] border border-emerald-500/40 focus:border-emerald-400 rounded-xl pl-2.5 pr-6 py-1.5 text-center text-sm font-extrabold text-white outline-none"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-emerald-400 font-semibold pointer-events-none">
+                  г
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStepWeight(25)}
+                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer active:scale-95"
+                title="+25 г"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStepWeight(50)}
+                className="px-2 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold cursor-pointer active:scale-95"
+              >
+                +50
+              </button>
+            </div>
+          </div>
+
+          {/* Proportional recalculation toggle */}
+          <label className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-400 hover:text-neutral-200 select-none pt-0.5">
+            <input
+              type="checkbox"
+              checked={scaleProportionally}
+              onChange={(e) => setScaleProportionally(e.target.checked)}
+              className="w-4 h-4 rounded accent-emerald-500 bg-neutral-900 border-neutral-700 cursor-pointer"
+            />
+            <span>Пересчитывать КБЖУ и ингредиенты пропорционально весу</span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <Input
             label="Калории (ккал) *"
             type="number"
@@ -210,27 +388,6 @@ export const EditMealModal: React.FC = () => {
             onChange={(e) => setForm({ ...form, calories: e.target.value })}
             required
           />
-          <Input
-            label="Вес порции (г)"
-            type="number"
-            min="0"
-            value={form.weight_grams}
-            onChange={(e) => handleWeightChange(e.target.value)}
-          />
-        </div>
-
-        {/* Proportional recalculation toggle */}
-        <label className="flex items-center gap-2 cursor-pointer text-xs text-neutral-300 select-none">
-          <input
-            type="checkbox"
-            checked={scaleProportionally}
-            onChange={(e) => setScaleProportionally(e.target.checked)}
-            className="w-4 h-4 rounded text-emerald-500 bg-neutral-900 border-neutral-700 focus:ring-emerald-500 cursor-pointer"
-          />
-          <span>Пересчитывать КБЖУ пропорционально изменению веса</span>
-        </label>
-
-        <div className="grid grid-cols-3 gap-2">
           <Input
             label="Белки (г)"
             type="number"

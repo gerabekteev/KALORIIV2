@@ -15,11 +15,13 @@ export const Card: React.FC<CardProps> = ({
   const baseStyles = 'rounded-2xl transition-all duration-200 border'
 
   const variants = {
-    default: 'bg-[#1c1c20] border-neutral-800/90 shadow-lg shadow-black/20',
-    elevated: 'bg-[#242429] border-neutral-700/80 shadow-xl shadow-black/30',
-    glass: 'bg-[#1c1c20]/80 backdrop-blur-md border-white/10 shadow-lg',
+    default:
+      'bg-gradient-to-b from-[#1a1a21] to-[#141419] border-white/[0.07] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)]',
+    elevated:
+      'bg-gradient-to-b from-[#23232c] to-[#191920] border-white/[0.11] shadow-[0_16px_40px_-10px_rgba(0,0,0,0.7)]',
+    glass: 'bg-[#191920]/80 backdrop-blur-xl border-white/10 shadow-xl',
     interactive:
-      'bg-[#1c1c20] border-neutral-800/90 hover:border-emerald-500/40 hover:bg-[#222226] active:scale-[0.99] cursor-pointer shadow-lg',
+      'bg-gradient-to-b from-[#1a1a21] to-[#141419] border-white/[0.07] hover:border-emerald-500/40 hover:from-[#1f1f27] hover:to-[#18181f] active:scale-[0.99] cursor-pointer shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)]',
   }
 
   const paddings = {

@@ -96,12 +96,13 @@ async def _collect_user_food_hints(db: AsyncSession, user_id: int) -> Optional[s
 @router.get("", response_model=Optional[MealPlanResponse])
 async def get_meal_plan(
     date: Optional[dt_date] = Query(None, description="Дата плана YYYY-MM-DD"),
-    x_client_date: Optional[str] = Header(None, alias="X-Client-Date"),
+    x_client_date: Optional[dt_date] = Header(None, alias="X-Client-Date"),
+    x_client_timezone: Optional[str] = Header(None, alias="X-Client-Timezone"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve saved generated meal plan for a specific date (returns null if none exists yet)."""
-    target_date = resolve_client_date(date, x_client_date, current_user)
+    target_date = resolve_client_date(date, x_client_date, current_user, x_client_timezone)
     stmt = select(MealPlan).where(
         and_(
             MealPlan.user_id == current_user.id,

@@ -367,16 +367,17 @@ async def recognize_food_voice_endpoint(
     """
     check_ai_rate_limit(current_user.id)
 
-    audio_bytes = await audio.read()
+    from app.utils.image import read_upload_file_bounded
+
+    audio_bytes = await read_upload_file_bounded(
+        audio,
+        settings.MAX_UPLOAD_SIZE_BYTES,
+        error_detail="Размер голосового сообщения превышает 10 МБ",
+    )
     if not audio_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Аудиофайл пуст",
-        )
-    if len(audio_bytes) > settings.MAX_UPLOAD_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Размер голосового сообщения превышает 10 МБ",
         )
 
     mime_type = (audio.content_type or "audio/ogg").lower()

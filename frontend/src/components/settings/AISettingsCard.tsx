@@ -23,24 +23,31 @@ export interface AISettingsCardProps {
 
 export const DEFAULT_AI_MODELS: AIModelItem[] = [
   {
-    id: 'gemini-2.5-flash-lite',
-    name: 'Gemini 2.5 Flash-Lite',
+    id: 'gemini-3.1-flash-lite',
+    name: 'Gemini 3.1 Flash-Lite (500 RPD)',
     provider: 'gemini',
     description: 'Лимит 500 запросов/день, 15 RPM. Быстрый и надёжный',
     enabled: true,
   },
   {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash',
+    id: 'gemini-3.5-flash',
+    name: 'Gemini 3.5 Flash',
     provider: 'gemini',
     description: 'Высокая точность и детализация блюд',
     enabled: true,
   },
   {
-    id: 'gemini-2.0-flash',
-    name: 'Gemini 2.0 Flash',
+    id: 'gemini-3.6-flash',
+    name: 'Gemini 3.6 Flash',
     provider: 'gemini',
     description: 'Стабильная мультимодальная модель',
+    enabled: true,
+  },
+  {
+    id: 'gemini-3.8-flash',
+    name: 'Gemini 3.8 Flash',
+    provider: 'gemini',
+    description: 'Максимальный reasoning и точность (20 RPD)',
     enabled: true,
   },
   {
@@ -51,17 +58,38 @@ export const DEFAULT_AI_MODELS: AIModelItem[] = [
     enabled: true,
   },
   {
-    id: 'google/gemma-3-27b-it:free',
-    name: 'Gemma 3 27B (Free)',
+    id: 'google/gemma-4-26b-a4b-it:free',
+    name: 'Gemma 4 26B (Free)',
     provider: 'openrouter',
     description: 'Мощная визуальная модель от Google',
     enabled: true,
   },
   {
-    id: 'qwen/qwen2.5-vl-72b-instruct:free',
-    name: 'Qwen 2.5 VL 72B (Free)',
+    id: 'google/gemma-4-31b-it:free',
+    name: 'Gemma 4 31B (Free)',
     provider: 'openrouter',
-    description: 'Флагманская vision-модель для распознавания еды',
+    description: 'Продвинутая мультимодальная модель Google',
+    enabled: true,
+  },
+  {
+    id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    name: 'NVIDIA Omni (Free)',
+    provider: 'openrouter',
+    description: 'Reasoning VLM от NVIDIA с поддержкой vision',
+    enabled: true,
+  },
+  {
+    id: 'gemini-3.7-flash',
+    name: 'Gemini 3.7 Flash',
+    provider: 'gemini',
+    description: 'Сбалансированный анализ и высокая скорость (20 RPD)',
+    enabled: true,
+  },
+  {
+    id: 'gemini-3.5-flash-lite',
+    name: 'Gemini 3.5 Flash-Lite',
+    provider: 'gemini',
+    description: 'Экономичный и ультрабыстрый отклик',
     enabled: true,
   },
 ]
@@ -264,12 +292,10 @@ export const AISettingsCard: React.FC<AISettingsCardProps> = ({ embedded = false
     }
   }
 
-  // Reset to defaults and sync with backend
+  // Reset to defaults and sync with backend (preserving custom API keys)
   const handleReset = async () => {
     setModels(DEFAULT_AI_MODELS)
-    setGeminiKey('')
-    setOpenrouterKey('')
-    await persistSettings(DEFAULT_AI_MODELS, '', '')
+    await persistSettings(DEFAULT_AI_MODELS, geminiKey, openrouterKey)
     addToast('Настройки AI сброшены к стандартным', 'info')
   }
 

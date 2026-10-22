@@ -52,6 +52,23 @@ class TelegramBotService:
     def file_base_url(self) -> str:
         return f"https://api.telegram.org/file/bot{self.token}"
 
+    @staticmethod
+    def _truncate_html_safe(text: str, max_len: int = 4000) -> str:
+        """Truncate message on line boundaries so HTML tags are not broken and length <= 4096."""
+        if len(text) <= max_len:
+            return text
+        lines = text.split("\n")
+        kept = []
+        curr = 0
+        for line in lines:
+            if curr + len(line) + 1 > max_len - 40:
+                break
+            kept.append(line)
+            curr += len(line) + 1
+        if not kept:
+            return html.escape(text[: max_len - 40]) + "\n<i>... (сокращено)</i>"
+        return "\n".join(kept) + "\n<i>... (сокращено)</i>"
+
     async def send_message(
         self,
         chat_id: int,
@@ -60,9 +77,10 @@ class TelegramBotService:
     ) -> Optional[int]:
         if not self.token:
             return None
+        safe_text = self._truncate_html_safe(text)
         payload: Dict[str, Any] = {
             "chat_id": chat_id,
-            "text": text,
+            "text": safe_text,
             "parse_mode": "HTML",
         }
         if reply_markup:
@@ -87,10 +105,11 @@ class TelegramBotService:
     ) -> None:
         if not self.token or not message_id:
             return
+        safe_text = self._truncate_html_safe(text)
         payload: Dict[str, Any] = {
             "chat_id": chat_id,
             "message_id": message_id,
-            "text": text,
+            "text": safe_text,
             "parse_mode": "HTML",
         }
         if reply_markup:
@@ -120,19 +139,26 @@ class TelegramBotService:
             logger.debug(f"Failed to answer callback query {callback_query_id}: {e}")
 
     async def download_telegram_file(self, file_id: str) -> Optional[bytes]:
-        """Download binary file (photo or voice .ogg) from Telegram servers."""
+        """Download binary file (photo or voice .ogg) from Telegram servers with size limit protection."""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 info_resp = await client.get(f"{self.base_url}/getFile", params={"file_id": file_id})
                 info_data = info_resp.json()
                 if not info_data.get("ok") or "result" not in info_data:
                     return None
-                file_path = info_data["result"].get("file_path")
+                res_obj = info_data["result"]
+                file_size = res_obj.get("file_size") or 0
+                if file_size > settings.MAX_UPLOAD_SIZE_BYTES:
+                    logger.warning(f"Telegram file {file_id} exceeds MAX_UPLOAD_SIZE_BYTES ({file_size} bytes)")
+                    return None
+                file_path = res_obj.get("file_path")
                 if not file_path:
                     return None
 
                 file_resp = await client.get(f"{self.file_base_url}/{file_path}")
                 if file_resp.status_code == 200:
+                    if len(file_resp.content) > settings.MAX_UPLOAD_SIZE_BYTES:
+                        return None
                     return file_resp.content
         except Exception as e:
             logger.error(f"Error downloading Telegram file {file_id}: {e}")
@@ -173,9 +199,9 @@ class TelegramBotService:
         attempts.append(now_ts)
 
         clean_code = code_raw.strip().upper()
-        stmt = select(User).where(User.telegram_link_code == clean_code)
+        stmt = select(User).where(User.telegram_link_code == clean_code).order_by(User.telegram_link_expires_at.desc())
         res = await db.execute(stmt)
-        user = res.scalar_one_or_none()
+        user = res.scalars().first()
 
         if not user:
             await self.send_message(
@@ -454,15 +480,16 @@ class TelegramBotService:
                 if voice:
                     status_msg_id = await self.send_message(chat_id, "⏳ <i>Слушаю голосовое сообщение и распознаю еду через AI...</i>")
                     file_id = voice["file_id"]
+                    voice_mime = str(voice.get("mime_type") or "audio/ogg").lower()
                     raw_audio = await self.download_telegram_file(file_id)
                     if not raw_audio:
-                        await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось загрузить голосовое сообщение с серверов Telegram.")
+                        await self.edit_message(chat_id, status_msg_id or 0, "❌ Не удалось загрузить голосовое сообщение с серверов Telegram (или превышен лимит 10 МБ).")
                         return
 
                     try:
                         result, prov_used, mod_used = await ai_router.recognize_food_by_voice(
                             audio_bytes=raw_audio,
-                            mime_type="audio/ogg",
+                            mime_type=voice_mime,
                             custom_gemini_key=custom_gemini,
                             custom_openrouter_key=custom_openrouter,
                             custom_model_chain=custom_chain,

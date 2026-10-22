@@ -155,6 +155,52 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }
 
+  // Scale the entire meal (weight, calories, macros, and all ingredients) by a factor
+  const handleScaleWholeMeal = async (factor: number) => {
+    if (factor <= 0 || factor === 1) return
+    const updatedIngredients = Array.isArray(meal.ingredients)
+      ? meal.ingredients.map((ing) => ({
+          ...ing,
+          weight_grams: Math.max(1, Math.round((ing.weight_grams || 0) * factor)),
+          calories: Math.round(ing.calories * factor * 10) / 10,
+          protein: Math.round(ing.protein * factor * 10) / 10,
+          fat: Math.round(ing.fat * factor * 10) / 10,
+          carbs: Math.round(ing.carbs * factor * 10) / 10,
+        }))
+      : undefined
+
+    const newTotalCalories = Math.round(meal.calories * factor)
+    const newTotalProtein = Math.round(meal.protein * factor * 10) / 10
+    const newTotalFat = Math.round(meal.fat * factor * 10) / 10
+    const newTotalCarbs = Math.round(meal.carbs * factor * 10) / 10
+    const newTotalWeight = meal.weight_grams
+      ? Math.max(1, Math.round(meal.weight_grams * factor))
+      : updatedIngredients && updatedIngredients.length > 0
+      ? Math.round(updatedIngredients.reduce((s, i) => s + (i.weight_grams || 0), 0))
+      : undefined
+
+    try {
+      await updateMeal(meal.id, {
+        calories: newTotalCalories,
+        protein: newTotalProtein,
+        fat: newTotalFat,
+        carbs: newTotalCarbs,
+        weight_grams: newTotalWeight,
+        ingredients: updatedIngredients,
+        is_manually_edited: true,
+      })
+      addToast(
+        `Порция масштабирована (×${factor}): ${newTotalCalories} ккал${
+          newTotalWeight ? ` • ${newTotalWeight} г` : ''
+        }`,
+        'info',
+        2000
+      )
+    } catch {
+      addToast('Не удалось масштабировать порцию', 'error')
+    }
+  }
+
   // Adjust ingredient weight (-25g, +25g) and recalculate totals
   const handleAdjustIngredientWeight = async (idx: number, delta: number) => {
     if (!meal.ingredients || meal.ingredients.length === 0) return
@@ -351,7 +397,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
               openEditMeal(meal)
             }
           }}
-          className="relative group bg-[#1c1c20] hover:bg-[#222227] hover:border-emerald-500/40 border border-neutral-800/80 rounded-2xl p-3.5 transition-all duration-200 shadow-sm cursor-pointer select-none touch-pan-y"
+          className="relative group bg-gradient-to-b from-[#1d1d23] to-[#17171c] hover:from-[#22232a] hover:to-[#1b1c22] hover:border-emerald-500/40 border border-white/[0.07] rounded-2xl p-3.5 transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.28)] cursor-pointer select-none touch-pan-y"
           title="Нажмите в любое место карточки для редактирования блюда"
         >
           <div className="flex items-start gap-3">
@@ -585,7 +631,32 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
               </button>
 
               {isIngredientsOpen && (
-                <div className="mt-2 space-y-1.5 bg-[#141417] p-2.5 rounded-xl border border-neutral-800">
+                <div className="mt-2 space-y-2 bg-[#121317] p-2.5 rounded-xl border border-neutral-800/90">
+                  {/* Quick Whole-Portion Scale Bar */}
+                  <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-neutral-800/80">
+                    <span className="text-[10px] font-semibold text-neutral-400">
+                      Масштаб всей порции:
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {[
+                        { label: '×0.5', factor: 0.5 },
+                        { label: '×0.75', factor: 0.75 },
+                        { label: '×1.5', factor: 1.5 },
+                        { label: '×2', factor: 2 },
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => handleScaleWholeMeal(item.factor)}
+                          className="px-2 py-0.5 rounded-md bg-neutral-800/90 hover:bg-emerald-500/20 text-neutral-300 hover:text-emerald-300 border border-neutral-700/70 hover:border-emerald-500/40 text-[10px] font-bold transition-colors cursor-pointer active:scale-95"
+                          title={`Умножить порцию на ${item.factor}`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {meal.ingredients?.map((ing, idx) => (
                     <div
                       key={idx}

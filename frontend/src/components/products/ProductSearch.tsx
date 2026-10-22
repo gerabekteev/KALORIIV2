@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Loader2, Plus, X } from 'lucide-react'
+import { Search, Loader2, Plus, X, Calculator, Scale, Minus } from 'lucide-react'
 import { Product } from '../../types'
 import { productsApi } from '../../api/products'
 import { ProductItem } from './ProductItem'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { useUIStore } from '../../store/uiStore'
+
+function parseNum(val: string): number {
+  if (!val) return 0
+  const n = parseFloat(val.replace(',', '.').trim())
+  return Number.isFinite(n) && n >= 0 ? n : 0
+}
 
 interface ProductSearchProps {
   onSelectProduct: (
@@ -34,10 +40,13 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
   const [isSavingProduct, setIsSavingProduct] = useState(false)
   const [newProduct, setNewProduct] = useState({
     name: '',
+    brand: '',
+    package_weight_grams: '',
     calories: '',
     protein: '',
     fat: '',
     carbs: '',
+    portion_grams: '100',
   })
 
   useEffect(() => {
@@ -85,10 +94,13 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
   const handleStartCreate = (defaultName = '') => {
     setNewProduct({
       name: defaultName || query.trim(),
+      brand: '',
+      package_weight_grams: '',
       calories: '',
       protein: '',
       fat: '',
       carbs: '',
+      portion_grams: '100',
     })
     setIsCreating(true)
   }
@@ -97,43 +109,78 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
     setIsCreating(false)
     setNewProduct({
       name: '',
+      brand: '',
+      package_weight_grams: '',
       calories: '',
       protein: '',
       fat: '',
       carbs: '',
+      portion_grams: '100',
     })
   }
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const newProdProtein = parseNum(newProduct.protein)
+  const newProdFat = parseNum(newProduct.fat)
+  const newProdCarbs = parseNum(newProduct.carbs)
+  const newProdMacroCal = Math.round(newProdProtein * 4 + newProdFat * 9 + newProdCarbs * 4)
+  const newProdEffectiveCal =
+    newProduct.calories.trim() !== '' ? Math.round(parseNum(newProduct.calories)) : newProdMacroCal
+  const newProdPortionGrams = Math.max(1, parseNum(newProduct.portion_grams || '100'))
+  const newProdPortionRatio = newProdPortionGrams / 100
+  const newProdPortionCal = Math.round(newProdEffectiveCal * newProdPortionRatio)
+
+  const handleSaveCustomProduct = async (addImmediatelyToDiary: boolean) => {
     if (!newProduct.name.trim()) {
       addToast('Введите название продукта', 'warning')
       return
     }
-    const cal = parseFloat(newProduct.calories)
-    if (isNaN(cal) || cal < 0) {
-      addToast('Введите корректные калории', 'warning')
+    if (newProdEffectiveCal <= 0 && newProdProtein <= 0 && newProdFat <= 0 && newProdCarbs <= 0) {
+      addToast('Укажите калории или БЖУ на 100 г', 'warning')
       return
     }
 
+    const pkgWeight = parseNum(newProduct.package_weight_grams)
     setIsSavingProduct(true)
     try {
       const created = await productsApi.createProduct({
         name: newProduct.name.trim(),
-        calories_per_100g: Math.round(cal),
-        protein_per_100g: Math.max(0, parseFloat(newProduct.protein) || 0),
-        fat_per_100g: Math.max(0, parseFloat(newProduct.fat) || 0),
-        carbs_per_100g: Math.max(0, parseFloat(newProduct.carbs) || 0),
+        brand: newProduct.brand.trim() || null,
+        package_weight_grams: pkgWeight > 0 ? pkgWeight : null,
+        calories_per_100g: newProdEffectiveCal,
+        protein_per_100g: newProdProtein,
+        fat_per_100g: newProdFat,
+        carbs_per_100g: newProdCarbs,
       })
       setProducts((prev) => [created, ...prev.filter((p) => p.id !== created.id)])
-      setSelectedProduct(created)
       setIsCreating(false)
-      addToast('Продукт успешно создан и выбран!', 'success')
+
+      if (addImmediatelyToDiary) {
+        onSelectProduct(
+          {
+            name: created.brand ? `${created.name} (${created.brand})` : created.name,
+            calories: Math.round(created.calories_per_100g * newProdPortionRatio),
+            protein: Math.round(created.protein_per_100g * newProdPortionRatio * 10) / 10,
+            fat: Math.round(created.fat_per_100g * newProdPortionRatio * 10) / 10,
+            carbs: Math.round(created.carbs_per_100g * newProdPortionRatio * 10) / 10,
+            weight_grams: Math.round(newProdPortionGrams),
+          },
+          false
+        )
+      } else {
+        setSelectedProduct(created)
+        setGrams(String(Math.round(newProdPortionGrams)))
+        addToast('Продукт сохранён в базу!', 'success')
+      }
     } catch {
       addToast('Ошибка при создании продукта', 'error')
     } finally {
       setIsSavingProduct(false)
     }
+  }
+
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await handleSaveCustomProduct(true)
   }
 
   return (
@@ -164,88 +211,175 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
       {isCreating && (
         <form
           onSubmit={handleCreateProduct}
-          className="p-4 rounded-xl bg-[#1c1c21] border border-emerald-500/40 space-y-3 animate-in fade-in"
+          className="p-4 rounded-2xl bg-[#18181d] border border-emerald-500/40 space-y-3.5 animate-in fade-in"
         >
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
+            <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
               <Plus className="w-4 h-4 text-emerald-400" />
-              <span>Создать свой продукт</span>
+              <span>Новый продукт (КБЖУ на 100 г)</span>
             </h4>
             <button
               type="button"
               onClick={handleCancelCreate}
-              className="text-neutral-400 hover:text-white p-1 rounded-lg"
+              className="text-neutral-400 hover:text-white p-1 rounded-lg cursor-pointer"
               title="Отмена"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <Input
-            label="Название продукта *"
-            placeholder="Например, Домашний творог"
-            value={newProduct.name}
-            onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-            required
-            autoFocus
-          />
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Input
-              label="Калории (на 100г) *"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={newProduct.calories}
-              onChange={(e) => setNewProduct({ ...newProduct, calories: e.target.value })}
-              required
-            />
-            <Input
-              label="Белки (на 100г)"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="0"
-              value={newProduct.protein}
-              onChange={(e) => setNewProduct({ ...newProduct, protein: e.target.value })}
-            />
-            <Input
-              label="Жиры (на 100г)"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="0"
-              value={newProduct.fat}
-              onChange={(e) => setNewProduct({ ...newProduct, fat: e.target.value })}
-            />
-            <Input
-              label="Углеводы (на 100г)"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="0"
-              value={newProduct.carbs}
-              onChange={(e) => setNewProduct({ ...newProduct, carbs: e.target.value })}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="sm:col-span-2">
+              <Input
+                label="Название продукта *"
+                placeholder="Например: Творог 5% домашний"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <Input
+                label="Вес упаковки (г)"
+                type="number"
+                min="1"
+                placeholder="Напр. 180"
+                value={newProduct.package_weight_grams}
+                onChange={(e) => {
+                  const val = e.target.value
+                  const pkg = parseNum(val)
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    package_weight_grams: val,
+                    portion_grams:
+                      pkg > 0 && prev.portion_grams === '100' ? String(Math.round(pkg)) : prev.portion_grams,
+                  }))
+                }}
+              />
+            </div>
           </div>
 
-          <div className="flex gap-2 pt-1">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                Пищевая ценность на 100 грамм (с пачки)
+              </span>
+              {newProdMacroCal > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewProduct((prev) => ({ ...prev, calories: String(newProdMacroCal) }))
+                  }
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-lg cursor-pointer"
+                >
+                  <Calculator className="w-3 h-3" />
+                  <span>Авто: {newProdMacroCal} ккал</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Input
+                label="Ккал / 100г *"
+                type="number"
+                min="0"
+                step="any"
+                placeholder={newProdMacroCal > 0 ? String(newProdMacroCal) : '0'}
+                value={newProduct.calories}
+                onChange={(e) => setNewProduct({ ...newProduct, calories: e.target.value })}
+              />
+              <Input
+                label="Белки / 100г"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="0"
+                value={newProduct.protein}
+                onChange={(e) => setNewProduct({ ...newProduct, protein: e.target.value })}
+              />
+              <Input
+                label="Жиры / 100г"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="0"
+                value={newProduct.fat}
+                onChange={(e) => setNewProduct({ ...newProduct, fat: e.target.value })}
+              />
+              <Input
+                label="Углеводы / 100г"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="0"
+                value={newProduct.carbs}
+                onChange={(e) => setNewProduct({ ...newProduct, carbs: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Inline Portion Weight Selector for immediate addition */}
+          <div className="p-3 rounded-xl bg-[#121317] border border-neutral-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Ваша порция сейчас (г):</span>
+              </span>
+              <span className="text-xs font-bold text-emerald-400">
+                Итого: {newProdPortionCal} ккал ({Math.round(newProdPortionGrams)} г)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                step="any"
+                value={newProduct.portion_grams}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, portion_grams: e.target.value })
+                }
+                className="w-24 bg-[#18181d] border border-neutral-700 focus:border-emerald-500 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white outline-none text-center"
+              />
+              <div className="flex flex-wrap gap-1 flex-1">
+                {[50, 100, 150, 200, 250].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() =>
+                      setNewProduct((prev) => ({ ...prev, portion_grams: String(g) }))
+                    }
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors ${
+                      Math.round(newProdPortionGrams) === g
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-neutral-800 text-neutral-300 hover:text-white'
+                    }`}
+                  >
+                    {g}г
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              className="w-1/2"
-              onClick={handleCancelCreate}
+              className="sm:w-2/5"
+              isLoading={isSavingProduct}
+              onClick={() => handleSaveCustomProduct(false)}
             >
-              Отмена
+              Только в базу
             </Button>
             <Button
               type="submit"
               size="sm"
-              className="w-1/2"
+              className="sm:w-3/5"
               isLoading={isSavingProduct}
             >
-              Создать и выбрать
+              {`Создать и в дневник (${newProdPortionCal} ккал)`}
             </Button>
           </div>
         </form>
@@ -253,14 +387,22 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
 
       {/* Selected Product Portion Drawer */}
       {selectedProduct && (
-        <div className="p-4 rounded-xl bg-neutral-800/80 border border-emerald-500/40 space-y-3 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white truncate">
-              {selectedProduct.name}
-            </h4>
+        <div className="p-4 rounded-2xl bg-[#181a20] border border-emerald-500/40 space-y-3 animate-in fade-in">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="text-sm font-bold text-white truncate">
+                {selectedProduct.name}
+              </h4>
+              <span className="text-[11px] text-neutral-400">
+                На 100 г: {Math.round(selectedProduct.calories_per_100g)} ккал • Б:{' '}
+                {selectedProduct.protein_per_100g}г • Ж: {selectedProduct.fat_per_100g}г • У:{' '}
+                {selectedProduct.carbs_per_100g}г
+              </span>
+            </div>
             <button
+              type="button"
               onClick={() => setSelectedProduct(null)}
-              className="text-xs text-neutral-400 hover:text-white"
+              className="text-xs text-neutral-400 hover:text-white shrink-0 cursor-pointer"
             >
               Сменить
             </button>
@@ -268,15 +410,15 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
 
           {/* Quick portion chips */}
           <div className="space-y-1.5">
-            <span className="text-[10px] text-neutral-400 font-medium">Быстрый выбор порции:</span>
+            <span className="text-[10px] text-neutral-400 font-medium">Быстрый выбор веса порции:</span>
             <div className="flex flex-wrap gap-1.5">
-              {[50, 100, 150, 200].map((chipGrams) => (
+              {[30, 50, 100, 150, 200, 250, 300].map((chipGrams) => (
                 <button
                   key={chipGrams}
                   type="button"
                   onClick={() => setGrams(String(chipGrams))}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    grams === String(chipGrams)
+                    Math.round(parseFloat(grams) || 0) === chipGrams
                       ? 'bg-emerald-500 text-white font-semibold shadow-sm'
                       : 'bg-neutral-900 border border-neutral-700/80 text-neutral-300 hover:bg-neutral-800'
                   }`}
@@ -286,28 +428,46 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
               ))}
               {Boolean(
                 selectedProduct.package_weight_grams &&
-                  ![50, 100, 150, 200].includes(selectedProduct.package_weight_grams)
+                  selectedProduct.package_weight_grams > 0
               ) && (
-                <button
-                  type="button"
-                  onClick={() => setGrams(String(selectedProduct.package_weight_grams))}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    grams === String(selectedProduct.package_weight_grams)
-                      ? 'bg-emerald-500 text-white font-semibold shadow-sm'
-                      : 'bg-neutral-900 border border-neutral-700/80 text-neutral-300 hover:bg-neutral-800'
-                  }`}
-                >
-                  Упаковка ({selectedProduct.package_weight_grams}г)
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGrams(String(Math.round((selectedProduct.package_weight_grams || 100) * 0.5)))
+                    }
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-neutral-900 border border-emerald-500/30 text-emerald-300 hover:bg-neutral-800 transition-colors cursor-pointer"
+                  >
+                    ½ пачки ({Math.round((selectedProduct.package_weight_grams || 100) * 0.5)}г)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGrams(String(Math.round(selectedProduct.package_weight_grams || 100)))}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      Math.round(parseFloat(grams) || 0) === Math.round(selectedProduct.package_weight_grams || 0)
+                        ? 'bg-emerald-500 text-white font-semibold shadow-sm'
+                        : 'bg-neutral-900 border border-emerald-500/30 text-emerald-300 hover:bg-neutral-800'
+                    }`}
+                  >
+                    Вся пачка ({Math.round(selectedProduct.package_weight_grams || 100)}г)
+                  </button>
+                </>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-1/2">
-              <label className="text-[11px] text-neutral-400 block mb-1">
-                Вес порции (граммы)
-              </label>
+          <div className="flex items-center justify-between gap-3 bg-[#121317] p-2.5 rounded-xl border border-neutral-800">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setGrams(String(Math.max(5, Math.round((parseFloat(grams) || 100) - 25))))
+                }
+                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer"
+                title="-25 г"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
               <input
                 type="number"
                 inputMode="decimal"
@@ -318,15 +478,28 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                   if (isNaN(num) || num <= 0) setGrams('100')
                 }}
                 placeholder="100"
-                className="w-full bg-[#18181b] border border-neutral-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-emerald-500 outline-none"
+                className="w-20 bg-[#18181b] border border-neutral-700 rounded-lg px-2 py-1 text-center text-sm font-bold text-white focus:border-emerald-500 outline-none"
               />
+              <span className="text-xs text-neutral-400">г</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setGrams(String(Math.round((parseFloat(grams) || 100) + 25)))
+                }
+                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer"
+                title="+25 г"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="w-1/2 text-right">
-              <span className="text-[11px] text-neutral-400 block mb-1">
-                Итого в порции:
-              </span>
-              <span className="text-sm font-bold text-emerald-400">
+            <div className="text-right">
+              <span className="text-sm font-extrabold text-emerald-400 block">
                 {Math.round(selectedProduct.calories_per_100g * ((parseFloat(grams) || 100) / 100))} ккал
+              </span>
+              <span className="text-[10px] text-neutral-400 block">
+                Б: {Math.round(selectedProduct.protein_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}г • Ж:{' '}
+                {Math.round(selectedProduct.fat_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}г • У:{' '}
+                {Math.round(selectedProduct.carbs_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}г
               </span>
             </div>
           </div>

@@ -38,6 +38,11 @@ class RecipeUpdate(BaseModel):
     description: Optional[str] = None
     items: Optional[List[RecipeItemCreate]] = None
     ingredients: Optional[List[MealIngredientItem]] = None
+    total_calories: Optional[float] = Field(None, ge=0, le=50000)
+    total_protein: Optional[float] = Field(None, ge=0, le=5000)
+    total_fat: Optional[float] = Field(None, ge=0, le=5000)
+    total_carbs: Optional[float] = Field(None, ge=0, le=5000)
+    total_weight_grams: Optional[float] = Field(None, gt=0, le=50000)
     is_favorite: Optional[bool] = None
 
 

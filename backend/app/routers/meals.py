@@ -167,6 +167,7 @@ async def update_meal(
             detail="Приём пищи не найден",
         )
 
+    old_photo_path = meal.photo_path
     update_data = meal_in.model_dump(exclude_unset=True)
     nullable_fields = {"user_comment", "photo_path"}
     for field, value in update_data.items():
@@ -199,6 +200,9 @@ async def update_meal(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при обновлении приёма пищи",
         )
+
+    if old_photo_path and old_photo_path != meal.photo_path:
+        await safe_unlink_upload_if_unreferenced(db, old_photo_path, exclude_meal_id=meal.id)
 
     return MealResponse.model_validate(meal)
 

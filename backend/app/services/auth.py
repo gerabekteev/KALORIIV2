@@ -140,8 +140,8 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token_ver = payload.get("ver")
-    if token_ver is not None and getattr(user, "token_version", 1) != token_ver:
+    token_ver = payload.get("ver", 1)
+    if getattr(user, "token_version", 1) != token_ver:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Сессия была завершена (токен отозван)",
