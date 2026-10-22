@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, Scale, ChevronDown, ChevronUp } from 'lucide-react'
 import { statsApi } from '../../api/stats'
 import { getTodayDateString } from '../../store/mealsStore'
-import { calculateWeeklyBank } from '../../utils/calorieBank'
+import { calculateWeeklyBank, WeeklyBankResult } from '../../utils/calorieBank'
 
 interface WeekStripCalendarProps {
   selectedDate: string
   onSelectDate: (date: string) => void
   currentDayCalories: number
   dailyGoalCalories: number
-  onWeeklyBankChange?: (
-    bank: { balance: number; isPositive: boolean; trackedCount: number } | null
-  ) => void
+  onWeeklyBankChange?: (bank: WeeklyBankResult | null) => void
 }
 
 // Helper to compute Monday (start of week) from any YYYY-MM-DD
@@ -39,6 +37,7 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
 }) => {
   const todayStr = useMemo(() => getTodayDateString(), [])
   const [weekCaloriesMap, setWeekCaloriesMap] = useState<Record<string, number>>({})
+  const [showBankDetails, setShowBankDetails] = useState(false)
 
   // Compute 7 days of the week for selectedDate (Monday -> Sunday)
   const monday = useMemo(() => getMonday(selectedDate), [selectedDate])
@@ -263,19 +262,94 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
 
       {/* Elastic Weekly Calorie Bank Badge (GC-02) */}
       {weeklyBank && (
-        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#141417] border border-neutral-800/80 text-[11px]">
-          <span className="text-neutral-400 flex items-center gap-1.5 font-medium">
-            <span>🏦</span>
-            <span>Банк недели ({weeklyBank.trackedCount} дн.):</span>
-          </span>
-          {weeklyBank.isPositive ? (
-            <span className="font-semibold text-emerald-400">
-              +{weeklyBank.balance} ккал в запасе
+        <div className="rounded-xl bg-[#131317] border border-white/[0.06] overflow-hidden transition-all">
+          <button
+            type="button"
+            onClick={() => setShowBankDetails((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 text-[11px] hover:bg-white/[0.02] transition-colors cursor-pointer"
+            title="Нажмите, чтобы посмотреть расчёт баланса по дням недели"
+          >
+            <span className="text-neutral-300 flex items-center gap-1.5 font-medium">
+              <Scale className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>
+                Баланс недели ({weeklyBank.trackedCount} дн.):
+              </span>
             </span>
-          ) : (
-            <span className="font-semibold text-amber-400">
-              {weeklyBank.balance} ккал (дефицит)
+            <span className="flex items-center gap-1.5">
+              {weeklyBank.balance > 0 ? (
+                <span className="font-semibold text-emerald-400">
+                  В запасе +{weeklyBank.balance} ккал
+                </span>
+              ) : weeklyBank.balance < 0 ? (
+                <span className="font-semibold text-amber-400">
+                  Перебор +{Math.abs(weeklyBank.balance)} ккал
+                </span>
+              ) : (
+                <span className="font-semibold text-neutral-300">
+                  Ровно по норме
+                </span>
+              )}
+              {showBankDetails ? (
+                <ChevronUp className="w-3.5 h-3.5 text-neutral-500" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />
+              )}
             </span>
+          </button>
+
+          {showBankDetails && (
+            <div className="px-3 pb-2.5 pt-1.5 border-t border-white/[0.05] space-y-2 text-[11px] animate-in fade-in duration-150">
+              <div className="flex items-center justify-between text-neutral-400">
+                <span>Съедено за {weeklyBank.trackedCount} дн. с записями:</span>
+                <span className="font-mono font-semibold text-white">
+                  {weeklyBank.totalConsumed} / {weeklyBank.totalBudget} ккал
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-1">
+                {weeklyBank.days.map((item) => {
+                  const [y, m, d] = item.dateStr.split('-').map(Number)
+                  const dt = new Date(y, m - 1, d)
+                  const label = dt.toLocaleDateString('ru-RU', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })
+                  return (
+                    <div
+                      key={item.dateStr}
+                      className="flex items-center justify-between py-1 px-2 rounded-lg bg-[#191920] text-[10.5px]"
+                    >
+                      <span className="text-neutral-300 capitalize">{label}</span>
+                      <div className="flex items-center gap-2 font-mono">
+                        <span className="text-neutral-400">
+                          {item.calories} / {item.goal} ккал
+                        </span>
+                        <span
+                          className={`font-semibold ${
+                            item.diff > 0
+                              ? 'text-emerald-400'
+                              : item.diff < 0
+                              ? 'text-amber-400'
+                              : 'text-neutral-400'
+                          }`}
+                        >
+                          {item.diff > 0
+                            ? `в запас +${item.diff}`
+                            : item.diff < 0
+                            ? `перебор +${Math.abs(item.diff)}`
+                            : '0'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <p className="text-[10px] text-neutral-500 leading-relaxed m-0">
+                Учитываются только дни этой недели, где записана еда. Если за день съедено меньше вашей нормы ({dailyGoalCalories} ккал), остаток копится в запас недели.
+              </p>
+            </div>
           )}
         </div>
       )}

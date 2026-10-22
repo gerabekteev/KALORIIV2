@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-10-23] — Релиз v1.5.1: Честный «Баланс недели» с детализацией по дням, полный отказ от эмодзи в пользу иконок Lucide, автопроверка обновлений в фоне и загрузка APK снизу в Профиле
+
+### ⚖️ Исправление расчёта и интерфейса «Баланса недели» ([`calorieBank.ts`](file:///c:/Fvus/some/KALORII/frontend/src/utils/calorieBank.ts), [`WeekStripCalendar.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/WeekStripCalendar.tsx))
+1. **Честный расчёт только по заполненным дням**:
+   - Ранее `calculateWeeklyBank` учитывал текущий день (`todayStr`) даже тогда, когда пользователь ещё ничего не записал (`0 ккал`), из-за чего с утра искусственно начислялся ложный «резерв» `+1850 ккал`, а при переборе выводилась путающая подпись `(дефицит)`.
+   - Теперь учитываются **только дни с фактическими записями еды (`cal > 0`)**.
+2. **Интерактивная расшифровка по клику**:
+   - Плашка переименована в понятный **«Баланс недели (X дн.): В запасе +Y ккал / Перебор +Y ккал»**.
+   - При нажатии на плашку раскрывается подробная сводка: суммарно съедено vs бюджет за заполненные дни, список учтённых дней недели с калориями и отклонением по каждому дню, а также пояснение логики расчёта.
+
+### 🎨 Чистый UI без эмодзи и без лишних подписей ([`TodayPage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/TodayPage.tsx), [`MealPlanPage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/MealPlanPage.tsx), [`MealCard.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/MealCard.tsx), [`MealList.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/MealList.tsx))
+1. **Лаконичные бары БЖУ рядом с кольцом калорий (`TodayPage.tsx`)**:
+   - Убраны загромождающие подписи `(ост. Xг)` рядом с названиями «Белки», «Жиры», «Углеводы» справа от кружка калорий.
+2. **Полный отказ от текстовых эмодзи в пользу векторных иконок Lucide**:
+   - Во всех компонентах, сторах и утилитах (`TodayPage.tsx`, `WeekStripCalendar.tsx`, `MealPlanPage.tsx`, `MealList.tsx`, `MealCard.tsx`, `AddMealModal.tsx`, `BarcodeScannerView.tsx`, `groceryList.ts`, `timeSlots.ts`, `mealsStore.ts`, `mealPlanStore.ts`) удалены все эмодзи и заменены на строгие векторные иконки `lucide-react` (`Scale`, `Utensils`, `Flame`, `Layers`, `Calendar`, `Clock`, `ShieldCheck`).
+
+### 📲 Фоновая проверка обновлений + скачивание приложения снизу в Профиле ([`platform.ts`](file:///c:/Fvus/some/KALORII/frontend/src/utils/platform.ts), [`Layout.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/layout/Layout.tsx), [`ProfilePage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/ProfilePage.tsx), [`main.py`](file:///c:/Fvus/some/KALORII/backend/app/main.py))
+1. **Фоновая проверка новой версии при входе и разворачивании приложения**:
+   - Эндпоинт `GET /api/health` теперь возвращает актуальную версию релиза (`version: "1.5.1"`, `apk_version: "1.5.1"`, `apk_url`).
+   - Раздача `/kalorii-ai.apk` в `main.py` снабжена заголовками `Cache-Control: no-cache, no-store, must-revalidate` и корректным MIME-типом `application/vnd.android.package-archive`.
+   - При запуске и возврате в приложение (`visibilitychange` / `focus`) [`Layout.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/layout/Layout.tsx) в фоне сверяет `APP_VERSION` с сервером (`checkServerAppVersion()`). Если на сервере вышла более новая версия, сверху плавно появляется баннер **«Доступно обновление vX.Y.Z»** с кнопкой **«Скачать»**.
+2. **Карточка скачивания APK в самом низу Профиля (`ProfilePage.tsx`)**:
+   - Блок скачивания Android-приложения перенесён в самый низ страницы Профиля (под все аккордеоны настроек) и теперь отображается **и на сайте, и внутри мобильного приложения** (ранее скрывался условием `!isNativeApp()`), позволяя в любой момент скачать свежий `kalorii-ai.apk` (`downloadLatestApk`).
+
+---
+
 ## [2026-10-23] — Релиз v1.5.0: Глубокий аудит безопасности, Калькулятор «На 100 г с пачки + Вес порции», Слайдер порций, AI OCR этикеток и Умный AI-ассистент БЖУ
 
 ### 🛡️ Безопасность и исправление багов (Security & Full-Stack Audit)

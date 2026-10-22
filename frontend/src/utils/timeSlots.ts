@@ -10,28 +10,28 @@ export const SLOTS_CONFIG: SlotConfig[] = [
   {
     id: 'breakfast',
     title: 'Завтрак',
-    icon: '☀️',
+    icon: 'sunrise',
     timeRange: '05:00 – 11:29',
     presetTime: '09:00',
   },
   {
     id: 'lunch',
     title: 'Обед',
-    icon: '🍲',
+    icon: 'sun',
     timeRange: '11:30 – 16:29',
     presetTime: '13:30',
   },
   {
     id: 'snack',
     title: 'Перекус',
-    icon: '🍏',
+    icon: 'coffee',
     timeRange: '16:30 – 18:29',
     presetTime: '17:00',
   },
   {
     id: 'dinner',
     title: 'Ужин',
-    icon: '🌙',
+    icon: 'moon',
     timeRange: '18:30 – 04:59',
     presetTime: '19:30',
   },
@@ -59,7 +59,7 @@ export function getMealTimeMeta(timeStr?: string, calories?: number): MealTimeMe
   if (calories !== undefined && calories > 0 && calories <= 160 && slot === 'lunch') {
     return {
       slot: 'snack',
-      icon: '🍏',
+      icon: 'coffee',
       label: 'Перекус',
     }
   }
@@ -68,25 +68,25 @@ export function getMealTimeMeta(timeStr?: string, calories?: number): MealTimeMe
     case 'breakfast':
       return {
         slot: 'breakfast',
-        icon: '☀️',
+        icon: 'sunrise',
         label: 'Завтрак',
       }
     case 'lunch':
       return {
         slot: 'lunch',
-        icon: '🍲',
+        icon: 'sun',
         label: 'Обед',
       }
     case 'snack':
       return {
         slot: 'snack',
-        icon: '🍏',
+        icon: 'coffee',
         label: 'Перекус',
       }
     case 'dinner':
       return {
         slot: 'dinner',
-        icon: '🪐',
+        icon: 'moon',
         label: 'Ужин',
       }
   }

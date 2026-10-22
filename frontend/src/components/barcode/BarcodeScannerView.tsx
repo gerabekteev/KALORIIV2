@@ -378,7 +378,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
       ) {
         setCameraErrorType('not_allowed')
         setCameraError(
-          'Доступ к камере заблокирован в браузере. Разрешите доступ к камере в настройках сайта (значок 🔒 в адресной строке) или воспользуйтесь фото.'
+          'Доступ к камере заблокирован в браузере. Разрешите доступ к камере в настройках сайта (значок замка в адресной строке) или воспользуйтесь фото.'
         )
       } else if (
         err?.name === 'NotFoundError' ||
@@ -519,7 +519,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
         if (navigator.vibrate) navigator.vibrate(60)
         const resolvedBarcode = attachBarcode || notFoundState?.code || res.product.barcode || ''
         addToast(
-          '✨ Этикетка считана! Проверьте данные на 100 г и укажите вес порции.',
+          'Этикетка считана! Проверьте данные на 100 г и укажите вес порции.',
           'success',
           3500
         )

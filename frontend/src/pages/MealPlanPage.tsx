@@ -21,6 +21,7 @@ import {
   ChevronUp,
   Zap,
   Flame,
+  Utensils,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useMealsStore, getTodayDateString } from '../store/mealsStore'
@@ -38,13 +39,13 @@ import { Modal } from '../components/ui/Modal'
 import { pluralizeRu } from '../utils/pluralize'
 
 const QUICK_PREFERENCE_TAGS = [
-  '⚡ Быстро до 15 мин',
-  '🛒 Из простых продуктов',
-  '🥣 Без готовки',
-  '🍗 Максимум белка',
-  '🐟 Без рыбы',
-  '🥛 Без лактозы',
-  '🥞 Сладкое ПП к чаю',
+  'Быстро до 15 мин',
+  'Из простых продуктов',
+  'Без готовки',
+  'Максимум белка',
+  'Без рыбы',
+  'Без лактозы',
+  'Сладкое ПП к чаю',
 ]
 
 function getTomorrowDateString(): string {
@@ -594,8 +595,10 @@ export const MealPlanPage: React.FC = () => {
                 : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-base">🍳</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+                <Utensils className="w-3.5 h-3.5" />
+              </div>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
                 1 блюдо
               </span>
@@ -618,8 +621,10 @@ export const MealPlanPage: React.FC = () => {
                 : 'bg-[#151519] border-white/[0.07] hover:border-blue-500/30 hover:bg-[#19191f]'
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-base">💪</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400">
+                <Flame className="w-3.5 h-3.5" />
+              </div>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300">
                 Белковый буст
               </span>
@@ -642,8 +647,10 @@ export const MealPlanPage: React.FC = () => {
                 : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-base">🥗</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-emerald-400">
+                <Layers className="w-3.5 h-3.5" />
+              </div>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
                 2 блюда
               </span>
@@ -666,8 +673,10 @@ export const MealPlanPage: React.FC = () => {
                 : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-base">📅</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-emerald-400">
+                <Calendar className="w-3.5 h-3.5" />
+              </div>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
                 3 блюда
               </span>
@@ -964,8 +973,9 @@ export const MealPlanPage: React.FC = () => {
                       {Math.round(meal.weight_grams)} г
                     </span>
                     {meal.added_to_diary && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        В дневнике ✓
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <Check className="w-3 h-3" />
+                        <span>В дневнике</span>
                       </span>
                     )}
                   </div>
@@ -1059,7 +1069,7 @@ export const MealPlanPage: React.FC = () => {
       <Modal
         isOpen={isShoppingListOpen}
         onClose={() => setIsShoppingListOpen(false)}
-        title="🛒 Список покупок"
+        title="Список покупок"
         maxWidth="md"
       >
         <div className="space-y-4">
@@ -1079,7 +1089,7 @@ export const MealPlanPage: React.FC = () => {
             ) : (
               Object.entries(
                 groceryItems.reduce((acc, item) => {
-                  const cat = item.category || '🛒 Другое'
+                  const cat = item.category || 'Другое'
                   if (!acc[cat]) acc[cat] = []
                   acc[cat].push(item)
                   return acc

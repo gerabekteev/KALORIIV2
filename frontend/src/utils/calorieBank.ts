@@ -1,7 +1,17 @@
+export interface WeeklyBankDayItem {
+  dateStr: string
+  calories: number
+  goal: number
+  diff: number // positive = saved (under goal), negative = over goal
+}
+
 export interface WeeklyBankResult {
   balance: number
   isPositive: boolean
   trackedCount: number
+  totalBudget: number
+  totalConsumed: number
+  days: WeeklyBankDayItem[]
 }
 
 export interface CalculateWeeklyBankParams {
@@ -14,8 +24,8 @@ export interface CalculateWeeklyBankParams {
 }
 
 /**
- * Calculates elastic weekly calorie bank (GC-02).
- * Evaluates days up to today (or past days), summing daily budgets vs consumed calories.
+ * Calculates weekly calorie balance across days up to today where meals were actually logged (cal > 0).
+ * Empty days (0 kcal, including an unstarted today) are never counted as artificial calorie savings.
  */
 export function calculateWeeklyBank({
   dailyGoalCalories,
@@ -27,20 +37,29 @@ export function calculateWeeklyBank({
 }: CalculateWeeklyBankParams): WeeklyBankResult | null {
   if (!dailyGoalCalories || dailyGoalCalories <= 0) return null
 
-  // Evaluate days up to today
+  // Evaluate days of the selected week up to today
   const activeDays = weekDateStrings.filter((d) => d <= todayStr)
   if (activeDays.length === 0) return null
 
   let totalBudget = 0
   let totalConsumed = 0
   let trackedCount = 0
+  const days: WeeklyBankDayItem[] = []
 
   activeDays.forEach((dateStr) => {
-    const cal = dateStr === selectedDate ? currentDayCalories : (weekCaloriesMap[dateStr] || 0)
-    if (cal > 0 || dateStr === todayStr) {
+    const rawCal =
+      dateStr === selectedDate ? currentDayCalories : weekCaloriesMap[dateStr] || 0
+    const cal = Math.round(rawCal)
+    if (cal > 0) {
       totalBudget += dailyGoalCalories
       totalConsumed += cal
       trackedCount++
+      days.push({
+        dateStr,
+        calories: cal,
+        goal: dailyGoalCalories,
+        diff: Math.round(dailyGoalCalories - cal),
+      })
     }
   })
 
@@ -50,5 +69,8 @@ export function calculateWeeklyBank({
     balance,
     isPositive: balance >= 0,
     trackedCount,
+    totalBudget: Math.round(totalBudget),
+    totalConsumed: Math.round(totalConsumed),
+    days,
   }
 }

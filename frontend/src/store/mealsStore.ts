@@ -653,7 +653,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         useUIStore
           .getState()
           .addToast(
-            `✨ "${newMeal.name}" (${Math.round(newMeal.calories)} ккал) добавлено в дневник!`,
+            `"${newMeal.name}" (${Math.round(newMeal.calories)} ккал) добавлено в дневник!`,
             'success',
             4500
           )
@@ -734,7 +734,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         useUIStore
           .getState()
           .addToast(
-            `✨ "${newMeal.name}" (${Math.round(newMeal.calories)} ккал) добавлено в дневник!`,
+            `"${newMeal.name}" (${Math.round(newMeal.calories)} ккал) добавлено в дневник!`,
             'success',
             4500
           )
@@ -763,7 +763,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       id,
       type: 'voice',
       audioBlob,
-      textDescription: '🎤 Расшифровка голосового описания...',
+      textDescription: 'Расшифровка голосового описания...',
       targetDate: date,
       targetTime: time,
       status: 'analyzing',
@@ -816,7 +816,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         useUIStore
           .getState()
           .addToast(
-            `🎤 "${newMeal.name}" (${Math.round(newMeal.calories)} ккал) распознано и добавлено!`,
+            `"${newMeal.name}" (${Math.round(newMeal.calories)} ккал) распознано и добавлено!`,
             'success',
             4500
           )
@@ -916,7 +916,7 @@ export const useMealsStore = create<MealsState>((set, get) => ({
       useUIStore
         .getState()
         .addToast(
-          `✨ "${newMeal.name}" (${Math.round(newMeal.calories)} ккал) добавлено в дневник!`,
+          `"${newMeal.name}" (${Math.round(newMeal.calories)} ккал) добавлено в дневник!`,
           'success',
           4500
         )

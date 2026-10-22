@@ -7,14 +7,14 @@ export interface GroceryItem {
 }
 
 export type GroceryCategory =
-  | '🥦 Овощи, фрукты и зелень'
-  | '🥩 Мясо, птица, рыба'
-  | '🥛 Молочные продукты и яйца'
-  | '🌾 Бакалея и крупы'
-  | '🛒 Другое'
+  | 'Овощи, фрукты и зелень'
+  | 'Мясо, птица, рыба'
+  | 'Молочные продукты и яйца'
+  | 'Бакалея и крупы'
+  | 'Другое'
 
 const CATEGORY_KEYWORDS: Record<GroceryCategory, string[]> = {
-  '🥦 Овощи, фрукты и зелень': [
+  'Овощи, фрукты и зелень': [
     'огурец',
     'огурц',
     'помидор',
@@ -50,7 +50,7 @@ const CATEGORY_KEYWORDS: Record<GroceryCategory, string[]> = {
     'груш',
     'персик',
   ],
-  '🥛 Молочные продукты и яйца': [
+  'Молочные продукты и яйца': [
     'творог',
     'молок',
     'кефир',
@@ -66,7 +66,7 @@ const CATEGORY_KEYWORDS: Record<GroceryCategory, string[]> = {
     'пармезан',
     'моцарелл',
   ],
-  '🥩 Мясо, птица, рыба': [
+  'Мясо, птица, рыба': [
     'куриц',
     'курин',
     'филе',
@@ -94,7 +94,7 @@ const CATEGORY_KEYWORDS: Record<GroceryCategory, string[]> = {
     'котлет',
     'печень',
   ],
-  '🌾 Бакалея и крупы': [
+  'Бакалея и крупы': [
     'круп',
     'греч',
     'рис',
@@ -132,26 +132,26 @@ const CATEGORY_KEYWORDS: Record<GroceryCategory, string[]> = {
     'горох',
     'консерв',
   ],
-  '🛒 Другое': [],
+  'Другое': [],
 }
 
 export function classifyGroceryItem(name: string): GroceryCategory {
   const lower = name.toLowerCase()
   if (lower.includes('зубн') || lower.includes('мыло') || lower.includes('шампунь')) {
-    return '🛒 Другое'
+    return 'Другое'
   }
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as [
     GroceryCategory,
     string[],
   ][]) {
-    if (category === '🛒 Другое') continue
+    if (category === 'Другое') continue
     for (const kw of keywords) {
       if (lower.includes(kw)) {
         return category
       }
     }
   }
-  return '🛒 Другое'
+  return 'Другое'
 }
 
 export function generateGroceryListFromItems(

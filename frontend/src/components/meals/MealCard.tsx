@@ -458,9 +458,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                     className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium mr-0.5"
                     title={`${timeMeta.label} (${displayTime})`}
                   >
-                    <span className="text-xs select-none" aria-hidden="true">
-                      {timeMeta.icon}
-                    </span>
+                    <Clock className="w-3 h-3 text-neutral-500" />
                     <span>{displayTime}</span>
                   </span>
 
@@ -819,7 +817,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                 <span className="text-neutral-300">У: {meal.carbs}г</span>
               </div>
               <span className="text-neutral-400 flex items-center gap-1 text-[11px]">
-                <span className="text-xs select-none">{timeMeta.icon}</span>
+                <Clock className="w-3 h-3 text-neutral-500" />
                 <span>{displayTime}</span>
               </span>
             </div>

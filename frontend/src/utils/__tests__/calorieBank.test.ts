@@ -26,15 +26,6 @@ describe('calculateWeeklyBank (GC-02)', () => {
   })
 
   it('correctly calculates surplus (+balance) over tracked days', () => {
-    // Daily goal = 2000 kcal
-    // Mon: 1800 (-200 consumed vs budget)
-    // Tue: 1700 (-300)
-    // Wed: 1900 (-100)
-    // Thu: 2000 (0)
-    // Fri (today): 1600 (-400)
-    // Total budget = 5 * 2000 = 10000
-    // Total consumed = 1800 + 1700 + 1900 + 2000 + 1600 = 9000
-    // Balance = +1000 kcal saved
     const res = calculateWeeklyBank({
       dailyGoalCalories: 2000,
       weekDateStrings: weekDays,
@@ -53,15 +44,11 @@ describe('calculateWeeklyBank (GC-02)', () => {
     expect(res?.balance).toBe(1000)
     expect(res?.isPositive).toBe(true)
     expect(res?.trackedCount).toBe(5)
+    expect(res?.totalBudget).toBe(10000)
+    expect(res?.totalConsumed).toBe(9000)
   })
 
-  it('correctly calculates deficit (-balance) when overeating', () => {
-    // Daily goal = 2000 kcal
-    // Mon: 2400 (+400 over budget)
-    // Tue (today): 2300 (+300 over budget)
-    // Total budget = 4000
-    // Total consumed = 4700
-    // Balance = -700 kcal
+  it('correctly calculates overeating (-balance) when exceeding goal', () => {
     const res = calculateWeeklyBank({
       dailyGoalCalories: 2000,
       weekDateStrings: weekDays,
@@ -80,7 +67,6 @@ describe('calculateWeeklyBank (GC-02)', () => {
   })
 
   it('ignores future days in the week', () => {
-    // If today is Wednesday (2026-10-14), days Thursday-Sunday should not count toward budget
     const res = calculateWeeklyBank({
       dailyGoalCalories: 2000,
       weekDateStrings: weekDays,
@@ -97,5 +83,26 @@ describe('calculateWeeklyBank (GC-02)', () => {
     expect(res?.trackedCount).toBe(3)
     expect(res?.balance).toBe(0)
     expect(res?.isPositive).toBe(true)
+  })
+
+  it('does not count today as +goal saved when today has 0 kcal eaten', () => {
+    const res = calculateWeeklyBank({
+      dailyGoalCalories: 1850,
+      weekDateStrings: weekDays,
+      todayStr: '2026-10-14',
+      selectedDate: '2026-10-14',
+      currentDayCalories: 0,
+      weekCaloriesMap: {
+        '2026-10-12': 2100,
+        '2026-10-13': 2000,
+      },
+    })
+
+    expect(res).not.toBeNull()
+    expect(res?.trackedCount).toBe(2)
+    expect(res?.totalBudget).toBe(3700)
+    expect(res?.totalConsumed).toBe(4100)
+    expect(res?.balance).toBe(-400)
+    expect(res?.isPositive).toBe(false)
   })
 })

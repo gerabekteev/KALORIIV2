@@ -115,7 +115,7 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
 
       useUIStore
         .getState()
-        .addToast('✨ Меню успешно сгенерировано и сохранено!', 'success', 3500)
+        .addToast('Меню успешно сгенерировано и сохранено!', 'success', 3500)
       return generated
     } catch (err: any) {
       const msg = err.message || 'Ошибка генерации меню через AI'

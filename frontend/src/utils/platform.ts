@@ -6,6 +6,88 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 const DEFAULT_CLOUD_ORIGIN = 'https://kalorii.lopni.fun'
 
 /**
+ * Текущая версия клиентского приложения (синхронизирована с backend /api/health).
+ */
+export const APP_VERSION = '1.5.1'
+
+/**
+ * Сравнивает две semver-версии (например, '1.5.2' и '1.5.1').
+ * Возвращает 1, если remote > local; -1, если remote < local; 0, если равны.
+ */
+export function compareAppVersions(remoteVer: string, localVer: string = APP_VERSION): number {
+  const cleanRemote = String(remoteVer || '').trim().replace(/^v/i, '')
+  const cleanLocal = String(localVer || '').trim().replace(/^v/i, '')
+  if (!cleanRemote || !cleanLocal) return 0
+
+  const rParts = cleanRemote.split('.').map((n) => parseInt(n, 10) || 0)
+  const lParts = cleanLocal.split('.').map((n) => parseInt(n, 10) || 0)
+  const len = Math.max(rParts.length, lParts.length)
+
+  for (let i = 0; i < len; i++) {
+    const r = rParts[i] || 0
+    const l = lParts[i] || 0
+    if (r > l) return 1
+    if (r < l) return -1
+  }
+  return 0
+}
+
+/**
+ * Возвращает прямую ссылку на скачивание свежего APK (с защитой от кэширования).
+ * Внутри Android WebView указывает на облачный сервер, чтобы скачивание шло через браузер/DownloadManager.
+ */
+export function getApkDownloadUrl(version: string = APP_VERSION): string {
+  const v = encodeURIComponent(version || APP_VERSION)
+  const origin = isNativeApp() ? getServerOrigin() || DEFAULT_CLOUD_ORIGIN : getServerOrigin()
+  return `${origin}/kalorii-ai.apk?v=${v}`
+}
+
+/**
+ * Запускает скачивание новой версии Android APK (как в браузере, так и внутри мобильного приложения).
+ */
+export function downloadLatestApk(version: string = APP_VERSION): void {
+  const url = getApkDownloadUrl(version)
+  if (isNativeApp()) {
+    openExternalUrl(url)
+    return
+  }
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', 'KaloriiAI.apk')
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+/**
+ * Проверяет в фоне актуальную версию приложения на сервере.
+ */
+export async function checkServerAppVersion(): Promise<{
+  remoteVersion: string
+  hasUpdate: boolean
+} | null> {
+  try {
+    const origin = getServerOrigin()
+    const healthUrl = `${origin}/api/health?t=${Date.now()}`
+    const res = await fetch(healthUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const remoteVersion = String(data?.apk_version || data?.version || '').trim()
+    if (!remoteVersion) return null
+    return {
+      remoteVersion,
+      hasUpdate: compareAppVersions(remoteVersion, APP_VERSION) > 0,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
  * Возвращает true, если приложение запущено внутри нативного контейнера Capacitor (Android/iOS),
  * и false в обычном веб-браузере.
  */

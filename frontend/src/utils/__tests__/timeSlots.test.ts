@@ -39,10 +39,10 @@ describe('timeSlots utility (UX-03)', () => {
   })
 
   it('correctly returns icon and label metadata with getMealTimeMeta', () => {
-    expect(getMealTimeMeta('08:00')).toEqual({ slot: 'breakfast', icon: '☀️', label: 'Завтрак' })
-    expect(getMealTimeMeta('13:00', 500)).toEqual({ slot: 'lunch', icon: '🍲', label: 'Обед' })
-    expect(getMealTimeMeta('13:00', 120)).toEqual({ slot: 'snack', icon: '🍏', label: 'Перекус' })
-    expect(getMealTimeMeta('17:00')).toEqual({ slot: 'snack', icon: '🍏', label: 'Перекус' })
-    expect(getMealTimeMeta('20:00')).toEqual({ slot: 'dinner', icon: '🪐', label: 'Ужин' })
+    expect(getMealTimeMeta('08:00')).toEqual({ slot: 'breakfast', icon: 'sunrise', label: 'Завтрак' })
+    expect(getMealTimeMeta('13:00', 500)).toEqual({ slot: 'lunch', icon: 'sun', label: 'Обед' })
+    expect(getMealTimeMeta('13:00', 120)).toEqual({ slot: 'snack', icon: 'coffee', label: 'Перекус' })
+    expect(getMealTimeMeta('17:00')).toEqual({ slot: 'snack', icon: 'coffee', label: 'Перекус' })
+    expect(getMealTimeMeta('20:00')).toEqual({ slot: 'dinner', icon: 'moon', label: 'Ужин' })
   })
 })

@@ -99,10 +99,12 @@ async def lifespan(app: FastAPI):
         await engine.dispose()
 
 
+APP_VERSION = "1.5.1"
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="KaloriiAI — Умный трекер калорий и макронутриентов (КБЖУ) с AI распознаванием еды",
-    version="1.0.0",
+    version=APP_VERSION,
     lifespan=lifespan,
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
@@ -143,11 +145,13 @@ app.include_router(telegram.router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/api/health", tags=["Служебные"])
 async def health_check():
-    """Service health check endpoint."""
+    """Service health check and version check endpoint."""
     return {
         "status": "ok",
         "app": settings.PROJECT_NAME,
-        "version": "1.0.0",
+        "version": APP_VERSION,
+        "apk_version": APP_VERSION,
+        "apk_url": f"/kalorii-ai.apk?v={APP_VERSION}",
     }
 
 
@@ -172,6 +176,13 @@ if STATIC_DIR.exists():
         if not file_path.is_relative_to(STATIC_ROOT):
             raise HTTPException(status_code=403, detail="Forbidden")
         if file_path.is_file():
+            if file_path.suffix.lower() == ".apk":
+                return FileResponse(
+                    file_path,
+                    media_type="application/vnd.android.package-archive",
+                    filename="KaloriiAI.apk",
+                    headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+                )
             return FileResponse(file_path)
         index_file = STATIC_ROOT / "index.html"
         if index_file.is_file():

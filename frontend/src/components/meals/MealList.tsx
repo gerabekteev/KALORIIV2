@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Utensils } from 'lucide-react'
 import { Meal } from '../../types'
 import { MealCard } from './MealCard'
 import { PendingMealCard } from './PendingMealCard'
@@ -47,8 +47,8 @@ export const MealList: React.FC<MealListProps> = ({ meals, isLoading }) => {
   if (!hasItems) {
     return (
       <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-neutral-800/80 bg-[#161619]/40 space-y-3">
-        <div className="w-12 h-12 rounded-2xl bg-neutral-800/60 text-neutral-400 flex items-center justify-center mx-auto text-xl">
-          🍽️
+        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+          <Utensils className="w-5 h-5" />
         </div>
         <div className="space-y-1">
           <p className="text-sm font-semibold text-neutral-300">

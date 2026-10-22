@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp, ChefHat } from 'lucide-react'
+import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp, ChefHat, Utensils, Flame, ShieldCheck } from 'lucide-react'
 import { useMeals } from '../hooks/useMeals'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
@@ -141,7 +141,7 @@ export const TodayPage: React.FC = () => {
             <ProgressBar
               current={totals.protein}
               target={dailyGoalProtein}
-              label={`Белки (ост. ${remainingProtein}г)`}
+              label="Белки"
               color="blue"
               size="sm"
               unit="г"
@@ -149,7 +149,7 @@ export const TodayPage: React.FC = () => {
             <ProgressBar
               current={totals.fat}
               target={dailyGoalFat}
-              label={`Жиры (ост. ${remainingFat}г)`}
+              label="Жиры"
               color="amber"
               size="sm"
               unit="г"
@@ -157,7 +157,7 @@ export const TodayPage: React.FC = () => {
             <ProgressBar
               current={totals.carbs}
               target={dailyGoalCarbs}
-              label={`Углеводы (ост. ${remainingCarbs}г)`}
+              label="Углеводы"
               color="purple"
               size="sm"
               unit="г"
@@ -180,36 +180,38 @@ export const TodayPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenSmartMealAssistant('single')}
-                className="flex-1 sm:flex-initial px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer active:scale-95"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer active:scale-95"
               >
-                🍳 1 блюдо
+                <Utensils className="w-3 h-3 text-emerald-400" />
+                <span>1 блюдо</span>
               </button>
               {remainingProtein >= 20 && (
                 <button
                   type="button"
                   onClick={() => handleOpenSmartMealAssistant('protein')}
-                  className="flex-1 sm:flex-initial px-2.5 py-1 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[11px] font-semibold text-blue-300 transition-all cursor-pointer active:scale-95"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[11px] font-semibold text-blue-300 transition-all cursor-pointer active:scale-95"
                 >
-                  💪 Добрать {remainingProtein}г белка
+                  <Flame className="w-3 h-3 text-blue-400" />
+                  <span>Добрать {remainingProtein}г белка</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => handleOpenSmartMealAssistant('remaining')}
-                className="flex-1 sm:flex-initial px-2.5 py-1 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-[11px] font-medium text-neutral-300 hover:text-white transition-all cursor-pointer active:scale-95"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-[11px] font-medium text-neutral-300 hover:text-white transition-all cursor-pointer active:scale-95"
               >
-                Рацион
+                <span>Рацион</span>
               </button>
             </div>
           </div>
         )}
 
         {/* Weekly Bank Supportive Status (GC-02) */}
-        {totals.calories > dailyGoalCalories && weeklyBank && weeklyBank.isPositive && (
+        {totals.calories > dailyGoalCalories && weeklyBank && weeklyBank.balance > 0 && (
           <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs text-emerald-400">
             <span className="flex items-center gap-1.5 font-medium">
-              <span>🛡️</span>
-              <span>Превышение покрыто банком недели</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Превышение покрыто запасом недели</span>
             </span>
             <span className="font-semibold text-emerald-300">
               +{weeklyBank.balance} ккал в запасе
