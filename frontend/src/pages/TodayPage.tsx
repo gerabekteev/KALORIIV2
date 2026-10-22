@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp, ChefHat, Utensils, Flame, ShieldCheck } from 'lucide-react'
+import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react'
 import { useMeals } from '../hooks/useMeals'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
 import { useMealsStore } from '../store/mealsStore'
-import { useMealPlanStore } from '../store/mealPlanStore'
 import { ProgressRing } from '../components/ui/ProgressRing'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { Card } from '../components/ui/Card'
@@ -14,10 +12,8 @@ import { WeekStripCalendar } from '../components/meals/WeekStripCalendar'
 import { pluralizeRu } from '../utils/pluralize'
 
 export const TodayPage: React.FC = () => {
-  const navigate = useNavigate()
   const { user } = useAuthStore()
   const { openAddMeal } = useUIStore()
-  const { setPlanDate } = useMealPlanStore()
   const {
     meals,
     selectedDate,
@@ -43,14 +39,6 @@ export const TodayPage: React.FC = () => {
   const dailyGoalCarbs = user?.daily_carbs_goal || 250
 
   const remainingCalories = Math.max(dailyGoalCalories - totals.calories, 0)
-  const remainingProtein = Math.max(Math.round(dailyGoalProtein - totals.protein), 0)
-  const remainingFat = Math.max(Math.round(dailyGoalFat - totals.fat), 0)
-  const remainingCarbs = Math.max(Math.round(dailyGoalCarbs - totals.carbs), 0)
-
-  const handleOpenSmartMealAssistant = (preset: 'single' | 'protein' | 'remaining') => {
-    setPlanDate(selectedDate)
-    navigate(`/meal-plan?preset=${preset}&date=${selectedDate}`)
-  }
 
   // Pending AI meals calculations
   const pendingForCurrentDate = pendingMeals.filter((p) => p.targetDate === selectedDate)
@@ -164,47 +152,6 @@ export const TodayPage: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Smart AI Assistant Bar: "What to eat for remaining macros?" */}
-        {remainingCalories >= 120 && (
-          <div className="mt-3.5 pt-3 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                <ChefHat className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-[11.5px] font-medium text-neutral-300 truncate">
-                Что съесть на остаток <b className="text-emerald-400">{remainingCalories} ккал</b>?
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => handleOpenSmartMealAssistant('single')}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer active:scale-95"
-              >
-                <Utensils className="w-3 h-3 text-emerald-400" />
-                <span>1 блюдо</span>
-              </button>
-              {remainingProtein >= 20 && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenSmartMealAssistant('protein')}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[11px] font-semibold text-blue-300 transition-all cursor-pointer active:scale-95"
-                >
-                  <Flame className="w-3 h-3 text-blue-400" />
-                  <span>Добрать {remainingProtein}г белка</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => handleOpenSmartMealAssistant('remaining')}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700/60 text-[11px] font-medium text-neutral-300 hover:text-white transition-all cursor-pointer active:scale-95"
-              >
-                <span>Рацион</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Weekly Bank Supportive Status (GC-02) */}
         {totals.calories > dailyGoalCalories && weeklyBank && weeklyBank.balance > 0 && (

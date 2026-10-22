@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Calendar, Scale, ChevronDown, ChevronUp } from 'lucide-react'
 import { statsApi } from '../../api/stats'
 import { getTodayDateString } from '../../store/mealsStore'
 import { calculateWeeklyBank, WeeklyBankResult } from '../../utils/calorieBank'
+import { haptics } from '../../utils/haptics'
 
 interface WeekStripCalendarProps {
   selectedDate: string
@@ -10,6 +11,12 @@ interface WeekStripCalendarProps {
   currentDayCalories: number
   dailyGoalCalories: number
   onWeeklyBankChange?: (bank: WeeklyBankResult | null) => void
+}
+
+interface WeekDayItem {
+  dateStr: string
+  dayNum: number
+  dateObj: Date
 }
 
 // Helper to compute Monday (start of week) from any YYYY-MM-DD
@@ -28,6 +35,23 @@ function formatDateISO(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+function buildWeekDays(baseMonday: Date, offsetDays: number): WeekDayItem[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(
+      baseMonday.getFullYear(),
+      baseMonday.getMonth(),
+      baseMonday.getDate() + offsetDays + i
+    )
+    return {
+      dateStr: formatDateISO(d),
+      dayNum: d.getDate(),
+      dateObj: d,
+    }
+  })
+}
+
+type SlidePhase = 'idle' | 'dragging' | 'animating-prev' | 'animating-next' | 'snapping-back'
+
 export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
   selectedDate,
   onSelectDate,
@@ -39,21 +63,57 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
   const [weekCaloriesMap, setWeekCaloriesMap] = useState<Record<string, number>>({})
   const [showBankDetails, setShowBankDetails] = useState(false)
 
-  // Compute 7 days of the week for selectedDate (Monday -> Sunday)
+  // Interactive swipe/drag carousel state
+  const viewportRef = useRef<HTMLDivElement | null>(null)
+  const [dragX, setDragX] = useState(0)
+  const [slidePhase, setSlidePhase] = useState<SlidePhase>('idle')
+
+  const pointerStartRef = useRef<{
+    x: number
+    y: number
+    time: number
+    active: boolean
+    isHorizontal: boolean | null
+  }>({
+    x: 0,
+    y: 0,
+    time: 0,
+    active: false,
+    isHorizontal: null,
+  })
+  const suppressClickRef = useRef(false)
+  const animTimerRef = useRef<number | null>(null)
+  const wheelCooldownRef = useRef<number>(0)
+
+  // Compute Monday for the currently selected date and build 3 adjacent weeks (Prev, Current, Next)
   const monday = useMemo(() => getMonday(selectedDate), [selectedDate])
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
-      return {
-        dateStr: formatDateISO(d),
-        dayNum: d.getDate(),
-        dateObj: d,
-      }
-    })
-  }, [monday])
+  const prevWeekDays = useMemo(() => buildWeekDays(monday, -7), [monday])
+  const weekDays = useMemo(() => buildWeekDays(monday, 0), [monday])
+  const nextWeekDays = useMemo(() => buildWeekDays(monday, 7), [monday])
+  const threeWeeks = useMemo(
+    () => [prevWeekDays, weekDays, nextWeekDays],
+    [prevWeekDays, weekDays, nextWeekDays]
+  )
 
   const mondayStr = weekDays[0].dateStr
-  const sundayStr = weekDays[6].dateStr
+
+  // Reset carousel offset synchronously before paint when monday changes so there is zero flicker
+  useLayoutEffect(() => {
+    if (animTimerRef.current) {
+      window.clearTimeout(animTimerRef.current)
+      animTimerRef.current = null
+    }
+    setSlidePhase('idle')
+    setDragX(0)
+  }, [mondayStr])
+
+  useEffect(() => {
+    return () => {
+      if (animTimerRef.current) {
+        window.clearTimeout(animTimerRef.current)
+      }
+    }
+  }, [])
 
   // Elastic Weekly Calorie Bank calculation (GC-02)
   const weeklyBank = useMemo(() => {
@@ -73,18 +133,30 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
     }
   }, [weeklyBank, onWeeklyBankChange])
 
-  // Fetch stats for the 7 days when week changes
+  // Prefetch stats for a wide window (-21 days to +13 days) so adjacent weeks already have live circles while swiping
+  const fetchStartStr = useMemo(() => {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 21)
+    return formatDateISO(d)
+  }, [monday])
+
+  const fetchEndStr = useMemo(() => {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 13)
+    return formatDateISO(d)
+  }, [monday])
+
   useEffect(() => {
     let isCancelled = false
     const fetchWeekStats = async () => {
       try {
-        const res = await statsApi.getStats('custom', mondayStr, sundayStr)
+        const res = await statsApi.getStats('custom', fetchStartStr, fetchEndStr)
         if (isCancelled) return
-        const map: Record<string, number> = {}
-        ;(res.daily_stats || []).forEach((item) => {
-          map[item.date] = item.calories || 0
+        setWeekCaloriesMap((prev) => {
+          const next = { ...prev }
+          ;(res.daily_stats || []).forEach((item) => {
+            next[item.date] = item.calories || 0
+          })
+          return next
         })
-        setWeekCaloriesMap(map)
       } catch {
         // Safe fallback if offline or request fails
       }
@@ -93,13 +165,117 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
     return () => {
       isCancelled = true
     }
-  }, [mondayStr, sundayStr])
+  }, [fetchStartStr, fetchEndStr])
 
   // Week navigation (-7 days or +7 days from selectedDate)
-  const shiftWeek = (daysDelta: number) => {
-    const [y, m, d] = selectedDate.split('-').map(Number)
-    const nextDate = new Date(y, m - 1, d + daysDelta)
-    onSelectDate(formatDateISO(nextDate))
+  const shiftWeek = useCallback(
+    (daysDelta: number) => {
+      const [y, m, d] = selectedDate.split('-').map(Number)
+      const nextDate = new Date(y, m - 1, d + daysDelta)
+      onSelectDate(formatDateISO(nextDate))
+    },
+    [selectedDate, onSelectDate]
+  )
+
+  const animateToWeek = useCallback(
+    (direction: 'prev' | 'next') => {
+      if (slidePhase === 'animating-prev' || slidePhase === 'animating-next') return
+      haptics.release()
+      setDragX(0)
+      setSlidePhase(direction === 'prev' ? 'animating-prev' : 'animating-next')
+
+      if (animTimerRef.current) {
+        window.clearTimeout(animTimerRef.current)
+      }
+      animTimerRef.current = window.setTimeout(() => {
+        animTimerRef.current = null
+        shiftWeek(direction === 'prev' ? -7 : 7)
+      }, 220)
+    },
+    [slidePhase, shiftWeek]
+  )
+
+  const handleDragStart = (clientX: number, clientY: number) => {
+    if (slidePhase === 'animating-prev' || slidePhase === 'animating-next') return
+    if (animTimerRef.current) {
+      window.clearTimeout(animTimerRef.current)
+      animTimerRef.current = null
+    }
+    pointerStartRef.current = {
+      x: clientX,
+      y: clientY,
+      time: Date.now(),
+      active: true,
+      isHorizontal: null,
+    }
+    suppressClickRef.current = false
+  }
+
+  const handleDragMove = (clientX: number, clientY: number) => {
+    const state = pointerStartRef.current
+    if (!state.active) return
+
+    const dx = clientX - state.x
+    const dy = clientY - state.y
+
+    if (state.isHorizontal === null) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+      state.isHorizontal = Math.abs(dx) > Math.abs(dy)
+      if (!state.isHorizontal) {
+        state.active = false
+        return
+      }
+    }
+
+    if (Math.abs(dx) > 8) {
+      suppressClickRef.current = true
+    }
+
+    setSlidePhase('dragging')
+    setDragX(dx)
+  }
+
+  const handleDragEnd = () => {
+    const state = pointerStartRef.current
+    if (!state.active) return
+    state.active = false
+
+    if (!state.isHorizontal) {
+      setDragX(0)
+      setSlidePhase('idle')
+      return
+    }
+
+    const viewportWidth = viewportRef.current?.clientWidth || 320
+    const elapsed = Math.max(Date.now() - state.time, 1)
+    const velocity = dragX / elapsed // px per ms
+
+    const shouldGoPrev = dragX > viewportWidth * 0.16 || (dragX > 24 && velocity > 0.32)
+    const shouldGoNext = dragX < -viewportWidth * 0.16 || (dragX < -24 && velocity < -0.32)
+
+    if (shouldGoPrev) {
+      animateToWeek('prev')
+    } else if (shouldGoNext) {
+      animateToWeek('next')
+    } else if (Math.abs(dragX) > 0) {
+      setDragX(0)
+      setSlidePhase('snapping-back')
+      animTimerRef.current = window.setTimeout(() => {
+        animTimerRef.current = null
+        setSlidePhase('idle')
+      }, 220)
+    } else {
+      setSlidePhase('idle')
+    }
+  }
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 25) {
+      const now = Date.now()
+      if (now - wheelCooldownRef.current < 400) return
+      wheelCooldownRef.current = now
+      animateToWeek(e.deltaX < 0 ? 'prev' : 'next')
+    }
   }
 
   // Formatting header date (e.g., "Сегодня, 16 октября, пт")
@@ -119,15 +295,32 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
   const radius = 8.5
   const circumference = 2 * Math.PI * radius // ~53.4
 
+  // Compute CSS transform and transition for the 3-week track
+  let trackTransform = 'translate3d(-33.333333%, 0, 0)'
+  if (slidePhase === 'dragging') {
+    trackTransform = `translate3d(calc(-33.333333% + ${dragX}px), 0, 0)`
+  } else if (slidePhase === 'animating-prev') {
+    trackTransform = 'translate3d(0%, 0, 0)'
+  } else if (slidePhase === 'animating-next') {
+    trackTransform = 'translate3d(-66.666667%, 0, 0)'
+  }
+
+  const trackTransition =
+    slidePhase === 'animating-prev' ||
+    slidePhase === 'animating-next' ||
+    slidePhase === 'snapping-back'
+      ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
+      : 'none'
+
   return (
     <div className="bg-[#19191d] p-3 rounded-2xl border border-neutral-800/80 shadow-md space-y-2.5">
       {/* Header bar: Navigation & Selected Date */}
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => shiftWeek(-7)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95 touch-manipulation shrink-0"
-          title="Предыдущая неделя"
+          onClick={() => animateToWeek('prev')}
+          className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95 touch-manipulation shrink-0"
+          title="Предыдущая неделя (или свайп вправо)"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -140,7 +333,10 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
           {!isToday && (
             <button
               type="button"
-              onClick={() => onSelectDate(todayStr)}
+              onClick={() => {
+                haptics.release()
+                onSelectDate(todayStr)
+              }}
               className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 transition-all cursor-pointer active:scale-95 shrink-0"
             >
               Сегодня
@@ -150,114 +346,162 @@ export const WeekStripCalendar: React.FC<WeekStripCalendarProps> = ({
 
         <button
           type="button"
-          onClick={() => shiftWeek(7)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95 touch-manipulation shrink-0"
-          title="Следующая неделя"
+          onClick={() => animateToWeek('next')}
+          className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer active:scale-95 touch-manipulation shrink-0"
+          title="Следующая неделя (или свайп влево)"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* 7-Days Grid */}
-      <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
-        {weekDays.map((day, idx) => {
-          const isSelected = day.dateStr === selectedDate
-          const isCurrentToday = day.dateStr === todayStr
-
-          // If this is the currently active selected date, use real-time calories from store
-          const calories =
-            day.dateStr === selectedDate
-              ? currentDayCalories
-              : weekCaloriesMap[day.dateStr] || 0
-
-          const ratio = dailyGoalCalories > 0 ? calories / dailyGoalCalories : 0
-          const progressPercent = Math.min(ratio, 1)
-          const strokeDashoffset = circumference - progressPercent * circumference
-
-          // Threshold colors per spec:
-          // 0% -> #27272a (gray)
-          // > 1.15 -> #f59e0b (amber)
-          // 0.85 .. 1.15 -> #10b981 (emerald with center dot)
-          // < 0.85 -> #34d399 (teal-emerald progress)
-          const isOver = ratio > 1.15
-          const isAchieved = ratio >= 0.85 && ratio <= 1.15
-          const inProgress = calories > 0 && ratio < 0.85
-
-          let progressStrokeColor = '#27272a'
-          if (isOver) progressStrokeColor = '#f59e0b'
-          else if (isAchieved) progressStrokeColor = '#10b981'
-          else if (inProgress) progressStrokeColor = '#34d399'
-
-          return (
-            <button
-              key={day.dateStr}
-              type="button"
-              onClick={() => onSelectDate(day.dateStr)}
-              className={`flex flex-col items-center justify-between py-2 px-1 rounded-xl transition-all cursor-pointer border ${
-                isSelected
-                  ? 'bg-emerald-500/15 border-emerald-500/50 text-white shadow-sm scale-[1.02]'
-                  : 'bg-[#151518]/70 hover:bg-neutral-800/60 border-neutral-800/80 text-neutral-400 hover:text-neutral-200'
-              }`}
+      {/* Interactive Swipeable 3-Week Carousel Viewport */}
+      <div
+        ref={viewportRef}
+        className="overflow-hidden touch-pan-y select-none cursor-grab active:cursor-grabbing"
+        onTouchStart={(e) => {
+          if (e.touches.length === 1) {
+            handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 1) {
+            handleDragMove(e.touches[0].clientX, e.touches[0].clientY)
+          }
+        }}
+        onTouchEnd={handleDragEnd}
+        onTouchCancel={handleDragEnd}
+        onMouseDown={(e) => {
+          if (e.button === 0) {
+            handleDragStart(e.clientX, e.clientY)
+          }
+        }}
+        onMouseMove={(e) => {
+          if (pointerStartRef.current.active) {
+            handleDragMove(e.clientX, e.clientY)
+          }
+        }}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={() => {
+          if (pointerStartRef.current.active) {
+            handleDragEnd()
+          }
+        }}
+        onWheel={handleWheel}
+      >
+        <div
+          className="flex w-[300%] will-change-transform"
+          style={{
+            transform: trackTransform,
+            transition: trackTransition,
+          }}
+        >
+          {threeWeeks.map((panelDays, panelIdx) => (
+            <div
+              key={panelDays[0].dateStr || panelIdx}
+              className="w-1/3 grid grid-cols-7 gap-1 sm:gap-1.5 px-0.5"
             >
-              {/* Day of Week Label (Пн..Вс) */}
-              <span
-                className={`text-[10px] font-medium leading-none ${
-                  isSelected ? 'text-emerald-300' : 'text-neutral-400'
-                }`}
-              >
-                {dayLabels[idx]}
-              </span>
+              {panelDays.map((day, idx) => {
+                const isSelected = day.dateStr === selectedDate
+                const isCurrentToday = day.dateStr === todayStr
 
-              {/* Day of Month Number */}
-              <span
-                className={`text-xs font-bold my-1 leading-none ${
-                  isSelected
-                    ? 'text-white'
-                    : isCurrentToday
-                    ? 'text-emerald-400'
-                    : 'text-neutral-200'
-                }`}
-              >
-                {day.dayNum}
-              </span>
+                const calories =
+                  day.dateStr === selectedDate
+                    ? currentDayCalories
+                    : weekCaloriesMap[day.dateStr] || 0
 
-              {/* Mini SVG Progress Ring (22x22px) */}
-              <div className="relative w-[22px] h-[22px] flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 22 22">
-                  {/* Background Track */}
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r={radius}
-                    stroke="#27272a"
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  {/* Animated Progress Ring */}
-                  {calories > 0 && (
-                    <circle
-                      cx="11"
-                      cy="11"
-                      r={radius}
-                      stroke={progressStrokeColor}
-                      strokeWidth="2.5"
-                      fill="none"
-                      strokeDasharray={circumference}
-                      strokeDashoffset={strokeDashoffset}
-                      strokeLinecap="round"
-                      className="transition-all duration-300"
-                    />
-                  )}
-                </svg>
+                const ratio = dailyGoalCalories > 0 ? calories / dailyGoalCalories : 0
+                const progressPercent = Math.min(ratio, 1)
+                const strokeDashoffset = circumference - progressPercent * circumference
 
-                {/* Achieved Center Dot */}
-                {isAchieved && (
-                  <div className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />
-                )}
-              </div>
-            </button>
-          )
-        })}
+                const isOver = ratio > 1.15
+                const isAchieved = ratio >= 0.85 && ratio <= 1.15
+                const inProgress = calories > 0 && ratio < 0.85
+
+                let progressStrokeColor = '#27272a'
+                if (isOver) progressStrokeColor = '#f59e0b'
+                else if (isAchieved) progressStrokeColor = '#10b981'
+                else if (inProgress) progressStrokeColor = '#34d399'
+
+                return (
+                  <button
+                    key={day.dateStr}
+                    type="button"
+                    onClick={() => {
+                      if (suppressClickRef.current) {
+                        suppressClickRef.current = false
+                        return
+                      }
+                      haptics.release()
+                      onSelectDate(day.dateStr)
+                    }}
+                    className={`flex flex-col items-center justify-between py-2 px-1 rounded-xl transition-colors cursor-pointer border ${
+                      isSelected
+                        ? 'bg-emerald-500/15 border-emerald-500/50 text-white shadow-sm'
+                        : 'bg-[#151518]/70 hover:bg-neutral-800/60 border-neutral-800/80 text-neutral-400 hover:text-neutral-200'
+                    }`}
+                  >
+                    {/* Day of Week Label (Пн..Вс) */}
+                    <span
+                      className={`text-[10px] font-medium leading-none ${
+                        isSelected ? 'text-emerald-300' : 'text-neutral-400'
+                      }`}
+                    >
+                      {dayLabels[idx]}
+                    </span>
+
+                    {/* Day of Month Number */}
+                    <span
+                      className={`text-xs font-bold my-1 leading-none ${
+                        isSelected
+                          ? 'text-white'
+                          : isCurrentToday
+                          ? 'text-emerald-400'
+                          : 'text-neutral-200'
+                      }`}
+                    >
+                      {day.dayNum}
+                    </span>
+
+                    {/* Mini SVG Progress Ring (22x22px) */}
+                    <div className="relative w-[22px] h-[22px] flex items-center justify-center">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 22 22">
+                        {/* Background Track */}
+                        <circle
+                          cx="11"
+                          cy="11"
+                          r={radius}
+                          stroke="#27272a"
+                          strokeWidth="2.5"
+                          fill="none"
+                        />
+                        {/* Animated Progress Ring */}
+                        {calories > 0 && (
+                          <circle
+                            cx="11"
+                            cy="11"
+                            r={radius}
+                            stroke={progressStrokeColor}
+                            strokeWidth="2.5"
+                            fill="none"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                            className="transition-all duration-300"
+                          />
+                        )}
+                      </svg>
+
+                      {/* Achieved Center Dot */}
+                      {isAchieved && (
+                        <div className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Elastic Weekly Calorie Bank Badge (GC-02) */}

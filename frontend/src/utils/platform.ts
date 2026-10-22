@@ -8,7 +8,7 @@ const DEFAULT_CLOUD_ORIGIN = 'https://kalorii.lopni.fun'
 /**
  * Текущая версия клиентского приложения (синхронизирована с backend /api/health).
  */
-export const APP_VERSION = '1.5.1'
+export const APP_VERSION = '1.5.2'
 
 /**
  * Сравнивает две semver-версии (например, '1.5.2' и '1.5.1').
