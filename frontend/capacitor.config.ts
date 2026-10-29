@@ -12,7 +12,6 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#0f0f0f',
     allowMixedContent: false,
-    captureInput: true,
     webContentsDebuggingEnabled: false,
   },
   plugins: {
@@ -22,7 +21,7 @@ const config: CapacitorConfig = {
       backgroundColor: '#0f0f0f',
     },
     Keyboard: {
-      resize: 'body',
+      resize: 'native',
       style: 'DARK',
       resizeOnFullScreen: true,
     },

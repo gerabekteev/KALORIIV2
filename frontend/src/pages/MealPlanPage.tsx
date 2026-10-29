@@ -442,6 +442,9 @@ export const MealPlanPage: React.FC = () => {
   }
 
   const handleGenerate = async (onlyUnlocked: boolean) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
     const cal = parseFloat(targetCalories) || 0
     if (cal < 100) {
       addToast('Укажите лимит калорий не менее 100 ккал', 'warning')

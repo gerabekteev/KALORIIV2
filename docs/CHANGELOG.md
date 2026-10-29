@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-10-30] — Релиз v1.5.3: Исправление мобильного ввода, жестов каретки и фиксации последнего слова для AI
+
+### 📱 Исправление мобильного ввода и жестов курсора ([`index.css`](file:///c:/Fvus/some/KALORII/frontend/src/index.css), [`Input.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/ui/Input.tsx), [`capacitor.config.ts`](file:///c:/Fvus/some/KALORII/frontend/capacitor.config.ts))
+1. **Разблокировка точного позиционирования каретки и тач-жестов в полях ввода**:
+   - Глобальный `touch-action: manipulation;` на `html, body` блокировал жесты точной установки курсора (caret), перемещение ползунка курсора («капельки») и выделение текста внутри полей ввода на смартфонах (Chrome/Android WebView), сбрасывая каретку в конец.
+   - В `index.css` и `Input.tsx` добавлено явное правило: `input, textarea, select { touch-action: auto !important; -webkit-user-select: text !important; user-select: text !important; }`. Курсор теперь плавно и точно ставится в любое место текста, каретка не отскакивает в конец при вводе в середине строки.
+2. **Устранение конфликта ресайза клавиатуры Capacitor**:
+   - В `capacitor.config.ts` и `capacitor.config.json` параметр `Keyboard.resize` переключен с `'body'` на `'native'` (под нативный `android:windowSoftInputMode="adjustResize"` из `AndroidManifest.xml`). Устранён двойной ресайз окна, вызывавший рассинхронизацию экранных координат тапа с системой IME Android. Удалена паразитная директива `captureInput`.
+
+### 🧠 Сохранение последнего набранного слова при отправке в AI ([`AddMealModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/AddMealModal.tsx), [`EditMealModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/EditMealModal.tsx), [`MealPlanPage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/MealPlanPage.tsx))
+1. **Принудительный commit буфера композиции клавиатуры (IME)**:
+   - При наборе текста на мобильных клавиатурах (Gboard, Samsung Keyboard, iOS) последнее слово находится в незафиксированном буфере композиции (`isComposing: true`), если пользователь не поставил после него пробел. При нажатии на кнопку отправки React-состояние читалось до того, как клавиатура отправляла `compositionend`, а закрытие модалки уничтожало DOM-элемент вместе с незафиксированным словом.
+   - В `handleAnalyzeText` и `handleRecognizePhoto` перед отправкой добавлен вызов `.blur()`, принудительно сбрасывающий буфер клавиатуры в DOM, а значение считывается напрямую из DOM-ноды (`ref.current?.value`), гарантируя передачу полного сообщения со всеми словами в ИИ.
+   - Добавлены атрибуты мобильной клавиатуры `autoCapitalize="sentences" autoCorrect="on" spellCheck={true}`.
+
+---
+
 ## [2026-10-23] — Релиз v1.5.2: Интерактивный свайп-календарь недель, удаление панели генерации под кружком на главной, честный «Баланс недели», отказ от эмодзи и фоновая проверка обновлений
 
 ### 📅 Интерактивный свайп-календарь по неделям и чистая карточка прогресса ([`WeekStripCalendar.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/WeekStripCalendar.tsx), [`TodayPage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/TodayPage.tsx))

@@ -80,7 +80,15 @@
   padding-bottom: calc(0.375rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* Prevent iOS WebKit auto-zoom on input focus (UI-04) */
+/* Prevent iOS WebKit auto-zoom on input focus and ensure proper mobile caret positioning & selection */
+input,
+textarea,
+select {
+  touch-action: auto !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
 @media screen and (max-width: 640px) {
   input,
   select,

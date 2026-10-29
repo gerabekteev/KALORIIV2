@@ -15,6 +15,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 BASE_APK = ROOT_DIR / "kalorii-ai.apk"
 STATIC_APK = ROOT_DIR / "backend" / "static" / "kalorii-ai.apk"
 PUBLIC_ASSETS_DIR = ROOT_DIR / "frontend" / "android" / "app" / "src" / "main" / "assets" / "public"
+CAPACITOR_CONFIG_JSON = ROOT_DIR / "frontend" / "android" / "app" / "src" / "main" / "assets" / "capacitor.config.json"
 KEYSTORE_PATH = ROOT_DIR / "frontend" / "android" / "app" / "kalorii-release-key.jks"
 APKSIGNER_JAR = ROOT_DIR / "scripts" / "tools" / "apksigner.jar"
 
@@ -66,7 +67,7 @@ def main() -> None:
             # 1. Copy all non-public, non-signature entries from base APK
             for item in zf_in.infolist():
                 fn = item.filename
-                if fn.startswith("assets/public/"):
+                if fn.startswith("assets/public/") or fn == "assets/capacitor.config.json":
                     continue
                 if fn in ("META-INF/MANIFEST.MF", "META-INF/CERT.SF", "META-INF/CERT.RSA") or fn.endswith((".SF", ".RSA", ".DSA")):
                     continue
@@ -81,7 +82,16 @@ def main() -> None:
                     external_attr=item.external_attr,
                 )
 
-            # 2. Add fresh assets/public/* files
+            # 2. Add fresh capacitor.config.json if available
+            if CAPACITOR_CONFIG_JSON.exists():
+                _write_entry_aligned(
+                    zf_out=zf_out,
+                    arcname="assets/capacitor.config.json",
+                    data=CAPACITOR_CONFIG_JSON.read_bytes(),
+                    compress_type=zipfile.ZIP_DEFLATED,
+                )
+
+            # 3. Add fresh assets/public/* files
             for root, _, files in os.walk(PUBLIC_ASSETS_DIR):
                 for file in sorted(files):
                     full_path = Path(root) / file

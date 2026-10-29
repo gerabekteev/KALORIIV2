@@ -42,6 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={effectiveType}
             onWheel={handleWheel}
+            style={{ touchAction: 'auto', WebkitUserSelect: 'text', userSelect: 'text' }}
             className={`w-full bg-[#18181b] border text-neutral-100 placeholder-neutral-500 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 disabled:opacity-50 disabled:bg-neutral-900 ${
               leftIcon ? 'pl-10' : ''
             } ${rightIcon || isPassword ? 'pr-10' : ''} ${

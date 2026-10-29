@@ -104,6 +104,8 @@ export const AddMealModal: React.FC = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const manualLabelInputRef = useRef<HTMLInputElement>(null)
+  const textDescriptionRef = useRef<HTMLTextAreaElement>(null)
+  const aiCommentRef = useRef<HTMLInputElement>(null)
 
   const cancelVoiceRecording = useCallback(() => {
     isRecordingCancelledRef.current = true
@@ -268,8 +270,16 @@ export const AddMealModal: React.FC = () => {
       return
     }
 
+    // Explicitly blur the active element to commit any in-flight mobile IME composition (Gboard/iOS)
+    if (aiCommentRef.current) {
+      aiCommentRef.current.blur()
+    } else if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
+    const rawComment = aiCommentRef.current?.value ?? aiComment
     const photoToUpload = selectedPhoto
-    const commentToSend = aiComment.trim() || undefined
+    const commentToSend = rawComment.trim() || undefined
 
     // Launch background AI recognition
     startPhotoAIAnalysis(
@@ -289,7 +299,16 @@ export const AddMealModal: React.FC = () => {
   }
 
   const handleAnalyzeText = () => {
-    const trimmed = textDescription.trim()
+    // Explicitly blur the active element to commit any in-flight mobile IME composition (Gboard/iOS)
+    if (textDescriptionRef.current) {
+      textDescriptionRef.current.blur()
+    } else if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
+    // Read latest committed value from DOM ref (where the committed word now lives) or state fallback
+    const rawText = textDescriptionRef.current?.value ?? textDescription
+    const trimmed = rawText.trim()
     if (!trimmed) {
       addToast('Пожалуйста, введите описание блюда', 'warning')
       return
@@ -436,6 +455,9 @@ export const AddMealModal: React.FC = () => {
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
     const cleanName = manualForm.name.trim()
     const cleanBrand = manualBrand.trim()
     if (!cleanName) {
@@ -940,10 +962,14 @@ export const AddMealModal: React.FC = () => {
                 Пояснение к фото (опционально)
               </label>
               <input
+                ref={aiCommentRef}
                 type="text"
                 placeholder='Например: "Гречка с курицей, около 300г"'
                 value={aiComment}
                 onChange={(e) => setAiComment(e.target.value)}
+                autoCapitalize="sentences"
+                autoCorrect="on"
+                spellCheck={true}
                 className="w-full bg-[#18181b] border border-neutral-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-emerald-500"
               />
             </div>
@@ -973,10 +999,14 @@ export const AddMealModal: React.FC = () => {
                 <span className="text-[11px] text-neutral-500">AI расчёт КБЖУ</span>
               </div>
               <textarea
+                ref={textDescriptionRef}
                 rows={4}
                 placeholder="Например: Овсянка 200г на молоке с бананом и ложкой мёда, плюс чашка кофе с молоком"
                 value={textDescription}
                 onChange={(e) => setTextDescription(e.target.value)}
+                autoCapitalize="sentences"
+                autoCorrect="on"
+                spellCheck={true}
                 className="w-full bg-[#18181b] border border-neutral-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-emerald-500 resize-none transition-colors"
               />
             </div>

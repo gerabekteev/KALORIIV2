@@ -204,6 +204,9 @@ export const EditMealModal: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
     if (!editingMeal) return
     if (!form.name.trim()) {
       addToast('Введите название блюда', 'warning')
