@@ -26,6 +26,7 @@ import { haptics } from '../../utils/haptics'
 import { resolveMediaUrl } from '../../utils/platform'
 import { registerBackHandler } from '../ui/Modal'
 import { getMealTimeMeta } from '../../utils/timeSlots'
+import { getMealAIModelBadge } from '../../utils/aiModelBadge'
 
 interface MealCardProps {
   meal: Meal
@@ -344,6 +345,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const timeMeta = getMealTimeMeta(meal.meal_time, meal.calories)
   const photoUrl = getPhotoUrl(meal.photo_path)
   const hasIngredients = Array.isArray(meal.ingredients) && meal.ingredients.length > 0
+  const aiBadge = getMealAIModelBadge(meal)
 
   return (
     <>
@@ -434,8 +436,11 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                 <Utensils className="w-5 h-5 text-neutral-500" />
               )}
 
-              {!meal.is_manually_edited && meal.ai_raw_response && (
-                <div className="absolute top-1 right-1 bg-emerald-500/90 text-white p-0.5 rounded-full shadow-sm">
+              {!meal.is_manually_edited && (meal.ai_raw_response || meal.ai_model) && (
+                <div
+                  className={`absolute top-1 right-1 ${aiBadge?.accentColor || 'bg-emerald-500'} text-white p-0.5 rounded-full shadow-sm`}
+                  title={aiBadge?.tooltip || 'Распознано через AI'}
+                >
                   <Sparkles className="w-2 h-2" />
                 </div>
               )}
@@ -449,11 +454,21 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   {meal.name}
                 </h3>
 
-                {/* Time & 3-Dots Menu */}
+                {/* Time, AI Model Badge & 3-Dots Menu */}
                 <div
-                  className="flex items-center gap-1 shrink-0 -mt-0.5"
+                  className="flex items-center gap-1.5 shrink-0 -mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {aiBadge && (
+                    <span
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border tracking-tight shrink-0 transition-transform active:scale-95 cursor-help ${aiBadge.badgeStyle}`}
+                      title={aiBadge.tooltip}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${aiBadge.accentColor}`} />
+                      <span>{aiBadge.shortLabel}</span>
+                    </span>
+                  )}
+
                   <span
                     className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium mr-0.5"
                     title={`${timeMeta.label} (${displayTime})`}
@@ -476,6 +491,20 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                     {/* Dropdown Menu */}
                     {isMenuOpen && (
                       <div className="absolute right-0 top-8 z-40 w-52 bg-[#222227] border border-neutral-700/80 rounded-2xl shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                        {aiBadge && (
+                          <div
+                            className="px-3 py-1.5 text-[11px] text-neutral-400 border-b border-neutral-800/80 mb-1 flex items-center justify-between"
+                            title={aiBadge.tooltip}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${aiBadge.accentColor}`} />
+                              <span>AI модель:</span>
+                            </span>
+                            <span className="font-semibold text-white truncate max-w-[110px]">
+                              {aiBadge.shortLabel}
+                            </span>
+                          </div>
+                        )}
                         <button
                           type="button"
                           onClick={() => {

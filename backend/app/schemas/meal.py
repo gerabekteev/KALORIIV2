@@ -32,6 +32,8 @@ class MealCreate(BaseModel):
     photo_path: Optional[str] = Field(None, max_length=500)
     user_comment: Optional[str] = Field(None, max_length=500)
     ai_raw_response: Optional[str] = Field(None, max_length=10000)
+    ai_provider: Optional[str] = Field(None, max_length=50)
+    ai_model: Optional[str] = Field(None, max_length=100)
     is_manually_edited: bool = False
     meal_date: Optional[date] = None
     meal_time: Optional[time] = None
@@ -49,6 +51,8 @@ class MealUpdate(BaseModel):
     weight_grams: Optional[float] = Field(None, ge=0, le=25000)
     photo_path: Optional[str] = Field(None, max_length=500)
     user_comment: Optional[str] = Field(None, max_length=500)
+    ai_provider: Optional[str] = Field(None, max_length=50)
+    ai_model: Optional[str] = Field(None, max_length=100)
     is_manually_edited: Optional[bool] = True
     meal_date: Optional[date] = None
     meal_time: Optional[time] = None
@@ -80,6 +84,8 @@ class MealResponse(BaseModel):
     photo_path: Optional[str] = None
     user_comment: Optional[str] = None
     ai_raw_response: Optional[str] = None
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
     is_manually_edited: bool
     meal_date: date
     meal_time: time

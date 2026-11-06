@@ -617,8 +617,16 @@ export const useMealsStore = create<MealsState>((set, get) => ({
           weight_grams: result.weight_grams ? Math.round(result.weight_grams) : undefined,
           photo_path: result.photo_path || null,
           user_comment: userComment?.trim() || null,
-          ai_raw_response:
-            result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI'),
+          ai_provider: result.provider_used || null,
+          ai_model: result.model_used || null,
+          ai_raw_response: result.model_used
+            ? JSON.stringify({
+                provider: result.provider_used,
+                model: result.model_used,
+                confidence: result.confidence,
+                raw: result.raw_response,
+              })
+            : result.raw_response || 'AI',
           ingredients: result.ingredients || [],
           meal_date: date,
           meal_time: time,
@@ -706,8 +714,16 @@ export const useMealsStore = create<MealsState>((set, get) => ({
           weight_grams: result.weight_grams ? Math.round(result.weight_grams) : undefined,
           photo_path: null,
           user_comment: text.trim(),
-          ai_raw_response:
-            result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI'),
+          ai_provider: result.provider_used || null,
+          ai_model: result.model_used || null,
+          ai_raw_response: result.model_used
+            ? JSON.stringify({
+                provider: result.provider_used,
+                model: result.model_used,
+                confidence: result.confidence,
+                raw: result.raw_response,
+              })
+            : result.raw_response || 'AI',
           ingredients: result.ingredients || [],
           meal_date: date,
           meal_time: time,
@@ -790,8 +806,16 @@ export const useMealsStore = create<MealsState>((set, get) => ({
           weight_grams: result.weight_grams ? Math.round(result.weight_grams) : undefined,
           photo_path: null,
           user_comment: transcriptionComment || null,
-          ai_raw_response:
-            result.raw_response || (result.model_used ? `Model: ${result.model_used}` : 'AI Voice'),
+          ai_provider: result.provider_used || null,
+          ai_model: result.model_used || null,
+          ai_raw_response: result.model_used
+            ? JSON.stringify({
+                provider: result.provider_used,
+                model: result.model_used,
+                confidence: result.confidence,
+                raw: result.raw_response,
+              })
+            : result.raw_response || 'AI Voice',
           ingredients: result.ingredients || [],
           meal_date: date,
           meal_time: time,
@@ -876,13 +900,16 @@ export const useMealsStore = create<MealsState>((set, get) => ({
         weight_grams: result.weight_grams ? Math.round(result.weight_grams) : undefined,
         photo_path: result.photo_path || null,
         user_comment: userComment,
-        ai_raw_response:
-          result.raw_response ||
-          (result.model_used
-            ? `Model: ${result.model_used}`
-            : item.type === 'voice'
-            ? 'AI Voice'
-            : 'AI'),
+        ai_provider: result.provider_used || null,
+        ai_model: result.model_used || null,
+        ai_raw_response: result.model_used
+          ? JSON.stringify({
+              provider: result.provider_used,
+              model: result.model_used,
+              confidence: result.confidence,
+              raw: result.raw_response,
+            })
+          : result.raw_response || (item.type === 'voice' ? 'AI Voice' : 'AI'),
         ingredients: result.ingredients || [],
         meal_date: item.targetDate,
         meal_time: item.targetTime,

@@ -111,6 +111,8 @@ async def create_meal(
         user_comment=meal_in.user_comment,
         ingredients_json=ingredients_json,
         ai_raw_response=meal_in.ai_raw_response,
+        ai_provider=meal_in.ai_provider,
+        ai_model=meal_in.ai_model,
         is_manually_edited=meal_in.is_manually_edited,
         meal_date=meal_date,
         meal_time=meal_time,
@@ -355,6 +357,8 @@ async def recalculate_meal(
         if ai_result.ingredients
         else None
     )
+    meal.ai_provider = prov_used
+    meal.ai_model = mod_used
     meal.ai_raw_response = json.dumps(
         {
             "provider": prov_used,
@@ -416,6 +420,8 @@ async def copy_meal(
         user_comment=source_meal.user_comment,
         ingredients_json=source_meal.ingredients_json,
         ai_raw_response=source_meal.ai_raw_response,
+        ai_provider=source_meal.ai_provider,
+        ai_model=source_meal.ai_model,
         is_manually_edited=source_meal.is_manually_edited,
         meal_date=target_date,
         meal_time=target_time,

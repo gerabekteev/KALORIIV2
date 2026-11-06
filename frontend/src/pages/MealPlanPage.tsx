@@ -485,6 +485,15 @@ export const MealPlanPage: React.FC = () => {
         weight_grams: Math.round(item.weight_grams),
         ingredients: item.ingredients || [],
         user_comment: `Из AI-плана питания (${item.meal_label})`,
+        ai_provider: currentPlan?.provider_used || null,
+        ai_model: currentPlan?.model_used || null,
+        ai_raw_response: currentPlan?.model_used
+          ? JSON.stringify({
+              provider: currentPlan.provider_used,
+              model: currentPlan.model_used,
+              source: 'meal_plan',
+            })
+          : null,
         meal_date: planDate,
         meal_time: resolvePlannedMealTime(item.meal_label, index),
         is_manually_edited: false,

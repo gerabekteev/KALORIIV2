@@ -26,6 +26,8 @@ class Meal(Base):
     photo_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     user_comment: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     ai_raw_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ai_provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    ai_model: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     ingredients_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_manually_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

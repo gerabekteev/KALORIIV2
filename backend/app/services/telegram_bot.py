@@ -438,7 +438,17 @@ class TelegramBotService:
                             if result.ingredients
                             else None
                         ),
-                        ai_raw_response=result.raw_response,
+                        ai_raw_response=json.dumps(
+                            {
+                                "provider": provider_name,
+                                "model": model_id,
+                                "confidence": result.confidence,
+                                "raw": result.raw_response,
+                            },
+                            ensure_ascii=False,
+                        ),
+                        ai_provider=provider_name,
+                        ai_model=model_id,
                         is_manually_edited=False,
                         meal_date=today_date,
                         meal_time=curr_time,
@@ -515,7 +525,17 @@ class TelegramBotService:
                             if result.ingredients
                             else None
                         ),
-                        ai_raw_response=result.raw_response,
+                        ai_raw_response=json.dumps(
+                            {
+                                "provider": provider_name,
+                                "model": model_id,
+                                "confidence": result.confidence,
+                                "raw": result.raw_response,
+                            },
+                            ensure_ascii=False,
+                        ),
+                        ai_provider=provider_name,
+                        ai_model=model_id,
                         is_manually_edited=False,
                         meal_date=today_date,
                         meal_time=curr_time,
@@ -583,7 +603,17 @@ class TelegramBotService:
                             if result.ingredients
                             else None
                         ),
-                        ai_raw_response=result.raw_response,
+                        ai_raw_response=json.dumps(
+                            {
+                                "provider": provider_name,
+                                "model": model_id,
+                                "confidence": result.confidence,
+                                "raw": result.raw_response,
+                            },
+                            ensure_ascii=False,
+                        ),
+                        ai_provider=provider_name,
+                        ai_model=model_id,
                         is_manually_edited=False,
                         meal_date=today_date,
                         meal_time=curr_time,

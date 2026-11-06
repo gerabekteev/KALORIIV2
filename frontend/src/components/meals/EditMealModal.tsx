@@ -6,6 +6,7 @@ import { Input } from '../ui/Input'
 import { useUIStore } from '../../store/uiStore'
 import { useMealsStore } from '../../store/mealsStore'
 import { MealIngredient } from '../../types'
+import { getMealAIModelBadge } from '../../utils/aiModelBadge'
 
 interface BaselineMealState {
   weight_grams: number
@@ -45,6 +46,7 @@ export const EditMealModal: React.FC = () => {
   const [scaleMultiplier, setScaleMultiplier] = useState<number>(1)
   const [scaleProportionally, setScaleProportionally] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const aiBadge = editingMeal ? getMealAIModelBadge(editingMeal) : null
 
   useEffect(() => {
     if (editingMeal) {
@@ -257,6 +259,23 @@ export const EditMealModal: React.FC = () => {
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {aiBadge && (
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-neutral-900/80 border border-neutral-800 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${aiBadge.accentColor}`} />
+              <span className="text-neutral-400 shrink-0">Оценка нейросети:</span>
+              <span className="font-semibold text-white truncate" title={aiBadge.fullName}>
+                {aiBadge.fullName}
+              </span>
+            </div>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${aiBadge.badgeStyle}`}
+            >
+              {aiBadge.shortLabel}
+            </span>
+          </div>
+        )}
+
         <Input
           label="Название блюда *"
           value={form.name}

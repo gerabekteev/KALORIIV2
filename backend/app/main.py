@@ -64,6 +64,8 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE users ADD COLUMN timezone VARCHAR(64) DEFAULT 'Europe/Moscow'",
             "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1",
             "ALTER TABLE user_scanned_products ADD COLUMN is_honest_sign BOOLEAN DEFAULT 0",
+            "ALTER TABLE meals ADD COLUMN ai_provider VARCHAR(50)",
+            "ALTER TABLE meals ADD COLUMN ai_model VARCHAR(100)",
         ]:
             try:
                 await conn.execute(text(alter_sql))

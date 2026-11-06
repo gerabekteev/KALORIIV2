@@ -57,6 +57,8 @@ export interface Meal {
   photo_path?: string | null
   user_comment?: string | null
   ai_raw_response?: string | null
+  ai_provider?: string | null
+  ai_model?: string | null
   ingredients?: MealIngredient[]
   is_manually_edited?: boolean
   meal_date: string // YYYY-MM-DD
@@ -89,6 +91,8 @@ export interface CreateMealPayload {
   photo_path?: string | null
   user_comment?: string | null
   ai_raw_response?: string | null
+  ai_provider?: string | null
+  ai_model?: string | null
   ingredients?: MealIngredient[]
   is_manually_edited?: boolean
   meal_date?: string

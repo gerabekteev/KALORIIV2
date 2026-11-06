@@ -4,6 +4,27 @@
 
 ---
 
+## [2026-11-06] — Релиз v1.5.4: Отображение AI-модели в карточках блюд (AI Model Badges)
+
+### 🤖 Индикация ответившей языковой модели в карточках приёмов пищи ([`MealCard.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/MealCard.tsx), [`EditMealModal.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/meals/EditMealModal.tsx), [`aiModelBadge.ts`](file:///c:/Fvus/some/KALORII/frontend/src/utils/aiModelBadge.ts))
+1. **Компактный визуальный бейдж модели в шапке карточки блюда**:
+   - В карточке каждого блюда (`MealCard.tsx`) рядом со временем приёма пищи отображается аккуратный информационный бейдж с цветной точкой и кратким идентификатором ответившей модели:
+     - **Google Gemini**: лазурный бейдж с синей точкой (например: `G 3.8`, `G 3.7`, `G 3.6`, `G 3.5`, `G 3.5L`, `G 3.1L`, `G 2.5`).
+     - **OpenRouter**: фиолетовый бейдж (например: `OR Auto`, `Gemma 4`, `NVIDIA`, `Qwen 2.5`).
+   - При наведении курсора или тапе всплывает полный тултип: например, `«Оценено нейросетью: Gemini 3.8 Flash [GEMINI]»` (с пометкой `«(затем скорректировано вручную)»`, если пользователь вносил правки).
+   - В выпадающем меню карточки («3 точки») добавлена отдельная строка с указанием точной модели AI.
+   - В окне редактирования блюда (`EditMealModal.tsx`) добавлен информационный блок с полным названием и бейджем модели.
+
+2. **Сквозная передача и сохранение модели в базе данных**:
+   - В модель БД `Meal` ([`meal.py`](file:///c:/Fvus/some/KALORII/backend/app/models/meal.py)) добавлены поля `ai_provider` (`VARCHAR(50)`) и `ai_model` (`VARCHAR(100)`).
+   - Создана миграция Alembic [`0008_add_meal_ai_provider_model.py`](file:///c:/Fvus/some/KALORII/backend/alembic/versions/0008_add_meal_ai_provider_model.py) и авто-миграция в `lifespan` (`main.py`).
+   - Pydantic-схемы `MealCreate`, `MealUpdate`, `MealResponse` синхронизированы с TypeScript интерфейсами `Meal` и `CreateMealPayload`.
+   - В сторе `mealsStore.ts` при распознавании по фото, тексту, голосу и оффлайн-синхронизации сохраняются точные `provider_used` и `model_used`.
+   - При пересчёте блюда через AI (`/recalculate`), копировании и добавлении из AI-плана питания модель также автоматически фиксируется.
+   - Telegram-бот (`telegram_bot.py`) теперь также сохраняет имя модели и провайдера для всех блюд, добавленных из чата.
+
+---
+
 ## [2026-10-30] — Релиз v1.5.3: Исправление мобильного ввода, жестов каретки и фиксации последнего слова для AI
 
 ### 📱 Исправление мобильного ввода и жестов курсора ([`index.css`](file:///c:/Fvus/some/KALORII/frontend/src/index.css), [`Input.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/components/ui/Input.tsx), [`capacitor.config.ts`](file:///c:/Fvus/some/KALORII/frontend/capacitor.config.ts))
