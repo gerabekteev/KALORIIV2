@@ -4,7 +4,16 @@
 
 ---
 
-## [2026-11-06] — Релиз v1.5.4: Отображение AI-модели в карточках блюд (AI Model Badges) и глубокое обновление системных промптов AI
+## [2026-11-06] — Релиз v1.5.4: Отображение AI-модели в карточках блюд, обновление системных промптов AI и умное обновление в профиле
+
+### 📱 Умное отображение карточки скачивания / обновления приложения ([`ProfilePage.tsx`](file:///c:/Fvus/some/KALORII/frontend/src/pages/ProfilePage.tsx), [`platform.ts`](file:///c:/Fvus/some/KALORII/frontend/src/utils/platform.ts))
+1. **Скрытие постоянного баннера скачивания внутри мобильного приложения**:
+   - В нативном Android-приложении (`isNativeApp()`) карточка скачивания больше не отображается постоянно, если установлена последняя версия — пользователь уже находится внутри приложения.
+   - Карточка в мобильном приложении появляется **только при выходе новой версии** (`hasAppUpdate`), предлагая загрузить обновление («Доступно обновление», кнопка «Скачать обновление» с указанием новой версии `v{serverVersion}`).
+   - На веб-версии сайта карточка скачивания Android APK отображается всегда, позволяя быстро загрузить приложение на телефон.
+2. **Синхронизация версий v1.5.4 (versionCode 4)**:
+   - Обновлены версии в `frontend/src/utils/platform.ts`, `backend/app/main.py`, `frontend/package.json` и `frontend/android/app/build.gradle`.
+   - Собран, выровнен по 4-байтовым границам (`zipalign -p 4`) и подписан v1+v2+v3 ключом релизный APK `kalorii-ai.apk` v1.5.4.
 
 ### 🧠 Обновление системных промптов, парсеров и контекста пересчёта AI ([`base.py`](file:///c:/Fvus/some/KALORII/backend/app/utils/ai_providers/base.py), [`meals.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/meals.py), [`barcode.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/barcode.py), [`meal_plan.py`](file:///c:/Fvus/some/KALORII/backend/app/routers/meal_plan.py), [`telegram_bot.py`](file:///c:/Fvus/some/KALORII/backend/app/services/telegram_bot.py))
 1. **Правило «Готовый продукт по умолчанию» во всех промптах (`build_system_prompt`, `build_text_prompt`, `build_voice_prompt`, `build_meal_plan_prompt`)**:

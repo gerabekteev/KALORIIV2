@@ -27,6 +27,7 @@ import {
   APP_VERSION,
   checkServerAppVersion,
   downloadLatestApk,
+  isNativeApp,
 } from '../utils/platform'
 
 interface AccordionSectionProps {
@@ -656,40 +657,44 @@ export const ProfilePage: React.FC = () => {
         </form>
       </AccordionSection>
 
-      {/* Bottom Download App Card (Always visible on Web and Native Android) */}
-      <div className="bg-gradient-to-r from-emerald-500/10 via-[#18181c] to-[#18181c] border border-emerald-500/25 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="min-w-0 flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-            <Smartphone className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-bold text-white my-0">
-                Приложение KaloriiAI для Android
-              </h3>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                v{serverVersion}
-              </span>
-              {hasAppUpdate && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  Доступно обновление
-                </span>
-              )}
+      {/* Bottom Download App Card (Always visible on Web; in Native Android app visible ONLY when hasAppUpdate) */}
+      {(!isNativeApp() || hasAppUpdate) && (
+        <div className="bg-gradient-to-r from-emerald-500/10 via-[#18181c] to-[#18181c] border border-emerald-500/25 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+              <Smartphone className="w-5 h-5" />
             </div>
-            <p className="text-xs text-neutral-400 mt-1 my-0">
-              Скачайте последнюю версию приложения (APK) — мгновенный запуск, камера и синхронизация с вашим аккаунтом
-            </p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white my-0">
+                  {isNativeApp() ? 'Обновление KaloriiAI для Android' : 'Приложение KaloriiAI для Android'}
+                </h3>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  v{serverVersion}
+                </span>
+                {hasAppUpdate && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    Доступно обновление
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-neutral-400 mt-1 my-0">
+                {isNativeApp()
+                  ? `Доступна новая версия v${serverVersion}. Обновите приложение для доступа к новым функциям и улучшениям.`
+                  : 'Скачайте последнюю версию приложения (APK) — мгновенный запуск, камера и синхронизация с вашим аккаунтом'}
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => downloadLatestApk(serverVersion)}
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-colors cursor-pointer active:scale-95"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isNativeApp() || hasAppUpdate ? 'Скачать обновление' : 'Скачать приложение'}</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => downloadLatestApk(serverVersion)}
-          className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-colors cursor-pointer active:scale-95"
-        >
-          <Download className="w-4 h-4" />
-          <span>{hasAppUpdate ? 'Скачать обновление' : 'Скачать приложение'}</span>
-        </button>
-      </div>
+      )}
     </div>
   )
 }

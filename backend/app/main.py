@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
         await engine.dispose()
 
 
-APP_VERSION = "1.5.3"
+APP_VERSION = "1.5.4"
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
