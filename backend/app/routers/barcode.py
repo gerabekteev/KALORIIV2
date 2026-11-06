@@ -137,10 +137,10 @@ async def scan_barcode_image_endpoint(
 
         # 4. Use AI Vision cascade to analyze package label / barcode
         ocr_comment = (
-            "Внимательно определи на этой упаковке: 1) Название продукта и бренд. "
-            "2) Если виден штрихкод или QR/DataMatrix Честный Знак — прочитай цифры. "
-            "3) Таблицу КБЖУ СТРОГО на 100 грамм продукта (калории, белки, жиры, углеводы на 100г) "
-            "и массу нетто упаковки в граммах в поле weight_grams (по умолчанию 100)."
+            "Внимательно определи на этой упаковке: 1) Название продукта (в поле name) и бренд (в поле brand). "
+            "2) Если виден штрихкод или QR/DataMatrix Честный Знак — прочитай цифры и укажи в поле barcode. "
+            "3) Таблицу КБЖУ СТРОГО на 100 грамм продукта (калории, белки, жиры, углеводы на 100г), "
+            "а массу нетто всей упаковки в граммах укажи в поле weight_grams (по умолчанию 100). Поле ingredients оставь пустым []."
         )
 
         analysis_result, provider_name, model_name = await ai_router.recognize_food(
@@ -153,22 +153,31 @@ async def scan_barcode_image_endpoint(
         )
 
         name = analysis_result.name.strip() if analysis_result.name else "Продукт по скану"
+        detected_brand = getattr(analysis_result, "brand", None)
         grams = analysis_result.weight_grams or 100.0
 
-        # Check if AI detected any barcode sequence in name or raw response
+        # Check if AI detected any barcode in barcode field, name, or raw response
         detected_code = None
         is_honest = False
-        raw_resp = getattr(analysis_result, "raw_response", "") or ""
-        candidates = re.findall(
-            r"\b\d{8,14}\b",
-            f"{analysis_result.name or ''} {raw_resp}"
-        )
-        for cand in candidates:
-            c_code, c_honest = parse_and_normalize_barcode(cand)
-            if c_code:
+        explicit_barcode = getattr(analysis_result, "barcode", None)
+        if explicit_barcode:
+            c_code, c_honest = parse_and_normalize_barcode(explicit_barcode)
+            if c_code and len(re.sub(r"\D", "", c_code)) >= 8:
                 detected_code = c_code
                 is_honest = c_honest
-                break
+
+        if not detected_code:
+            raw_resp = getattr(analysis_result, "raw_response", "") or ""
+            candidates = re.findall(
+                r"\b\d{8,14}\b",
+                f"{analysis_result.name or ''} {raw_resp}"
+            )
+            for cand in candidates:
+                c_code, c_honest = parse_and_normalize_barcode(cand)
+                if c_code:
+                    detected_code = c_code
+                    is_honest = c_honest
+                    break
 
         # Check if product already exists by detected_code to avoid duplicates
         existing_prod = None
@@ -202,6 +211,7 @@ async def scan_barcode_image_endpoint(
         else:
             new_prod = Product(
                 name=name,
+                brand=detected_brand,
                 barcode=detected_code,
                 calories_per_100g=round(float(analysis_result.calories or 0), 1),
                 protein_per_100g=round(float(analysis_result.protein or 0), 1),

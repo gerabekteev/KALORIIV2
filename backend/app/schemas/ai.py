@@ -25,6 +25,12 @@ class FoodAnalysisResult(BaseModel):
     transcription: Optional[str] = Field(
         None, description="Verbatim voice transcription if recognized from audio"
     )
+    brand: Optional[str] = Field(
+        None, description="Brand or manufacturer name if recognized from packaging"
+    )
+    barcode: Optional[str] = Field(
+        None, description="Barcode or Chestny ZNAK code if recognized from packaging"
+    )
     raw_response: Optional[str] = None
     ingredients: List[MealIngredientItem] = Field(default_factory=list)
 

@@ -24,6 +24,8 @@ def test_build_voice_prompt():
     prompt = build_voice_prompt()
     assert "transcription" in prompt
     assert "дословная текстовая расшифровка" in prompt
+    assert "САМОИСПРАВЛЕНИЯ В РЕЧИ" in prompt
+    assert "ГОТОВЫЙ ПРОДУКТ ПО УМОЛЧАНИЮ" in prompt
     assert "ingredients" in prompt
     assert "weight_grams" in prompt
     assert "calories" in prompt
@@ -46,11 +48,14 @@ def test_build_meal_plan_prompt():
     assert "без глютена" in prompt
     assert "Овсянка с ягодами" in prompt
     assert "Творог, Куриная грудка" in prompt
+    assert "СПИСКА ПОКУПОК" in prompt
 
 
 def test_parse_food_result_with_transcription():
     raw_json = {
         "name": "Омлет с сыром",
+        "brand": "ВкусВилл",
+        "barcode": "4607025140019",
         "weight_grams": 250,
         "calories": 380,
         "protein": 24,
@@ -65,6 +70,8 @@ def test_parse_food_result_with_transcription():
     }
     result = parse_food_result(raw_json)
     assert result.name == "Омлет с сыром"
+    assert result.brand == "ВкусВилл"
+    assert result.barcode == "4607025140019"
     assert result.transcription == "Я съел омлет из двух яиц с сыром грамм 250"
     assert len(result.ingredients) == 2
 

@@ -203,9 +203,10 @@ async def generate_meal_plan_endpoint(
             )
 
         final_meals = locked + generated_meals
-        # Нумеруем подписи приёмов пищи аккуратно по порядку
+        # Нумеруем подписи приёмов пищи аккуратно по порядку, сохраняя осмысленные слоты (Завтрак/Обед/Ужин/Перекус)
         for i, m in enumerate(final_meals):
-            if not m.meal_label or m.meal_label.startswith("Приём пищи"):
+            lbl = (m.meal_label or "").strip()
+            if not lbl or (lbl.startswith("Приём пищи") and not any(k in lbl.lower() for k in ("завтрак", "обед", "ужин", "перекус", "полдник"))):
                 m.meal_label = f"Приём пищи {i + 1}"
 
     # Upsert в таблицу meal_plans

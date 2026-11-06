@@ -312,11 +312,23 @@ async def recalculate_meal(
                 custom_model_chain=custom_chain,
             )
         else:
-            # Combine dish name and user comment for accurate AI context
-            if meal.user_comment and meal.name and meal.user_comment.strip() != meal.name.strip():
-                text_to_analyze = f"{meal.name}. Пояснение: {meal.user_comment.strip()}"
+            # Combine dish name, current weight/ingredients, and user comment for accurate AI context
+            base_context = (meal.name or "").strip()
+            if meal.weight_grams and meal.weight_grams > 0 and base_context:
+                base_context = f"{base_context} ({round(meal.weight_grams)} г)"
+            if meal.ingredients and isinstance(meal.ingredients, list):
+                ing_summary = ", ".join(
+                    f"{i.get('name')} {round(float(i.get('weight_grams') or 0))}г"
+                    for i in meal.ingredients
+                    if isinstance(i, dict) and i.get("name")
+                )
+                if ing_summary:
+                    base_context = f"{base_context}. Текущий состав: {ing_summary}"
+
+            if meal.user_comment and base_context and meal.user_comment.strip() != (meal.name or "").strip():
+                text_to_analyze = f"{base_context}. Пояснение: {meal.user_comment.strip()}"
             else:
-                text_to_analyze = (meal.user_comment or meal.name or "").strip()
+                text_to_analyze = (meal.user_comment or base_context or "").strip()
 
             if not text_to_analyze:
                 raise HTTPException(
