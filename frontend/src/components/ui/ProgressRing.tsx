@@ -16,10 +16,10 @@ export interface ProgressRingProps {
 export const ProgressRing: React.FC<ProgressRingProps> = ({
   current,
   target,
-  size = 180,
-  strokeWidth = 14,
-  strokeColor = '#10b981', // emerald-500
-  trackColor = '#27272a',  // neutral-800
+  size = 160,
+  strokeWidth = 10,
+  strokeColor = '#E02424',
+  trackColor = '#2A2A2F',
   label,
   sublabel,
   children,
@@ -65,21 +65,21 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
           children
         ) : (
           <>
-            <span className="text-2xl font-bold tracking-tight text-white">
-              {current.toLocaleString()}
+            <span className="font-ndot text-2xl font-bold tracking-tight text-white">
+              {current.toLocaleString('ru-RU')}
             </span>
             {target > 0 && (
-              <span className="text-xs text-neutral-400 font-medium mt-0.5">
-                из {target.toLocaleString()} {label || 'ккал'}
+              <span className="text-[11px] text-[#7A7A82] font-medium mt-0.5">
+                из {target.toLocaleString('ru-RU')} {label || 'ккал'}
               </span>
             )}
             {showPercentage && (
-              <span className="text-[11px] font-semibold text-emerald-400 mt-1 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+              <span className="font-ndot text-[11px] font-bold text-white mt-1 bg-[#2A2A2F] px-2 py-0.5 rounded-full">
                 {percentage}%
               </span>
             )}
             {sublabel && (
-              <span className="text-[10px] text-neutral-400 mt-0.5">{sublabel}</span>
+              <span className="text-[10px] text-[#7A7A82] mt-0.5">{sublabel}</span>
             )}
           </>
         )}

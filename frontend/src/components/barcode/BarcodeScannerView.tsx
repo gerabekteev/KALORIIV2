@@ -663,25 +663,25 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
         }}
         className="hidden"
       />
-      <div className="flex items-center justify-between text-[11px] text-neutral-400 px-1 pb-1">
-        <span>Штрихкоды: EAN-13, EAN-8, UPC</span>
-        <span className="text-emerald-400 flex items-center gap-1 font-medium">
-          <ShieldCheck className="w-3.5 h-3.5" /> Честный Знак
+      <div className="flex items-center justify-between text-[11px] text-[#7A7A82] px-1">
+        <span className="font-ndot">EAN-13 · EAN-8 · UPC</span>
+        <span className="text-white flex items-center gap-1 font-medium">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#E02424]" /> Честный Знак
         </span>
       </div>
 
       {/* Sub-tabs: Camera | Screenshot | Manual */}
-      <div className="grid grid-cols-3 bg-[#141417] p-1 rounded-xl border border-neutral-800 text-xs font-semibold gap-1">
+      <div className="grid grid-cols-3 bg-[#1A1A1D] p-1 rounded-full text-xs font-semibold gap-1">
         <button
           type="button"
           onClick={() => {
             setActiveTab('camera')
             setNotFoundState(null)
           }}
-          className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all cursor-pointer min-h-[38px] ${
+          className={`flex items-center justify-center gap-1.5 py-2 rounded-full transition-colors cursor-pointer min-h-[38px] ${
             activeTab === 'camera'
-              ? 'bg-emerald-500 text-white shadow'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-white text-black'
+              : 'text-[#8E8E96] hover:text-white'
           }`}
         >
           <Camera className="w-3.5 h-3.5 shrink-0" />
@@ -694,10 +694,10 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
             setActiveTab('upload')
             setNotFoundState(null)
           }}
-          className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all cursor-pointer min-h-[38px] ${
+          className={`flex items-center justify-center gap-1.5 py-2 rounded-full transition-colors cursor-pointer min-h-[38px] ${
             activeTab === 'upload'
-              ? 'bg-emerald-500 text-white shadow'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-white text-black'
+              : 'text-[#8E8E96] hover:text-white'
           }`}
         >
           <ImageIcon className="w-3.5 h-3.5 shrink-0" />
@@ -710,10 +710,10 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
             setActiveTab('manual')
             setNotFoundState(null)
           }}
-          className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all cursor-pointer min-h-[38px] ${
+          className={`flex items-center justify-center gap-1.5 py-2 rounded-full transition-colors cursor-pointer min-h-[38px] ${
             activeTab === 'manual'
-              ? 'bg-emerald-500 text-white shadow'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-white text-black'
+              : 'text-[#8E8E96] hover:text-white'
           }`}
         >
           <Keyboard className="w-3.5 h-3.5 shrink-0" />
@@ -726,77 +726,62 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
       {/* ======================================================== */}
       {activeTab === 'camera' && (
         <div className="space-y-3">
-          <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800 aspect-square max-h-[300px] mx-auto flex items-center justify-center">
-            {/* HTML5 QR Scanner DOM Region */}
+          <div className="relative rounded-[22px] overflow-hidden bg-black border border-white/[0.1] aspect-square max-h-[300px] mx-auto flex items-center justify-center">
             <div
               id={scannerRegionId}
               className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
             />
 
-            {/* Glowing Reticle Overlay (Only when scanning active) */}
+            {/* Nothing X Precision Reticle Overlay */}
             {isCameraActive && !isScanningPaused && !isSearching && !notFoundState && !cameraError && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="relative w-64 h-40 rounded-2xl border-2 border-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                  {/* Corner brackets */}
-                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-3 border-l-3 border-emerald-400 rounded-tl-lg" />
-                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-3 border-r-3 border-emerald-400 rounded-tr-lg" />
-                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-3 border-l-3 border-emerald-400 rounded-bl-lg" />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-emerald-400 rounded-br-lg" />
-
-                  {/* Laser line */}
-                  <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse top-1/2 -translate-y-1/2 shadow-[0_0_8px_#34d399]" />
+                <div className="relative w-64 h-40 rounded-2xl border border-white/30">
+                  <div className="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-white rounded-tl-lg" />
+                  <div className="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-white rounded-tr-lg" />
+                  <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-white rounded-bl-lg" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-white rounded-br-lg" />
+                  <div className="absolute left-3 right-3 h-0.5 bg-[#E02424] animate-pulse top-1/2 -translate-y-1/2 shadow-[0_0_10px_#E02424]" />
                 </div>
               </div>
             )}
 
-            {/* Torch / Flashlight Toggle Button in Viewfinder */}
             {isCameraActive && isTorchAvailable && !cameraError && (
               <button
                 type="button"
                 onClick={handleToggleTorch}
                 disabled={isTogglingTorch}
-                className={`absolute top-2.5 right-2.5 z-10 px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md ${
+                className={`absolute top-2.5 right-2.5 z-10 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md ${
                   isTorchOn
-                    ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/30'
-                    : 'bg-black/60 hover:bg-black/80 text-white border border-white/20'
+                    ? 'bg-white text-black'
+                    : 'bg-black/70 hover:bg-black text-white border border-white/20'
                 }`}
                 title={isTorchOn ? 'Выключить фонарик' : 'Включить фонарик'}
               >
-                {isTorchOn ? (
-                  <Zap className="w-3.5 h-3.5 fill-black" />
-                ) : (
-                  <ZapOff className="w-3.5 h-3.5 text-neutral-300" />
-                )}
+                {isTorchOn ? <Zap className="w-3.5 h-3.5 fill-black" /> : <ZapOff className="w-3.5 h-3.5" />}
                 <span className="text-[11px]">{isTorchOn ? 'Вкл' : 'Фонарик'}</span>
               </button>
             )}
 
-            {/* Searching In-view overlay */}
             {isSearching && (
               <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4 z-20 animate-in fade-in">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                <div className="w-12 h-12 rounded-full bg-[#1A1A1D] flex items-center justify-center text-white">
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-white">
-                    Ищем товар в базе...
-                  </p>
+                  <p className="text-xs font-semibold text-white my-0">Ищем товар в базе...</p>
                   {searchingCode && (
-                    <p className="text-[11px] font-mono text-emerald-400 mt-1">
-                      {searchingCode}
-                    </p>
+                    <p className="font-ndot text-xs text-[#E02424] mt-1 my-0">{searchingCode}</p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Detailed Camera Access Error State */}
             {cameraError && (
-              <div className="absolute inset-0 bg-[#161619]/95 p-4 sm:p-6 flex flex-col items-center justify-center text-center space-y-3 z-20 animate-in fade-in">
-                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <div className="absolute inset-0 bg-[#111113]/95 p-5 flex flex-col items-center justify-center text-center space-y-3 z-20 animate-in fade-in">
+                <div className="w-11 h-11 rounded-full bg-[#E02424]/15 flex items-center justify-center text-[#E02424] shrink-0">
                   <CameraOff className="w-5 h-5" />
                 </div>
-                <p className="text-xs text-neutral-300 max-w-xs leading-relaxed">
+                <p className="text-xs text-[#A1A1AA] max-w-xs leading-relaxed">
                   {cameraError}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
@@ -829,13 +814,13 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
           {/* Polite Not-Found Inline Card for Camera */}
           {notFoundState && notFoundState.source === 'camera' && (
-            <div className="p-4 rounded-2xl bg-[#191920] border border-amber-500/40 space-y-3 animate-in fade-in">
-              <div className="flex items-center gap-2 text-amber-400">
+            <div className="p-4 rounded-[20px] bg-[#1A1A1D] border border-[#E02424]/40 space-y-3 animate-in fade-in">
+              <div className="flex items-center gap-2 text-[#E02424]">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span className="text-xs font-bold">Товар не найден в базе</span>
+                <span className="text-xs font-semibold">Товар не найден в базе</span>
               </div>
-              <p className="text-xs text-neutral-300">
-                Штрихкод <span className="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-neutral-700">{notFoundState.code}</span> пока отсутствует в каталоге.
+              <p className="text-xs text-[#A1A1AA]">
+                Штрихкод <span className="font-mono font-bold text-white bg-black/60 px-1.5 py-0.5 rounded border border-white/10">{notFoundState.code}</span> пока отсутствует в каталоге.
               </p>
               <div className="space-y-2 pt-0.5">
                 <Button
@@ -843,9 +828,9 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                   variant="secondary"
                   isLoading={isScanningOcr}
                   onClick={handleTriggerLabelPhotoOcr}
-                  className="w-full flex items-center justify-center gap-1.5 border-emerald-500/40 text-emerald-300"
+                  className="w-full flex items-center justify-center gap-1.5"
                 >
-                  <ScanLine className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <ScanLine className="w-4 h-4 text-white shrink-0" />
                   <span className="truncate">Считать КБЖУ с фото этикетки в форму (AI)</span>
                 </Button>
                 <div className="grid grid-cols-2 gap-2">
@@ -855,7 +840,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                     onClick={() => onSwitchToAI(null, `Штрихкод: ${notFoundState.code}`)}
                     className="flex items-center justify-center gap-1.5"
                   >
-                    <Camera className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <Camera className="w-3.5 h-3.5 text-white shrink-0" />
                     <span className="truncate">Фото блюда AI</span>
                   </Button>
                   <Button
@@ -871,7 +856,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
               <button
                 type="button"
                 onClick={resumeCameraScanning}
-                className="w-full text-center text-xs text-neutral-400 hover:text-white pt-1 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                className="w-full text-center text-xs text-[#7A7A82] hover:text-white pt-1 flex items-center justify-center gap-1 transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Сканировать другой товар</span>
@@ -880,7 +865,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
           )}
 
           {!notFoundState && !isSearching && !cameraError && (
-            <p className="text-[11px] text-center text-neutral-400">
+            <p className="text-[11px] text-center text-[#7A7A82]">
               Наведите камеру на штрихкод или квадратный код маркировки «Честный Знак»
             </p>
           )}
@@ -922,20 +907,20 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                 }
               }}
               onClick={handleOpenGalleryUpload}
-              className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center transition-all flex flex-col items-center justify-center gap-3 cursor-pointer ${
+              className={`border border-dashed rounded-[20px] p-6 sm:p-7 text-center transition-all flex flex-col items-center justify-center gap-3 cursor-pointer ${
                 isDragging
-                  ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]'
-                  : 'border-neutral-800 bg-[#161619] hover:border-neutral-700 hover:bg-[#1a1a1f]'
+                  ? 'border-white bg-white/10 scale-[1.01]'
+                  : 'border-white/15 bg-[#1A1A1D] hover:border-white/30 hover:bg-[#222226]'
               }`}
             >
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <div className="w-12 h-12 rounded-2xl bg-[#111113] border border-white/10 flex items-center justify-center text-white">
                 <UploadCloud className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs font-semibold text-white">
                   Выберите скриншот или вставьте из буфера (Ctrl+V)
                 </p>
-                <p className="text-[11px] text-neutral-400 mt-1 max-w-xs">
+                <p className="text-[11px] text-[#7A7A82] mt-1 max-w-xs">
                   Подходят скриншоты каталогов, фото упаковки, штрихкодов или маркировки Честный Знак
                 </p>
               </div>
@@ -946,7 +931,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
           ) : (
             <div className="space-y-3 animate-in fade-in">
               {/* Preview with action overlays */}
-              <div className="relative rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900 aspect-video max-h-48 flex items-center justify-center">
+              <div className="relative rounded-[20px] overflow-hidden border border-white/10 bg-[#111113] aspect-video max-h-48 flex items-center justify-center">
                 <img
                   src={uploadedPreview}
                   alt="Скриншот"
@@ -955,7 +940,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
                 {isProcessingFile && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4 z-10">
-                    <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-white" />
                     <span className="text-xs font-medium text-white">
                       Сканируем изображение...
                     </span>
@@ -964,7 +949,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
                 {isSearching && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4 z-10">
-                    <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-white" />
                     <span className="text-xs font-medium text-white">
                       Поиск в базе продуктов...
                     </span>
@@ -988,16 +973,16 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
               {/* Polite Result State for Uploaded Screenshot */}
               {notFoundState && notFoundState.source === 'upload' && (
-                <div className="p-4 rounded-2xl bg-[#191920] border border-neutral-800 space-y-3 animate-in fade-in">
+                <div className="p-4 rounded-[20px] bg-[#1A1A1D] border border-white/10 space-y-3 animate-in fade-in">
                   {notFoundState.noBarcodeFound ? (
                     <>
-                      <div className="flex items-center gap-2 text-neutral-200">
-                        <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
-                        <span className="text-xs font-bold">
+                      <div className="flex items-center gap-2 text-white">
+                        <Sparkles className="w-4 h-4 text-[#E02424] shrink-0" />
+                        <span className="text-xs font-semibold">
                           Штрихкод на изображении не найден
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-400">
+                      <p className="text-xs text-[#7A7A82]">
                         Штрихкод не обнаружен. Вы можете распознать пищевую ценность с упаковки/этикетки через AI или проанализировать готовое блюдо.
                       </p>
                       <div className="flex flex-col gap-2 pt-1">
@@ -1008,7 +993,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                             isLoading={isScanningOcr}
                             onClick={() => notFoundState.file && handleScanLabelViaAI(notFoundState.file)}
                           >
-                            <ScanLine className="w-4 h-4 text-emerald-400" />
+                            <ScanLine className="w-4 h-4 text-white" />
                             <span>Считать этикетку / упаковку через AI</span>
                           </Button>
                         )}
@@ -1016,21 +1001,21 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                           className="w-full flex items-center justify-center gap-1.5"
                           onClick={() => onSwitchToAI(notFoundState.file)}
                         >
-                          <Sparkles className="w-4 h-4 text-emerald-300" />
+                          <Sparkles className="w-4 h-4" />
                           <span>Распознать блюдо целиком через AI</span>
                         </Button>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center gap-2 text-amber-400">
+                      <div className="flex items-center gap-2 text-[#E02424]">
                         <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span className="text-xs font-bold">
+                        <span className="text-xs font-semibold">
                           Штрихкод найден, но товара нет в базе
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-300">
-                        Код <span className="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-neutral-700">{notFoundState.code}</span> отсутствует в каталоге. Определить КБЖУ по фото через AI?
+                      <p className="text-xs text-[#A1A1AA]">
+                        Код <span className="font-mono font-bold text-white bg-black/60 px-1.5 py-0.5 rounded border border-white/10">{notFoundState.code}</span> отсутствует в каталоге. Определить КБЖУ по фото через AI?
                       </p>
                       <div className="space-y-2 pt-0.5">
                         {notFoundState.file && (
@@ -1042,9 +1027,9 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                               notFoundState.file &&
                               handleScanLabelViaAI(notFoundState.file, notFoundState.code)
                             }
-                            className="w-full flex items-center justify-center gap-1.5 border-emerald-500/40 text-emerald-300"
+                            className="w-full flex items-center justify-center gap-1.5"
                           >
-                            <ScanLine className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <ScanLine className="w-4 h-4 text-white shrink-0" />
                             <span className="truncate">Считать КБЖУ с этикетки в форму (AI)</span>
                           </Button>
                         )}
@@ -1055,7 +1040,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                             onClick={() => onSwitchToAI(notFoundState.file, `Штрихкод: ${notFoundState.code}`)}
                             className="flex items-center justify-center gap-1.5"
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                            <Sparkles className="w-3.5 h-3.5 text-white shrink-0" />
                             <span className="truncate">Фото блюда AI</span>
                           </Button>
                           <Button
@@ -1083,7 +1068,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
       {activeTab === 'manual' && (
         <form onSubmit={handleManualSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-medium text-neutral-300 block mb-1.5">
+            <label className="text-xs font-medium text-[#A1A1AA] block mb-1.5">
               Цифры штрихкода (EAN-13, EAN-8) или код Честного Знака
             </label>
             <Input
@@ -1101,13 +1086,13 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
           {/* Polite Not-found Card for Manual Code */}
           {notFoundState && notFoundState.source === 'manual' && (
-            <div className="p-4 rounded-2xl bg-[#191920] border border-amber-500/40 space-y-3 animate-in fade-in">
-              <div className="flex items-center gap-2 text-amber-400">
+            <div className="p-4 rounded-[20px] bg-[#1A1A1D] border border-[#E02424]/40 space-y-3 animate-in fade-in">
+              <div className="flex items-center gap-2 text-[#E02424]">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span className="text-xs font-bold">Товар не найден в базе</span>
+                <span className="text-xs font-semibold">Товар не найден в базе</span>
               </div>
-              <p className="text-xs text-neutral-300">
-                Код <span className="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-neutral-700">{notFoundState.code}</span> отсутствует в каталоге.
+              <p className="text-xs text-[#A1A1AA]">
+                Код <span className="font-mono font-bold text-white bg-black/60 px-1.5 py-0.5 rounded border border-white/10">{notFoundState.code}</span> отсутствует в каталоге.
               </p>
               <div className="space-y-2 pt-0.5">
                 <Button
@@ -1115,9 +1100,9 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                   variant="secondary"
                   isLoading={isScanningOcr}
                   onClick={handleTriggerLabelPhotoOcr}
-                  className="w-full flex items-center justify-center gap-1.5 border-emerald-500/40 text-emerald-300"
+                  className="w-full flex items-center justify-center gap-1.5"
                 >
-                  <ScanLine className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <ScanLine className="w-4 h-4 text-white shrink-0" />
                   <span className="truncate">Считать КБЖУ с фото этикетки в форму (AI)</span>
                 </Button>
                 <div className="grid grid-cols-2 gap-2">
@@ -1127,7 +1112,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                     onClick={() => onSwitchToAI(null, `Штрихкод: ${notFoundState.code}`)}
                     className="flex items-center justify-center gap-1.5"
                   >
-                    <Camera className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <Camera className="w-3.5 h-3.5 text-white shrink-0" />
                     <span className="truncate">Фото блюда AI</span>
                   </Button>
                   <Button

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Flame, Mail, Lock, Sparkles } from 'lucide-react'
+import { Mail, Lock } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
 import { Button } from '../components/ui/Button'
@@ -21,7 +21,8 @@ export const LoginPage: React.FC = () => {
     e.preventDefault()
     const errors: { email?: string; password?: string } = {}
     if (!email.trim()) errors.email = 'Введите email'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Некорректный формат email'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      errors.email = 'Некорректный формат email'
     if (!password) errors.password = 'Введите пароль'
 
     if (Object.keys(errors).length > 0) {
@@ -43,28 +44,26 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex flex-col items-center justify-center p-4">
+    <div className="min-h-dvh bg-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
-        {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 shadow-xl shadow-emerald-500/20 mb-2">
-            <Flame className="w-8 h-8 text-white fill-white" />
-          </div>
-          <div className="flex items-center justify-center gap-1.5">
-            <h1 className="text-2xl font-bold tracking-tight text-white my-0">
-              KaloriiAI
-            </h1>
-            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-              <Sparkles className="w-3 h-3" /> AI
+        {/* Nothing Brand Header */}
+        <div className="text-center space-y-2.5">
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#1A1A1D]">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#E02424]" />
+            <span className="font-ndot text-lg font-bold tracking-wider text-white">
+              KALORII<span className="text-[#7A7A82]">.AI</span>
             </span>
           </div>
-          <p className="text-xs text-neutral-400">
-            Умный подсчет калорий и макронутриентов
+          <h1 className="text-2xl font-semibold tracking-tight text-white my-0">
+            Вход в аккаунт
+          </h1>
+          <p className="text-xs text-[#7A7A82]">
+            Умный подсчёт калорий и макронутриентов
           </p>
         </div>
 
         {/* Login Form Card */}
-        <Card variant="default" padding="lg">
+        <Card variant="default" padding="lg" className="space-y-4">
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <Input
               label="Email"
@@ -96,12 +95,9 @@ export const LoginPage: React.FC = () => {
               required
             />
 
-            <Button
-              type="submit"
-              className="w-full mt-2"
-              size="lg"
-              isLoading={isLoading}
-            >
+            <div className="nothing-dotted-divider pt-1" />
+
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
               Войти
             </Button>
           </form>
@@ -109,11 +105,11 @@ export const LoginPage: React.FC = () => {
 
         {/* Register Link */}
         <div className="text-center">
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-[#7A7A82]">
             Нет аккаунта?{' '}
             <Link
               to="/register"
-              className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
+              className="font-semibold text-white hover:text-[#E4E4E7] underline underline-offset-4"
             >
               Зарегистрироваться
             </Link>

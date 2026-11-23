@@ -14,17 +14,10 @@ interface CaloriesTrendChartProps {
 }
 
 export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="h-56 flex items-center justify-center text-xs text-neutral-500">
-        Нет данных для тренда
-      </div>
-    )
-  }
-
-  const isAggregatedByMonth = data.length > 31
+  const isAggregatedByMonth = (data?.length ?? 0) > 31
 
   const chartData = React.useMemo(() => {
+    if (!data || data.length === 0) return []
     if (!isAggregatedByMonth) {
       return data.map((d) => {
         const parts = d.date.split('-').map(Number)
@@ -40,7 +33,6 @@ export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) 
       })
     }
 
-    // Group by YYYY-MM
     const monthsMap = new Map<
       string,
       { totalCal: number; totalProt: number; totalFat: number; totalCarbs: number; count: number; dateObj: Date }
@@ -83,46 +75,46 @@ export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) 
     })
   }, [data, isAggregatedByMonth])
 
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-56 flex items-center justify-center text-xs text-[#7A7A82]">
+        Нет данных для тренда
+      </div>
+    )
+  }
+
   return (
     <div className="w-full h-56 pt-2">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={chartData}
-          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-        >
+        <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -22, bottom: 0 }}>
           <defs>
-            <linearGradient id="calorieTrend" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+            <linearGradient id="calorieTrendNothing" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#FFFFFF" stopOpacity={0.22} />
+              <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0.0} />
             </linearGradient>
           </defs>
           <XAxis
             dataKey="shortDate"
-            stroke="#737373"
-            fontSize={11}
-            tickLine={false}
-            axisLine={{ stroke: '#2e2e33' }}
-          />
-          <YAxis
-            stroke="#737373"
+            stroke="#7A7A82"
             fontSize={10}
             tickLine={false}
-            axisLine={false}
+            axisLine={{ stroke: '#2A2A2F' }}
           />
+          <YAxis stroke="#7A7A82" fontSize={10} tickLine={false} axisLine={false} />
           <Tooltip
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
                 const item = payload[0].payload as StatsDayData & { shortDate: string }
                 return (
-                  <div className="bg-[#1c1c20] border border-neutral-700/80 p-2.5 rounded-xl shadow-xl text-xs space-y-1">
-                    <p className="font-semibold text-white">{item.shortDate}</p>
-                    <p className="text-emerald-400 font-bold">
+                  <div className="bg-[#111113] border border-white/[0.12] p-3 rounded-2xl shadow-2xl text-xs space-y-1">
+                    <p className="font-medium text-[#A1A1AA] my-0">{item.shortDate}</p>
+                    <p className="font-ndot text-sm font-bold text-white my-0">
                       {item.calories} ккал
                     </p>
-                    <div className="text-[10px] text-neutral-400 flex gap-2">
-                      <span>Б: {item.protein}г</span>
-                      <span>Ж: {item.fat}г</span>
-                      <span>У: {item.carbs}г</span>
+                    <div className="font-ndot text-[10px] text-[#7A7A82] flex gap-2">
+                      <span>Б {item.protein}</span>
+                      <span>Ж {item.fat}</span>
+                      <span>У {item.carbs}</span>
                     </div>
                   </div>
                 )
@@ -133,10 +125,11 @@ export const CaloriesTrendChart: React.FC<CaloriesTrendChartProps> = ({ data }) 
           <Area
             type="monotone"
             dataKey="calories"
-            stroke="#10b981"
-            strokeWidth={2.5}
+            stroke="#FFFFFF"
+            strokeWidth={2}
             fillOpacity={1}
-            fill="url(#calorieTrend)"
+            fill="url(#calorieTrendNothing)"
+            activeDot={{ r: 5, fill: '#E02424', stroke: '#FFFFFF', strokeWidth: 1.5 }}
           />
         </AreaChart>
       </ResponsiveContainer>

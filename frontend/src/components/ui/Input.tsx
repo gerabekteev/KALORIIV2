@@ -19,7 +19,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
       if (type === 'number') {
-        (e.target as HTMLElement).blur()
+        ;(e.target as HTMLElement).blur()
       }
       onWheel?.(e)
     }
@@ -27,13 +27,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full text-left space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-xs font-medium text-neutral-300">
+          <label htmlFor={inputId} className="block text-xs font-medium text-[#A1A1AA]">
             {label}
           </label>
         )}
         <div className="relative flex items-center">
           {leftIcon && (
-            <div className="absolute left-3 flex items-center pointer-events-none text-neutral-400">
+            <div className="absolute left-3.5 flex items-center pointer-events-none text-[#7A7A82]">
               {leftIcon}
             </div>
           )}
@@ -43,10 +43,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             type={effectiveType}
             onWheel={handleWheel}
             style={{ touchAction: 'auto', WebkitUserSelect: 'text', userSelect: 'text' }}
-            className={`w-full bg-[#18181b] border text-neutral-100 placeholder-neutral-500 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 disabled:opacity-50 disabled:bg-neutral-900 ${
+            className={`w-full min-h-[44px] bg-[#111113] border text-white placeholder-[#6E6E75] rounded-2xl px-3.5 py-2.5 text-sm transition-colors outline-none focus:ring-2 focus:ring-white/15 focus:border-white/40 disabled:opacity-45 disabled:bg-[#0C0C0E] ${
               leftIcon ? 'pl-10' : ''
             } ${rightIcon || isPassword ? 'pr-10' : ''} ${
-              error ? 'border-red-500/80 focus:border-red-500 focus:ring-red-500/30' : 'border-neutral-800 hover:border-neutral-700'
+              error
+                ? 'border-[#E02424] focus:border-[#E02424] focus:ring-[#E02424]/25'
+                : 'border-white/[0.08] hover:border-white/[0.16]'
             } ${className}`}
             {...props}
           />
@@ -54,22 +56,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 flex items-center text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer focus:outline-none"
+              className="absolute right-3 flex items-center text-[#7A7A82] hover:text-white transition-colors cursor-pointer focus:outline-none p-1"
               tabIndex={-1}
               aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           ) : rightIcon ? (
-            <div className="absolute right-3 flex items-center text-neutral-400">
+            <div className="absolute right-3.5 flex items-center text-[#7A7A82]">
               {rightIcon}
             </div>
           ) : null}
         </div>
         {error ? (
-          <p className="text-xs text-red-400 font-medium pl-0.5">{error}</p>
+          <p className="text-xs text-[#E02424] font-medium pl-0.5">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-neutral-400 pl-0.5">{helperText}</p>
+          <p className="text-xs text-[#7A7A82] pl-0.5">{helperText}</p>
         ) : null}
       </div>
     )

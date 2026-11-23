@@ -14,8 +14,6 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  Plus,
-  Minus,
 } from 'lucide-react'
 import { Meal } from '../../types'
 import { useUIStore } from '../../store/uiStore'
@@ -34,27 +32,20 @@ interface MealCardProps {
 
 export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const { openEditMeal, addToast } = useUIStore()
-  const { deleteMealWithUndo, updateMeal, copyMealToDate, recalculateMeal, selectedDate } = useMealsStore()
+  const { deleteMealWithUndo, updateMeal, copyMealToDate, recalculateMeal } = useMealsStore()
 
   const [isSavingRecipe, setIsSavingRecipe] = useState(false)
   const [isSavedRecipe, setIsSavedRecipe] = useState(false)
-
-  // Ingredients toggle state
   const [isIngredientsOpen, setIsIngredientsOpen] = useState(false)
 
-  // 3-Dots Action Menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-
-  // Photo Lightbox state
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
 
-  // Comment edit & AI recalculation state
   const [isEditingComment, setIsEditingComment] = useState(false)
   const [commentText, setCommentText] = useState(meal.user_comment || '')
   const [isRecalculating, setIsRecalculating] = useState(false)
 
-  // Swipe gesture state & rubber-band physics (UX-04)
   const [swipeOffset, setSwipeOffset] = useState(0)
   const touchStartXRef = useRef(0)
   const touchStartYRef = useRef(0)
@@ -70,7 +61,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     return Math.sign(dx) * (threshold + (abs - threshold) * 0.28)
   }
 
-  // Close menu on click outside
   useEffect(() => {
     if (!isMenuOpen) return
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -86,12 +76,10 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }, [isMenuOpen])
 
-  // Keep comment text in sync if meal updates
   useEffect(() => {
     setCommentText(meal.user_comment || '')
   }, [meal.user_comment])
 
-  // Close lightbox on Escape key or Android Back button
   useEffect(() => {
     if (!isLightboxOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -107,10 +95,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       unregisterBack()
     }
   }, [isLightboxOpen])
-
-  const getPhotoUrl = (path: string | null | undefined) => {
-    return resolveMediaUrl(path)
-  }
 
   const handleSaveAsRecipe = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -145,7 +129,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     try {
       const updated = await recalculateMeal(meal.id, commentText.trim() || undefined)
       addToast(
-        `КБЖУ "${updated.name}" успешно пересчитано через AI! (${Math.round(updated.calories)} ккал)`,
+        `КБЖУ "${updated.name}" пересчитано через AI (${Math.round(updated.calories)} ккал)`,
         'success'
       )
       setIsEditingComment(false)
@@ -156,7 +140,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }
 
-  // Scale the entire meal (weight, calories, macros, and all ingredients) by a factor
   const handleScaleWholeMeal = async (factor: number) => {
     if (factor <= 0 || factor === 1) return
     const updatedIngredients = Array.isArray(meal.ingredients)
@@ -191,9 +174,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
         is_manually_edited: true,
       })
       addToast(
-        `Порция масштабирована (×${factor}): ${newTotalCalories} ккал${
-          newTotalWeight ? ` • ${newTotalWeight} г` : ''
-        }`,
+        `Порция ×${factor}: ${newTotalCalories} ккал${newTotalWeight ? ` · ${newTotalWeight} г` : ''}`,
         'info',
         2000
       )
@@ -202,7 +183,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }
 
-  // Adjust ingredient weight (-25g, +25g) and recalculate totals
   const handleAdjustIngredientWeight = async (idx: number, delta: number) => {
     if (!meal.ingredients || meal.ingredients.length === 0) return
     const currentIng = meal.ingredients[idx]
@@ -223,20 +203,14 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       }
     })
 
-    const newTotalCalories = Math.round(updatedIngredients.reduce((s, i) => s + i.calories, 0))
-    const newTotalProtein = Math.round(updatedIngredients.reduce((s, i) => s + i.protein, 0) * 10) / 10
-    const newTotalFat = Math.round(updatedIngredients.reduce((s, i) => s + i.fat, 0) * 10) / 10
-    const newTotalCarbs = Math.round(updatedIngredients.reduce((s, i) => s + i.carbs, 0) * 10) / 10
-    const newTotalWeight = Math.round(updatedIngredients.reduce((s, i) => s + (i.weight_grams || 0), 0))
-
     try {
       await updateMeal(meal.id, {
         ingredients: updatedIngredients,
-        calories: newTotalCalories,
-        protein: newTotalProtein,
-        fat: newTotalFat,
-        carbs: newTotalCarbs,
-        weight_grams: newTotalWeight,
+        calories: Math.round(updatedIngredients.reduce((s, i) => s + i.calories, 0)),
+        protein: Math.round(updatedIngredients.reduce((s, i) => s + i.protein, 0) * 10) / 10,
+        fat: Math.round(updatedIngredients.reduce((s, i) => s + i.fat, 0) * 10) / 10,
+        carbs: Math.round(updatedIngredients.reduce((s, i) => s + i.carbs, 0) * 10) / 10,
+        weight_grams: Math.round(updatedIngredients.reduce((s, i) => s + (i.weight_grams || 0), 0)),
         is_manually_edited: true,
       })
     } catch {
@@ -244,24 +218,18 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }
 
-  // Remove single ingredient
   const handleRemoveIngredient = async (idx: number) => {
     if (!meal.ingredients || meal.ingredients.length === 0) return
     const updatedIngredients = meal.ingredients.filter((_, i) => i !== idx)
-    const newTotalCalories = Math.round(updatedIngredients.reduce((s, i) => s + i.calories, 0))
-    const newTotalProtein = Math.round(updatedIngredients.reduce((s, i) => s + i.protein, 0) * 10) / 10
-    const newTotalFat = Math.round(updatedIngredients.reduce((s, i) => s + i.fat, 0) * 10) / 10
-    const newTotalCarbs = Math.round(updatedIngredients.reduce((s, i) => s + i.carbs, 0) * 10) / 10
-    const newTotalWeight = Math.round(updatedIngredients.reduce((s, i) => s + (i.weight_grams || 0), 0))
 
     try {
       await updateMeal(meal.id, {
         ingredients: updatedIngredients,
-        calories: newTotalCalories,
-        protein: newTotalProtein,
-        fat: newTotalFat,
-        carbs: newTotalCarbs,
-        weight_grams: newTotalWeight,
+        calories: Math.round(updatedIngredients.reduce((s, i) => s + i.calories, 0)),
+        protein: Math.round(updatedIngredients.reduce((s, i) => s + i.protein, 0) * 10) / 10,
+        fat: Math.round(updatedIngredients.reduce((s, i) => s + i.fat, 0) * 10) / 10,
+        carbs: Math.round(updatedIngredients.reduce((s, i) => s + i.carbs, 0) * 10) / 10,
+        weight_grams: Math.round(updatedIngredients.reduce((s, i) => s + (i.weight_grams || 0), 0)),
         is_manually_edited: true,
       })
     } catch {
@@ -269,7 +237,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     }
   }
 
-  // Touch handlers for swipe actions with rubber-band physics & haptic ticks
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX
     touchStartYRef.current = e.touches[0].clientY
@@ -283,7 +250,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     const dx = e.touches[0].clientX - touchStartXRef.current
     const dy = e.touches[0].clientY - touchStartYRef.current
 
-    // If vertical movement dominates early, lock gesture into native scroll
     if (!isSwipingRef.current && Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) {
       isVerticalScrollRef.current = true
       return
@@ -309,11 +275,9 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
     if (isSwipingRef.current) {
       didSwipeRef.current = true
       if (swipeOffset < -60) {
-        // Swiped Left -> Delete with undo
         haptics.warning()
         deleteMealWithUndo(meal.id)
       } else if (swipeOffset > 60) {
-        // Swiped Right -> Repeat / Copy
         haptics.success()
         handleCopyMeal()
       } else {
@@ -343,44 +307,39 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
 
   const displayTime = meal.meal_time ? meal.meal_time.slice(0, 5) : '—:—'
   const timeMeta = getMealTimeMeta(meal.meal_time, meal.calories)
-  const photoUrl = getPhotoUrl(meal.photo_path)
+  const photoUrl = resolveMediaUrl(meal.photo_path)
   const hasIngredients = Array.isArray(meal.ingredients) && meal.ingredients.length > 0
   const aiBadge = getMealAIModelBadge(meal)
 
   return (
     <>
       <div
-        className={`relative rounded-2xl select-none ${
+        data-no-tab-swipe="true"
+        className={`relative rounded-[22px] select-none ${
           isMenuOpen ? 'overflow-visible z-30' : 'overflow-hidden'
         }`}
       >
-        {/* Swipe Action Background Indicators */}
-        <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none rounded-2xl bg-neutral-900 border border-neutral-800">
+        {/* Swipe Action Background */}
+        <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none rounded-[22px] bg-[#111113]">
           <div
-            className={`flex items-center gap-1.5 text-xs font-semibold text-emerald-400 transition-all ${
+            className={`flex items-center gap-1.5 text-xs font-semibold text-white transition-opacity ${
               swipeOffset > 20 ? 'opacity-100' : 'opacity-0'
             }`}
-            style={{
-              transform: `scale(${Math.min(1.15, Math.max(0.85, 0.85 + (Math.max(0, swipeOffset) / 80) * 0.3))})`,
-            }}
           >
             <Copy className="w-4 h-4" />
             <span>Повторить</span>
           </div>
           <div
-            className={`flex items-center gap-1.5 text-xs font-semibold text-rose-400 transition-all ${
+            className={`flex items-center gap-1.5 text-xs font-semibold text-[#E02424] transition-opacity ${
               swipeOffset < -20 ? 'opacity-100' : 'opacity-0'
             }`}
-            style={{
-              transform: `scale(${Math.min(1.15, Math.max(0.85, 0.85 + (Math.max(0, -swipeOffset) / 80) * 0.3))})`,
-            }}
           >
             <span>Удалить</span>
             <Trash2 className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Foreground Card */}
+        {/* Foreground Nothing Bento Card */}
         <div
           role="button"
           tabIndex={0}
@@ -399,11 +358,11 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
               openEditMeal(meal)
             }
           }}
-          className="relative group bg-gradient-to-b from-[#1d1d23] to-[#17171c] hover:from-[#22232a] hover:to-[#1b1c22] hover:border-emerald-500/40 border border-white/[0.07] rounded-2xl p-3.5 transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.28)] cursor-pointer select-none touch-pan-y"
-          title="Нажмите в любое место карточки для редактирования блюда"
+          className="relative group bg-[#1A1A1D] hover:bg-[#222226] rounded-[22px] p-3.5 sm:p-4 transition-colors duration-150 cursor-pointer select-none touch-pan-y"
+          title="Нажмите для редактирования блюда"
         >
           <div className="flex items-start gap-3">
-            {/* Meal Photo or Utensils Icon with Lightbox trigger */}
+            {/* Thumbnail / Lightbox Trigger */}
             <div
               onClick={(e) => {
                 if (photoUrl) {
@@ -411,10 +370,8 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   setIsLightboxOpen(true)
                 }
               }}
-              className={`relative w-14 h-14 rounded-xl bg-neutral-800/90 border border-neutral-700/60 overflow-hidden shrink-0 flex items-center justify-center transition-all ${
-                photoUrl
-                  ? 'cursor-pointer hover:ring-2 hover:ring-emerald-400 group/photo active:scale-95 shadow-sm'
-                  : ''
+              className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#111113] overflow-hidden shrink-0 flex items-center justify-center transition-all ${
+                photoUrl ? 'cursor-pointer hover:ring-1 hover:ring-white/40 group/photo active:scale-95' : ''
               }`}
               title={photoUrl ? 'Нажмите для просмотра фото' : undefined}
             >
@@ -428,79 +385,80 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                       ;(e.target as HTMLElement).style.display = 'none'
                     }}
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
-                    <Maximize2 className="w-3.5 h-3.5 text-white drop-shadow" />
+                  <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
+                    <Maximize2 className="w-3.5 h-3.5 text-white" />
                   </div>
                 </>
               ) : (
-                <Utensils className="w-5 h-5 text-neutral-500" />
+                <Utensils className="w-4 h-4 text-[#7A7A82]" />
               )}
 
               {!meal.is_manually_edited && (meal.ai_raw_response || meal.ai_model) && (
-                <div
-                  className={`absolute top-1 right-1 ${aiBadge?.accentColor || 'bg-emerald-500'} text-white p-0.5 rounded-full shadow-sm`}
+                <span
+                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E02424] ring-2 ring-[#111113]"
                   title={aiBadge?.tooltip || 'Распознано через AI'}
-                >
-                  <Sparkles className="w-2 h-2" />
-                </div>
+                />
               )}
             </div>
 
-            {/* Meal Details */}
+            {/* Details */}
             <div className="flex-1 min-w-0">
-              {/* Title & Top Action Bar */}
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm sm:text-[15px] font-semibold text-white leading-snug line-clamp-2 group-hover:text-emerald-300 transition-colors">
-                  {meal.name}
-                </h3>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium text-white leading-snug line-clamp-2 my-0">
+                    {meal.name}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-[#7A7A82]">
+                    <span className="font-ndot flex items-center gap-1" title={`${timeMeta.label} (${displayTime})`}>
+                      <Clock className="w-3 h-3" />
+                      {displayTime}
+                    </span>
+                    {meal.weight_grams ? (
+                      <span className="font-ndot text-[#A1A1AA]">{meal.weight_grams}г</span>
+                    ) : null}
+                    {aiBadge && (
+                      <span
+                        className="font-ndot text-[10px] px-1.5 py-0.5 rounded-full bg-[#2A2A2F] text-[#D4D4D8]"
+                        title={aiBadge.tooltip}
+                      >
+                        {aiBadge.shortLabel}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                {/* Time, AI Model Badge & 3-Dots Menu */}
+                {/* Right: Prominent Dot-Matrix Calories + 3-Dots Menu */}
                 <div
-                  className="flex items-center gap-1.5 shrink-0 -mt-0.5"
+                  className="flex items-start gap-1 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {aiBadge && (
-                    <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border tracking-tight shrink-0 transition-transform active:scale-95 cursor-help ${aiBadge.badgeStyle}`}
-                      title={aiBadge.tooltip}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${aiBadge.accentColor}`} />
-                      <span>{aiBadge.shortLabel}</span>
-                    </span>
-                  )}
+                  <div className="text-right pr-0.5">
+                    <div className="font-ndot text-lg font-bold text-white leading-none">
+                      {Math.round(meal.calories)}
+                    </div>
+                    <div className="text-[10px] text-[#7A7A82] mt-0.5">ккал</div>
+                  </div>
 
-                  <span
-                    className="text-[11px] text-neutral-400 flex items-center gap-1 font-medium mr-0.5"
-                    title={`${timeMeta.label} (${displayTime})`}
-                  >
-                    <Clock className="w-3 h-3 text-neutral-500" />
-                    <span>{displayTime}</span>
-                  </span>
-
-                  {/* 3-Dots Button */}
                   <div className="relative" ref={menuRef}>
                     <button
                       type="button"
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className="p-1 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer active:scale-95 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                      className="w-8 h-8 -mr-1 text-[#7A7A82] hover:text-white hover:bg-[#2A2A2F] rounded-full transition-colors cursor-pointer flex items-center justify-center"
                       title="Действия с блюдом"
+                      aria-label="Действия с блюдом"
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {/* Dropdown Menu */}
                     {isMenuOpen && (
-                      <div className="absolute right-0 top-8 z-40 w-52 bg-[#222227] border border-neutral-700/80 rounded-2xl shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute right-0 top-9 z-40 w-52 bg-[#111113] border border-white/[0.1] rounded-[20px] shadow-[0_16px_50px_rgba(0,0,0,0.9)] p-1.5 animate-in fade-in zoom-in-95 duration-150">
                         {aiBadge && (
                           <div
-                            className="px-3 py-1.5 text-[11px] text-neutral-400 border-b border-neutral-800/80 mb-1 flex items-center justify-between"
+                            className="px-3 py-1.5 text-[11px] text-[#7A7A82] mb-1 flex items-center justify-between"
                             title={aiBadge.tooltip}
                           >
-                            <span className="flex items-center gap-1.5">
-                              <span className={`w-1.5 h-1.5 rounded-full ${aiBadge.accentColor}`} />
-                              <span>AI модель:</span>
-                            </span>
-                            <span className="font-semibold text-white truncate max-w-[110px]">
+                            <span>AI модель</span>
+                            <span className="font-ndot font-bold text-white truncate max-w-[110px]">
                               {aiBadge.shortLabel}
                             </span>
                           </div>
@@ -511,10 +469,10 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             setIsMenuOpen(false)
                             openEditMeal(meal)
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-200 hover:text-white hover:bg-neutral-800/80 rounded-xl transition-colors cursor-pointer min-h-[38px]"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#E4E4E7] hover:text-white hover:bg-[#1E1E22] rounded-xl transition-colors cursor-pointer min-h-[38px]"
                         >
-                          <Edit2 className="w-4 h-4 text-emerald-400" />
-                          <span>Редактировать блюдо</span>
+                          <Edit2 className="w-3.5 h-3.5 text-[#A1A1AA]" />
+                          <span>Редактировать</span>
                         </button>
 
                         <button
@@ -523,9 +481,9 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             setIsMenuOpen(false)
                             handleCopyMeal()
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-200 hover:text-white hover:bg-neutral-800/80 rounded-xl transition-colors cursor-pointer min-h-[38px]"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#E4E4E7] hover:text-white hover:bg-[#1E1E22] rounded-xl transition-colors cursor-pointer min-h-[38px]"
                         >
-                          <Copy className="w-4 h-4 text-sky-400" />
+                          <Copy className="w-3.5 h-3.5 text-[#A1A1AA]" />
                           <span>
                             {meal.meal_date === getTodayDateString()
                               ? 'Повторить блюдо'
@@ -539,9 +497,9 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             setIsMenuOpen(false)
                             setIsEditingComment(true)
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-200 hover:text-white hover:bg-neutral-800/80 rounded-xl transition-colors cursor-pointer min-h-[38px]"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#E4E4E7] hover:text-white hover:bg-[#1E1E22] rounded-xl transition-colors cursor-pointer min-h-[38px]"
                         >
-                          <RotateCcw className="w-4 h-4 text-emerald-400" />
+                          <RotateCcw className="w-3.5 h-3.5 text-[#A1A1AA]" />
                           <span>Пересчитать через AI</span>
                         </button>
 
@@ -552,13 +510,13 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             handleSaveAsRecipe(e)
                           }}
                           disabled={isSavingRecipe}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-200 hover:text-white hover:bg-neutral-800/80 rounded-xl transition-colors cursor-pointer min-h-[38px]"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#E4E4E7] hover:text-white hover:bg-[#1E1E22] rounded-xl transition-colors cursor-pointer min-h-[38px]"
                         >
-                          <BookmarkPlus className="w-4 h-4 text-amber-400" />
-                          <span>{isSavedRecipe ? 'Сохранено в рецепты' : 'В «Мои рецепты»'}</span>
+                          <BookmarkPlus className="w-3.5 h-3.5 text-[#A1A1AA]" />
+                          <span>{isSavedRecipe ? 'Сохранено' : 'В «Мои рецепты»'}</span>
                         </button>
 
-                        <div className="my-1 border-t border-neutral-800" />
+                        <div className="nothing-dotted-divider my-1.5" />
 
                         <button
                           type="button"
@@ -566,9 +524,9 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                             setIsMenuOpen(false)
                             handleDelete(e)
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer min-h-[38px]"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-[#E02424] hover:bg-[#E02424]/10 rounded-xl transition-colors cursor-pointer min-h-[38px]"
                         >
-                          <Trash2 className="w-4 h-4 text-rose-400" />
+                          <Trash2 className="w-3.5 h-3.5" />
                           <span>Удалить запись</span>
                         </button>
                       </div>
@@ -577,93 +535,69 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                 </div>
               </div>
 
-              {/* Weight and Comment */}
-              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-neutral-400">
-                {meal.weight_grams ? (
-                  <span className="font-medium text-neutral-300">
-                    {meal.weight_grams} г
+              {/* Macros Row (Clean Nothing Monochrome) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5">
+                <div className="flex items-center gap-2 text-[11px] font-ndot tabular-nums">
+                  <span className="text-white">
+                    Б <span className="font-bold">{meal.protein}</span>
                   </span>
-                ) : null}
+                  <span className="text-[#52525B]">·</span>
+                  <span className="text-[#A1A1AA]">
+                    Ж <span className="font-bold">{meal.fat}</span>
+                  </span>
+                  <span className="text-[#52525B]">·</span>
+                  <span className="text-[#7A7A82]">
+                    У <span className="font-bold">{meal.carbs}</span>
+                  </span>
+                </div>
 
-                {meal.user_comment ? (
-                  <div
-                    className="flex items-center gap-1 max-w-full"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span
-                      onClick={() => setIsEditingComment(true)}
-                      className="truncate italic text-[11px] text-neutral-300 bg-neutral-900/90 hover:bg-neutral-800 px-2 py-1 rounded-md border border-neutral-800 cursor-pointer transition-colors"
-                      title="Нажмите, чтобы изменить комментарий"
-                    >
-                      "{meal.user_comment}"
-                    </span>
+                {/* Comment trigger / pill */}
+                <div onClick={(e) => e.stopPropagation()} className="min-w-0 max-w-full">
+                  {meal.user_comment ? (
                     <button
                       type="button"
                       onClick={() => setIsEditingComment(true)}
-                      className="text-neutral-500 hover:text-emerald-400 p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center transition-colors cursor-pointer"
+                      className="max-w-[200px] truncate italic text-[11px] text-[#A1A1AA] hover:text-white bg-[#111113] px-2.5 py-0.5 rounded-full transition-colors cursor-pointer"
                       title="Изменить комментарий"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      "{meal.user_comment}"
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setIsEditingComment(true)
-                    }}
-                    className="text-[11px] text-neutral-500 hover:text-emerald-400 flex items-center gap-1.5 py-1 px-1.5 min-h-[32px] rounded-lg hover:bg-neutral-800/40 transition-colors cursor-pointer"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600" />
-                    <span>+ комментарий</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Macros Pills */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                  {Math.round(meal.calories)} ккал
-                </span>
-                <span className="text-[11px] font-medium text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded-md">
-                  Б: {meal.protein}г
-                </span>
-                <span className="text-[11px] font-medium text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-                  Ж: {meal.fat}г
-                </span>
-                <span className="text-[11px] font-medium text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md">
-                  У: {meal.carbs}г
-                </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingComment(true)}
+                      className="text-[11px] text-[#6E6E75] hover:text-white inline-flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      <span>AI-уточнение</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Expandable Ingredients Section (FEAT-01) - Full card width */}
+          {/* Expandable Ingredients Section */}
           {hasIngredients && (
-            <div className="mt-2.5 pt-2 border-t border-neutral-800/60" onClick={(e) => e.stopPropagation()}>
+            <div className="mt-3 pt-2.5" onClick={(e) => e.stopPropagation()}>
+              <div className="nothing-dotted-divider mb-2" />
               <button
                 type="button"
                 onClick={() => setIsIngredientsOpen(!isIngredientsOpen)}
-                className="w-full flex items-center justify-between py-1 px-1 -mx-1 rounded-lg hover:bg-neutral-800/40 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between py-0.5 text-[11px] font-medium text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
               >
-                <span className="flex items-center gap-1.5">
-                  <span>Состав ({meal.ingredients?.length})</span>
-                </span>
+                <span>Состав ({meal.ingredients?.length})</span>
                 {isIngredientsOpen ? (
-                  <ChevronUp className="w-4 h-4 text-neutral-400" />
+                  <ChevronUp className="w-3.5 h-3.5" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-neutral-400" />
+                  <ChevronDown className="w-3.5 h-3.5" />
                 )}
               </button>
 
               {isIngredientsOpen && (
-                <div className="mt-2 space-y-2 bg-[#121317] p-2.5 rounded-xl border border-neutral-800/90">
-                  {/* Quick Whole-Portion Scale Bar */}
-                  <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-neutral-800/80">
-                    <span className="text-[10px] font-semibold text-neutral-400">
-                      Масштаб всей порции:
-                    </span>
+                <div className="mt-2 space-y-2 bg-[#111113] p-3 rounded-[16px]">
+                  <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-white/[0.06]">
+                    <span className="text-[10px] font-medium text-[#7A7A82]">Масштаб порции:</span>
                     <div className="flex items-center gap-1">
                       {[
                         { label: '×0.5', factor: 0.5 },
@@ -675,8 +609,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                           key={item.label}
                           type="button"
                           onClick={() => handleScaleWholeMeal(item.factor)}
-                          className="px-2 py-0.5 rounded-md bg-neutral-800/90 hover:bg-emerald-500/20 text-neutral-300 hover:text-emerald-300 border border-neutral-700/70 hover:border-emerald-500/40 text-[10px] font-bold transition-colors cursor-pointer active:scale-95"
-                          title={`Умножить порцию на ${item.factor}`}
+                          className="font-ndot px-2 py-0.5 rounded-full bg-[#222226] hover:bg-white hover:text-black text-[#D4D4D8] text-[10px] font-bold transition-colors cursor-pointer active:scale-95"
                         >
                           {item.label}
                         </button>
@@ -687,35 +620,29 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   {meal.ingredients?.map((ing, idx) => (
                     <div
                       key={idx}
-                      className="py-1.5 border-b border-neutral-800/60 last:border-0 space-y-1"
+                      className="py-1.5 border-b border-white/[0.05] last:border-0 space-y-1"
                     >
-                      {/* Row 1: Ingredient name full width */}
-                      <p className="font-medium text-neutral-200 text-xs truncate">
-                        {ing.name}
-                      </p>
-
-                      {/* Row 2: KBJU on left, buttons on right */}
+                      <p className="font-medium text-white text-xs truncate my-0">{ing.name}</p>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[10px] text-neutral-400">
-                          {Math.round(ing.calories)} ккал • Б:{ing.protein} Ж:{ing.fat} У:{ing.carbs}
+                        <p className="font-ndot text-[10px] text-[#7A7A82] my-0">
+                          {Math.round(ing.calories)} ккал · Б{ing.protein} Ж{ing.fat} У{ing.carbs}
                         </p>
-
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleAdjustIngredientWeight(idx, -25)}
-                            className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 touch-manipulation"
+                            className="w-7 h-7 rounded-full bg-[#222226] hover:bg-[#2F2F36] text-white flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95"
                             title="-25г"
                           >
                             -
                           </button>
-                          <span className="min-w-[36px] text-center font-mono text-xs text-white">
+                          <span className="min-w-[38px] text-center font-ndot text-xs text-white">
                             {ing.weight_grams}г
                           </span>
                           <button
                             type="button"
                             onClick={() => handleAdjustIngredientWeight(idx, 25)}
-                            className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-200 flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95 touch-manipulation"
+                            className="w-7 h-7 rounded-full bg-[#222226] hover:bg-[#2F2F36] text-white flex items-center justify-center font-bold text-xs cursor-pointer active:scale-95"
                             title="+25г"
                           >
                             +
@@ -723,7 +650,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                           <button
                             type="button"
                             onClick={() => handleRemoveIngredient(idx)}
-                            className="w-7 h-7 rounded-lg text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer ml-1 active:scale-95 touch-manipulation"
+                            className="w-7 h-7 rounded-full text-[#7A7A82] hover:text-[#E02424] hover:bg-[#E02424]/10 flex items-center justify-center transition-colors cursor-pointer ml-0.5"
                             title="Удалить ингредиент"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -737,21 +664,22 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
             </div>
           )}
 
-          {/* Comment edit & AI recalculate section */}
+          {/* Inline Comment & AI Recalculate */}
           {isEditingComment && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="mt-3 pt-3 border-t border-neutral-800/80 space-y-2.5 animate-in fade-in duration-200"
+              className="mt-3 pt-2.5 space-y-2.5 animate-in fade-in duration-150"
             >
+              <div className="nothing-dotted-divider" />
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Пояснение для AI пересчёта:</span>
+                <label className="text-xs font-medium text-white flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#E02424]" />
+                  <span>Уточнение для AI-пересчёта</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => setIsEditingComment(false)}
-                  className="text-neutral-500 hover:text-neutral-300 p-0.5 rounded cursor-pointer"
+                  className="text-[#7A7A82] hover:text-white p-1 rounded-full cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -761,93 +689,80 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                 type="text"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Например: Добавил 50г сыра, половина банана, без соуса..."
-                className="w-full bg-[#141417] border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Например: Добавил 50г сыра, без соуса..."
+                className="w-full bg-[#111113] border border-white/[0.1] rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-[#6E6E75] outline-none focus:border-white/40 transition-colors"
               />
 
-              <div className="flex items-center justify-between pt-0.5">
-                <span className="text-[11px] text-neutral-500">
-                  AI пересчитает калории и БЖУ
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingComment(false)}
-                    disabled={isRecalculating}
-                    className="px-2.5 py-1 text-xs text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                  >
-                    Отмена
-                  </button>
-                  <Button
-                    size="sm"
-                    onClick={handleRecalculateAI}
-                    isLoading={isRecalculating}
-                    leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-                    className="text-xs"
-                  >
-                    Пересчитать через AI
-                  </Button>
-                </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsEditingComment(false)}
+                  disabled={isRecalculating}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleRecalculateAI}
+                  isLoading={isRecalculating}
+                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                >
+                  Пересчитать AI
+                </Button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Expressive Photo Lightbox Modal */}
+      {/* Photo Lightbox Modal */}
       {isLightboxOpen && photoUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => setIsLightboxOpen(false)}
         >
           <div
-            className="relative max-w-2xl max-h-[90vh] w-full flex flex-col items-center bg-[#18181c] border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl"
+            className="relative max-w-2xl max-h-[90vh] w-full flex flex-col items-center bg-[#111113] border border-white/[0.1] rounded-[26px] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Lightbox Header */}
-            <div className="w-full flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-[#141416]">
+            <div className="w-full flex items-center justify-between px-4 py-3.5 border-b border-white/[0.06]">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-sm font-semibold text-white truncate">
-                  {meal.name}
-                </span>
+                <span className="text-sm font-semibold text-white truncate">{meal.name}</span>
                 {meal.weight_grams ? (
-                  <span className="text-xs text-neutral-400">
-                    ({meal.weight_grams} г)
-                  </span>
+                  <span className="font-ndot text-xs text-[#7A7A82]">{meal.weight_grams}г</span>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={() => setIsLightboxOpen(false)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[#1E1E22] text-[#A1A1AA] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                 title="Закрыть (Esc)"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Lightbox Full Photo */}
-            <div className="p-3 w-full flex items-center justify-center bg-black/40 overflow-hidden">
+            <div className="p-3 w-full flex items-center justify-center bg-black overflow-hidden">
               <img
                 src={photoUrl}
                 alt={meal.name}
-                className="max-h-[65vh] w-auto max-w-full object-contain rounded-xl shadow-lg"
+                className="max-h-[65vh] w-auto max-w-full object-contain rounded-2xl"
               />
             </div>
 
-            {/* Lightbox Footer */}
-            <div className="w-full px-4 py-3 bg-[#141416] border-t border-neutral-800 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                  {Math.round(meal.calories)} ккал
-                </span>
-                <span className="text-neutral-300">Б: {meal.protein}г</span>
-                <span className="text-neutral-300">Ж: {meal.fat}г</span>
-                <span className="text-neutral-300">У: {meal.carbs}г</span>
+            <div className="w-full px-4 py-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
+              <div className="flex items-center gap-3 font-ndot">
+                <span className="font-bold text-white">{Math.round(meal.calories)} ккал</span>
+                <span className="text-[#A1A1AA]">Б {meal.protein}</span>
+                <span className="text-[#A1A1AA]">Ж {meal.fat}</span>
+                <span className="text-[#A1A1AA]">У {meal.carbs}</span>
               </div>
-              <span className="text-neutral-400 flex items-center gap-1 text-[11px]">
-                <Clock className="w-3 h-3 text-neutral-500" />
-                <span>{displayTime}</span>
+              <span className="font-ndot text-[#7A7A82] flex items-center gap-1 text-[11px]">
+                <Clock className="w-3 h-3" />
+                {displayTime}
               </span>
             </div>
           </div>

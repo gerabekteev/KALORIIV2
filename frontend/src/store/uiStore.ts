@@ -2,6 +2,15 @@ import { create } from 'zustand'
 import { Meal, AIRecognitionResult } from '../types'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
+export type AddMealModalMode =
+  | 'hub'
+  | 'barcode'
+  | 'ai_photo'
+  | 'text_ai'
+  | 'voice_ai'
+  | 'search'
+  | 'recipes'
+  | 'manual'
 
 export interface ToastAction {
   label: string
@@ -19,6 +28,7 @@ export interface ToastItem {
 interface UIState {
   isAddMealOpen: boolean
   addMealPresetTime: string | null
+  addMealInitialMode: AddMealModalMode
   isEditMealOpen: boolean
   isAIResultOpen: boolean
   editingMeal: Meal | null
@@ -27,7 +37,7 @@ interface UIState {
 
   toasts: ToastItem[]
 
-  openAddMeal: (presetTime?: string | null) => void
+  openAddMeal: (presetTime?: string | null, initialMode?: AddMealModalMode) => void
   closeAddMeal: () => void
 
   openEditMeal: (meal: Meal) => void
@@ -48,6 +58,7 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   isAddMealOpen: false,
   addMealPresetTime: null,
+  addMealInitialMode: 'hub',
   isEditMealOpen: false,
   isAIResultOpen: false,
   editingMeal: null,
@@ -56,9 +67,18 @@ export const useUIStore = create<UIState>((set) => ({
 
   toasts: [],
 
-  openAddMeal: (presetTime = null) =>
-    set({ isAddMealOpen: true, addMealPresetTime: presetTime }),
-  closeAddMeal: () => set({ isAddMealOpen: false, addMealPresetTime: null }),
+  openAddMeal: (presetTime = null, initialMode = 'hub') =>
+    set({
+      isAddMealOpen: true,
+      addMealPresetTime: presetTime,
+      addMealInitialMode: initialMode,
+    }),
+  closeAddMeal: () =>
+    set({
+      isAddMealOpen: false,
+      addMealPresetTime: null,
+      addMealInitialMode: 'hub',
+    }),
 
   openEditMeal: (meal: Meal) => set({ isEditMealOpen: true, editingMeal: meal }),
   closeEditMeal: () => set({ isEditMealOpen: false, editingMeal: null }),
@@ -75,7 +95,6 @@ export const useUIStore = create<UIState>((set) => ({
     action?: ToastAction
   ) => {
     set((state) => {
-      // 1. Deduplication: if an active toast with the same message exists, replace it if action is present, otherwise ignore
       let currentToasts = state.toasts
       if (action) {
         currentToasts = currentToasts.filter((t) => t.message !== message)
@@ -83,7 +102,6 @@ export const useUIStore = create<UIState>((set) => ({
         return state
       }
 
-      // 2. Limit capacity: keep at most 2 existing toasts so there are never more than 3 on screen
       const current = currentToasts.length >= 3 ? currentToasts.slice(-2) : currentToasts
       const id = Math.random().toString(36).substring(2, 9)
 

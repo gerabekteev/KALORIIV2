@@ -260,17 +260,15 @@ export const EditMealModal: React.FC = () => {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {aiBadge && (
-          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-neutral-900/80 border border-neutral-800 text-xs">
+          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-[16px] bg-[#1A1A1D] text-xs">
             <div className="flex items-center gap-2 min-w-0">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${aiBadge.accentColor}`} />
-              <span className="text-neutral-400 shrink-0">Оценка нейросети:</span>
-              <span className="font-semibold text-white truncate" title={aiBadge.fullName}>
+              <span className="w-2 h-2 rounded-full shrink-0 bg-[#E02424]" />
+              <span className="text-[#7A7A82] shrink-0">Нейросеть:</span>
+              <span className="font-medium text-white truncate" title={aiBadge.fullName}>
                 {aiBadge.fullName}
               </span>
             </div>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${aiBadge.badgeStyle}`}
-            >
+            <span className="font-ndot text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2A2A2F] text-white shrink-0">
               {aiBadge.shortLabel}
             </span>
           </div>
@@ -283,21 +281,18 @@ export const EditMealModal: React.FC = () => {
           required
         />
 
-        {/* Portion Scaling Slider & Multipliers Block */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-[#181c22] to-[#131519] border border-emerald-500/30 space-y-3">
+        {/* Portion Scaling Block */}
+        <div className="p-3.5 rounded-[20px] bg-[#1A1A1D] space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Scale className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-xs font-bold text-white">
-                Масштаб порции и общий вес
-              </span>
+              <Scale className="w-4 h-4 text-[#A1A1AA] shrink-0" />
+              <span className="text-xs font-semibold text-white">Масштаб и вес</span>
             </div>
-            <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-500/30">
-              {Math.round(scaleMultiplier * 100)}% ({form.weight_grams || 0} г • {form.calories || 0} ккал)
+            <span className="font-ndot text-xs font-bold text-white bg-[#2A2A2F] px-2.5 py-0.5 rounded-full">
+              {Math.round(scaleMultiplier * 100)}% · {form.weight_grams || 0}г · {form.calories || 0}
             </span>
           </div>
 
-          {/* Multiplier Quick Pills */}
           <div className="flex flex-wrap gap-1.5">
             {SCALE_MULTIPLIERS.map((m) => {
               const isSelected = Math.abs(scaleMultiplier - m.value) < 0.03
@@ -306,10 +301,10 @@ export const EditMealModal: React.FC = () => {
                   key={m.label}
                   type="button"
                   onClick={() => applyScaleFactor(m.value)}
-                  className={`flex-1 min-w-[64px] py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[60px] py-1.5 px-2 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
                     isSelected
-                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
-                      : 'bg-[#111317] text-neutral-300 hover:text-white border border-neutral-800 hover:border-emerald-500/40'
+                      ? 'bg-white text-black'
+                      : 'bg-[#111113] text-[#A1A1AA] hover:text-white'
                   }`}
                 >
                   {m.label}
@@ -318,7 +313,6 @@ export const EditMealModal: React.FC = () => {
             })}
           </div>
 
-          {/* Smooth Range Slider (0.25x .. 2.5x) */}
           <div className="space-y-1 pt-0.5">
             <input
               type="range"
@@ -327,54 +321,51 @@ export const EditMealModal: React.FC = () => {
               step="0.05"
               value={Math.min(2.5, Math.max(0.25, scaleMultiplier))}
               onChange={(e) => applyScaleFactor(parseFloat(e.target.value))}
-              className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              className="w-full h-1.5 bg-[#2A2A2F] rounded-full appearance-none cursor-pointer accent-[#E02424]"
             />
-            <div className="flex justify-between text-[10px] text-neutral-500 font-medium px-0.5">
-              <span>¼ порции</span>
-              <span>Половина</span>
-              <span>Исходная (100%)</span>
+            <div className="flex justify-between font-ndot text-[10px] text-[#7A7A82] px-0.5">
+              <span>¼</span>
+              <span>½</span>
+              <span>100%</span>
               <span>×1.5</span>
               <span>×2.5</span>
             </div>
           </div>
 
-          {/* Exact Weight Input with Steppers */}
           <div className="flex items-center justify-between gap-2 pt-1">
-            <span className="text-xs text-neutral-300 font-medium">
-              Точный вес съеденного:
-            </span>
+            <span className="text-xs text-[#A1A1AA] font-medium">Точный вес:</span>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => handleStepWeight(-50)}
-                className="px-2 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold cursor-pointer active:scale-95"
+                className="px-2.5 py-1.5 rounded-full bg-[#2A2A2F] hover:bg-[#34343B] text-white font-ndot text-xs font-bold cursor-pointer active:scale-95"
               >
                 -50
               </button>
               <button
                 type="button"
                 onClick={() => handleStepWeight(-25)}
-                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer active:scale-95"
+                className="w-8 h-8 rounded-full bg-[#2A2A2F] hover:bg-[#34343B] text-white flex items-center justify-center cursor-pointer active:scale-95"
                 title="-25 г"
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
-              <div className="relative w-24">
+              <div className="relative w-20">
                 <input
                   type="number"
                   min="1"
                   value={form.weight_grams}
                   onChange={(e) => handleWeightChange(e.target.value)}
-                  className="w-full bg-[#0f1115] border border-emerald-500/40 focus:border-emerald-400 rounded-xl pl-2.5 pr-6 py-1.5 text-center text-sm font-extrabold text-white outline-none"
+                  className="w-full bg-[#111113] border border-white/[0.14] focus:border-white rounded-full pl-2.5 pr-6 py-1.5 text-center font-ndot text-sm font-bold text-white outline-none"
                 />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-emerald-400 font-semibold pointer-events-none">
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-[#7A7A82] pointer-events-none">
                   г
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => handleStepWeight(25)}
-                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer active:scale-95"
+                className="w-8 h-8 rounded-full bg-[#2A2A2F] hover:bg-[#34343B] text-white flex items-center justify-center cursor-pointer active:scale-95"
                 title="+25 г"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -382,28 +373,27 @@ export const EditMealModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleStepWeight(50)}
-                className="px-2 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold cursor-pointer active:scale-95"
+                className="px-2.5 py-1.5 rounded-full bg-[#2A2A2F] hover:bg-[#34343B] text-white font-ndot text-xs font-bold cursor-pointer active:scale-95"
               >
                 +50
               </button>
             </div>
           </div>
 
-          {/* Proportional recalculation toggle */}
-          <label className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-400 hover:text-neutral-200 select-none pt-0.5">
+          <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[#8E8E96] hover:text-white select-none pt-0.5">
             <input
               type="checkbox"
               checked={scaleProportionally}
               onChange={(e) => setScaleProportionally(e.target.checked)}
-              className="w-4 h-4 rounded accent-emerald-500 bg-neutral-900 border-neutral-700 cursor-pointer"
+              className="w-4 h-4 rounded accent-[#E02424] bg-[#111113] cursor-pointer"
             />
-            <span>Пересчитывать КБЖУ и ингредиенты пропорционально весу</span>
+            <span>Пересчитывать КБЖУ и состав пропорционально весу</span>
           </label>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <Input
-            label="Калории (ккал) *"
+            label="Калории *"
             type="number"
             min="0"
             value={form.calories}
@@ -436,29 +426,29 @@ export const EditMealModal: React.FC = () => {
           />
         </div>
 
-        {/* Ingredients Editor Section (FEAT-01) */}
-        <div className="pt-2 border-t border-neutral-800 space-y-2.5">
+        {/* Ingredients Editor */}
+        <div className="space-y-2.5 pt-1">
+          <div className="nothing-dotted-divider" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Состав блюда ({ingredients.length})</span>
+            <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#A1A1AA]" />
+              <span>Состав ({ingredients.length})</span>
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               {ingredients.length > 0 && (
                 <button
                   type="button"
                   onClick={handleSyncFromIngredients}
-                  className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Рассчитать итоговые КБЖУ из суммы ингредиентов"
+                  className="text-[11px] text-white hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <RefreshCw className="w-3 h-3" />
-                  <span>Суммировать КБЖУ</span>
+                  <span>Суммировать</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={handleAddIngredient}
-                className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-[11px] text-[#A1A1AA] hover:text-white flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
                 <span>Добавить</span>
@@ -471,103 +461,57 @@ export const EditMealModal: React.FC = () => {
               {ingredients.map((ing, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#141417] p-2.5 rounded-xl border border-neutral-800 text-xs space-y-2"
+                  className="bg-[#1A1A1D] p-3 rounded-[16px] text-xs space-y-2"
                 >
-                  {/* Row 1: Ingredient name + delete button */}
                   <div className="flex items-center justify-between gap-2">
                     <input
                       type="text"
                       value={ing.name}
                       onChange={(e) => handleIngredientChange(idx, 'name', e.target.value)}
                       placeholder="Название ингредиента"
-                      className="flex-1 min-w-0 bg-transparent text-white placeholder-neutral-500 outline-none text-xs font-medium"
+                      className="flex-1 min-w-0 bg-transparent text-white placeholder-[#6E6E75] outline-none text-xs font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemoveIngredient(idx)}
-                      className="p-1 text-neutral-500 hover:text-rose-400 rounded transition-colors cursor-pointer shrink-0"
+                      className="p-1 text-[#7A7A82] hover:text-[#E02424] rounded-full transition-colors cursor-pointer shrink-0"
                       title="Удалить ингредиент"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Row 2: 5 columns grid (Вес, Ккал, Б, Ж, У) */}
-                  <div className="grid grid-cols-5 gap-1.5 pt-1.5 border-t border-neutral-850/70 text-[10px]">
-                    <div className="flex flex-col">
-                      <span className="text-neutral-400 font-medium text-[10px] mb-0.5 truncate">Вес (г)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={ing.weight_grams || ''}
-                        onChange={(e) =>
-                          handleIngredientChange(idx, 'weight_grams', Number(e.target.value) || 0)
-                        }
-                        placeholder="г"
-                        className="w-full text-center bg-neutral-800 text-white rounded px-1 py-1 outline-none font-mono text-[11px]"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-emerald-400 font-medium text-[10px] mb-0.5 truncate">Ккал</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={ing.calories || ''}
-                        onChange={(e) =>
-                          handleIngredientChange(idx, 'calories', Number(e.target.value) || 0)
-                        }
-                        placeholder="ккал"
-                        className="w-full text-center bg-neutral-800 text-emerald-400 rounded px-1 py-1 outline-none font-mono text-[11px]"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-blue-400 font-medium text-[10px] mb-0.5 truncate">Б (г)</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={ing.protein || ''}
-                        onChange={(e) =>
-                          handleIngredientChange(idx, 'protein', Number(e.target.value) || 0)
-                        }
-                        placeholder="0"
-                        className="w-full text-center bg-neutral-800/90 text-blue-300 rounded px-1 py-1 outline-none font-mono text-[11px]"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-amber-400 font-medium text-[10px] mb-0.5 truncate">Ж (г)</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={ing.fat || ''}
-                        onChange={(e) =>
-                          handleIngredientChange(idx, 'fat', Number(e.target.value) || 0)
-                        }
-                        placeholder="0"
-                        className="w-full text-center bg-neutral-800/90 text-amber-300 rounded px-1 py-1 outline-none font-mono text-[11px]"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-purple-400 font-medium text-[10px] mb-0.5 truncate">У (г)</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={ing.carbs || ''}
-                        onChange={(e) =>
-                          handleIngredientChange(idx, 'carbs', Number(e.target.value) || 0)
-                        }
-                        placeholder="0"
-                        className="w-full text-center bg-neutral-800/90 text-purple-300 rounded px-1 py-1 outline-none font-mono text-[11px]"
-                      />
-                    </div>
+                  <div className="grid grid-cols-5 gap-1.5 pt-1.5 border-t border-white/[0.06] text-[10px]">
+                    {[
+                      { field: 'weight_grams' as const, label: 'Вес (г)' },
+                      { field: 'calories' as const, label: 'Ккал' },
+                      { field: 'protein' as const, label: 'Б (г)' },
+                      { field: 'fat' as const, label: 'Ж (г)' },
+                      { field: 'carbs' as const, label: 'У (г)' },
+                    ].map(({ field, label }) => (
+                      <div key={field} className="flex flex-col">
+                        <span className="text-[#7A7A82] font-medium text-[10px] mb-0.5 truncate">
+                          {label}
+                        </span>
+                        <input
+                          type="number"
+                          step={field === 'weight_grams' || field === 'calories' ? '1' : '0.1'}
+                          min="0"
+                          value={ing[field] || ''}
+                          onChange={(e) =>
+                            handleIngredientChange(idx, field, Number(e.target.value) || 0)
+                          }
+                          placeholder="0"
+                          className="w-full text-center bg-[#111113] text-white rounded-lg px-1 py-1 outline-none font-ndot text-[11px]"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[11px] text-neutral-500 italic">
+            <p className="text-[11px] text-[#7A7A82] italic">
               Ингредиенты не добавлены. Вы можете добавить компоненты вручную.
             </p>
           )}
@@ -595,7 +539,7 @@ export const EditMealModal: React.FC = () => {
           placeholder="Примечание к блюду"
         />
 
-        <div className="sticky bottom-0 bg-[#1a1a1e] -mx-4 sm:-mx-6 px-4 sm:px-6 -mb-4 py-3 border-t border-neutral-800 flex gap-2 z-10">
+        <div className="sticky bottom-0 bg-[#111113] -mx-4 sm:-mx-6 px-4 sm:px-6 -mb-4 py-3 border-t border-white/[0.08] flex gap-2 z-10">
           <Button
             type="button"
             variant="secondary"
@@ -604,11 +548,7 @@ export const EditMealModal: React.FC = () => {
           >
             Отмена
           </Button>
-          <Button
-            type="submit"
-            className="w-1/2"
-            isLoading={isSubmitting}
-          >
+          <Button type="submit" className="w-1/2" isLoading={isSubmitting}>
             Сохранить
           </Button>
         </div>

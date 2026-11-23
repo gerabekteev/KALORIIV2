@@ -3,10 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useMealsStore } from './store/mealsStore'
 import { Layout } from './components/layout/Layout'
-import { TodayPage } from './pages/TodayPage'
-import { StatsPage } from './pages/StatsPage'
-import { ProfilePage } from './pages/ProfilePage'
-import { MealPlanPage } from './pages/MealPlanPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { PageLoading } from './components/ui/Loading'
@@ -79,7 +75,7 @@ export const App: React.FC = () => {
         }
       />
 
-      {/* Protected app routes wrapped in Layout */}
+      {/* Protected app routes wrapped in Android ViewPager Layout */}
       <Route
         path="/"
         element={
@@ -88,10 +84,10 @@ export const App: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<TodayPage />} />
-        <Route path="meal-plan" element={<MealPlanPage />} />
-        <Route path="stats" element={<StatsPage />} />
-        <Route path="profile" element={<ProfilePage />} />
+        <Route index element={null} />
+        <Route path="meal-plan" element={null} />
+        <Route path="stats" element={null} />
+        <Route path="profile" element={null} />
       </Route>
 
       {/* Fallback route */}

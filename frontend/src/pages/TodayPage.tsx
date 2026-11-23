@@ -1,15 +1,184 @@
-import React, { useState } from 'react'
-import { Plus, Camera, Sparkles, RotateCcw, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import {
+  Plus,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+} from 'lucide-react'
+import { Meal } from '../types'
 import { useMeals } from '../hooks/useMeals'
 import { useAuthStore } from '../store/authStore'
 import { useUIStore } from '../store/uiStore'
 import { useMealsStore } from '../store/mealsStore'
-import { ProgressRing } from '../components/ui/ProgressRing'
-import { ProgressBar } from '../components/ui/ProgressBar'
-import { Card } from '../components/ui/Card'
 import { MealList } from '../components/meals/MealList'
 import { WeekStripCalendar } from '../components/meals/WeekStripCalendar'
 import { pluralizeRu } from '../utils/pluralize'
+
+function buildRoundedRectPath(w: number, h: number, inset: number, radius: number): string {
+  const x = inset
+  const y = inset
+  const rw = Math.max(20, w - inset * 2)
+  const rh = Math.max(20, h - inset * 2)
+  const r = Math.min(radius, rw / 2, rh / 2)
+  const cx = w / 2
+  return [
+    `M ${cx} ${y}`,
+    `L ${x + rw - r} ${y}`,
+    `A ${r} ${r} 0 0 1 ${x + rw} ${y + r}`,
+    `L ${x + rw} ${y + rh - r}`,
+    `A ${r} ${r} 0 0 1 ${x + rw - r} ${y + rh}`,
+    `L ${x + r} ${y + rh}`,
+    `A ${r} ${r} 0 0 1 ${x} ${y + rh - r}`,
+    `L ${x} ${y + r}`,
+    `A ${r} ${r} 0 0 1 ${x + r} ${y}`,
+    'Z',
+  ].join(' ')
+}
+
+/**
+ * Nothing X Flagship Concentric Soft-Oval Stadium Frame (chunky arcs, slightly squared ends)
+ * Holds Calories / Protein / Fat & Carbs cleanly inside the spacious center.
+ */
+const NothingConcentricFrame: React.FC<{
+  caloriesRatio: number
+  proteinRatio: number
+  carbsFatRatio: number
+  children: React.ReactNode
+}> = ({ caloriesRatio, proteinRatio, carbsFatRatio, children }) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [box, setBox] = useState({ w: 340, h: 184 })
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => {
+      const rect = el.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        setBox({ w: Math.round(rect.width), h: Math.round(rect.height) })
+      }
+    }
+    update()
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(update)
+      ro.observe(el)
+      return () => ro.disconnect()
+    }
+  }, [])
+
+  const cVal = caloriesRatio > 0 ? Math.max(0.025, Math.min(1, caloriesRatio)) : 0
+  const pVal = proteinRatio > 0 ? Math.max(0.025, Math.min(1, proteinRatio)) : 0
+  const cfVal = carbsFatRatio > 0 ? Math.max(0.025, Math.min(1, carbsFatRatio)) : 0
+
+  // Big sweeping half-oval corners, uniformly concentric with identical stroke thickness
+  const strokeW = 8.5
+  const ringStep = 13.5 // 8.5px stroke + exact 5px dark gap between every ring
+  const outerMaxR = Math.max(32, (box.h - 20) / 2)
+  const rOuter = Math.round(outerMaxR * 0.72)
+  const rMiddle = Math.max(20, rOuter - ringStep)
+  const rInner = Math.max(12, rMiddle - ringStep)
+
+  const outerPath = buildRoundedRectPath(box.w, box.h, 10, rOuter)
+  const middlePath = buildRoundedRectPath(box.w, box.h, 10 + ringStep, rMiddle)
+  const innerPath = buildRoundedRectPath(box.w, box.h, 10 + ringStep * 2, rInner)
+
+  return (
+    <div ref={containerRef} className="relative w-full select-none">
+      <svg
+        width={box.w}
+        height={box.h}
+        viewBox={`0 0 ${box.w} ${box.h}`}
+        className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
+        aria-hidden="true"
+      >
+        {/* Outer Track & Calories Fill (Nothing Red #E02424) */}
+        <path
+          d={outerPath}
+          fill="none"
+          stroke="#2A2A2F"
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {cVal > 0 ? (
+          <path
+            d={outerPath}
+            fill="none"
+            stroke="#E02424"
+            strokeWidth={strokeW}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={100}
+            strokeDasharray={`${cVal * 100} 100`}
+            className="transition-all duration-700 ease-out"
+          />
+        ) : (
+          <circle cx={box.w / 2} cy={10} r="3.5" fill="#E02424" />
+        )}
+
+        {/* Middle Track & Protein Fill (Pure White #FFFFFF) */}
+        <path
+          d={middlePath}
+          fill="none"
+          stroke="#2A2A2F"
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {pVal > 0 && (
+          <path
+            d={middlePath}
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth={strokeW}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={100}
+            strokeDasharray={`${pVal * 100} 100`}
+            className="transition-all duration-700 ease-out"
+          />
+        )}
+
+        {/* Inner Track & Fat+Carbs Fill (Stone Gray #7A7A82) */}
+        <path
+          d={innerPath}
+          fill="none"
+          stroke="#2A2A2F"
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {cfVal > 0 && (
+          <path
+            d={innerPath}
+            fill="none"
+            stroke="#7A7A82"
+            strokeWidth={strokeW}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={100}
+            strokeDasharray={`${cfVal * 100} 100`}
+            className="transition-all duration-700 ease-out"
+          />
+        )}
+      </svg>
+
+      {/* 3 Core Macro Rows Centered Inside the Concentric Oval */}
+      <div className="relative z-10 px-[52px] sm:px-[58px] py-[52px] sm:py-[54px]">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+interface DaySnapshot {
+  date: string
+  meals: Meal[]
+  totals: { calories: number; protein: number; fat: number; carbs: number }
+}
+
+const DAY_WIPE_DURATION_MS = 540
+const DAY_WIPE_CLEANUP_MS = 570
 
 export const TodayPage: React.FC = () => {
   const { user } = useAuthStore()
@@ -31,24 +200,103 @@ export const TodayPage: React.FC = () => {
     isPositive: boolean
     trackedCount: number
   } | null>(null)
-  const [showAllRepeats, setShowAllRepeats] = useState(false)
+  const [showYesterdayList, setShowYesterdayList] = useState(false)
+
+  // Continuous zero-jitter top-to-bottom Wipe on day switch
+  const [dayWipe, setDayWipe] = useState<{
+    id: number
+    active: boolean
+    prev: DaySnapshot | null
+    next: DaySnapshot | null
+  }>({
+    id: 0,
+    active: false,
+    prev: null,
+    next: null,
+  })
+
+  const committedDayRef = useRef<DaySnapshot | null>(null)
+  const wipeTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (wipeTimerRef.current) window.clearTimeout(wipeTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isLoading) return
+
+    const incoming: DaySnapshot = {
+      date: selectedDate,
+      meals,
+      totals: { ...totals },
+    }
+    const previous = committedDayRef.current
+
+    if (!previous) {
+      committedDayRef.current = incoming
+      return
+    }
+
+    if (previous.date !== incoming.date) {
+      if (wipeTimerRef.current) window.clearTimeout(wipeTimerRef.current)
+      committedDayRef.current = incoming
+
+      const prefersReduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+      if (prefersReduced) {
+        setDayWipe((w) => ({ id: w.id + 1, active: false, prev: null, next: incoming }))
+        return
+      }
+
+      setDayWipe((w) => ({
+        id: w.id + 1,
+        active: true,
+        prev: previous,
+        next: incoming,
+      }))
+
+      wipeTimerRef.current = window.setTimeout(() => {
+        setDayWipe((w) => ({ ...w, active: false, prev: null }))
+        wipeTimerRef.current = null
+      }, DAY_WIPE_CLEANUP_MS)
+    } else {
+      committedDayRef.current = incoming
+      setDayWipe((w) => ({ ...w, next: incoming }))
+    }
+  }, [
+    selectedDate,
+    meals,
+    totals.calories,
+    totals.protein,
+    totals.fat,
+    totals.carbs,
+    isLoading,
+  ])
+
+  const fallbackSnap: DaySnapshot = {
+    date: selectedDate,
+    meals,
+    totals,
+  }
+  const activeSnap =
+    isLoading && committedDayRef.current ? committedDayRef.current : dayWipe.next || fallbackSnap
+
+  const isWipeActive = dayWipe.active && !!dayWipe.prev && !!dayWipe.next
+  const showInitialSkeleton = isLoading && !committedDayRef.current
 
   const dailyGoalCalories = user?.daily_calories_goal || 2000
   const dailyGoalProtein = user?.daily_protein_goal || 140
   const dailyGoalFat = user?.daily_fat_goal || 70
   const dailyGoalCarbs = user?.daily_carbs_goal || 250
 
-  const remainingCalories = Math.max(dailyGoalCalories - totals.calories, 0)
-
-  // Pending AI meals calculations
-  const pendingForCurrentDate = pendingMeals.filter((p) => p.targetDate === selectedDate)
-  const pendingAnalyzingCount = pendingForCurrentDate.filter((p) => p.status === 'analyzing').length
-  const totalDisplayCount = meals.length + pendingForCurrentDate.length
   const otherDatePendingCount = pendingMeals.filter(
     (p) => p.targetDate !== selectedDate && p.status === 'analyzing'
   ).length
 
-  // Yesterday breakfast calculation for quick repeat banner (FEAT-02)
   const breakfastMeals = previousDayMeals.filter(
     (m) => m.meal_time && m.meal_time >= '05:00' && m.meal_time < '12:00'
   )
@@ -56,9 +304,248 @@ export const TodayPage: React.FC = () => {
     breakfastMeals.reduce((s, m) => s + (m.calories || 0), 0)
   )
 
+  const renderDayContent = (snap: DaySnapshot, interactive: boolean) => {
+    const t = snap.totals
+    const isOver = t.calories > dailyGoalCalories
+    const remCal = Math.max(dailyGoalCalories - t.calories, 0)
+    const overCal = Math.max(t.calories - dailyGoalCalories, 0)
+    const calRatio = dailyGoalCalories > 0 ? t.calories / dailyGoalCalories : 0
+    const protRatio = dailyGoalProtein > 0 ? t.protein / dailyGoalProtein : 0
+    const cfRatio =
+      dailyGoalFat + dailyGoalCarbs > 0
+        ? (t.fat + t.carbs) / (dailyGoalFat + dailyGoalCarbs)
+        : 0
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 lg:gap-5 lg:items-start">
+        {/* LEFT COLUMN (Mobile Top / Desktop Sticky Bento Summary) */}
+        <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-3.5">
+          {/* Flagship Nothing X Hero Progress Card */}
+          <div className="bg-[#1A1A1D] rounded-[24px] p-2.5 sm:p-3 space-y-2.5">
+            <NothingConcentricFrame
+              caloriesRatio={calRatio}
+              proteinRatio={protRatio}
+              carbsFatRatio={cfRatio}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+                  <span className="flex items-center gap-2 text-[#F4F4F6] font-medium min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-[#E02424] shrink-0" />
+                    <span className="truncate">Калории</span>
+                  </span>
+                  <span className="font-ndot text-base sm:text-lg font-bold tracking-wider shrink-0">
+                    <span className={isOver ? 'text-[#E02424]' : 'text-white'}>
+                      {Math.round(t.calories)}
+                    </span>
+                    <span className="text-[#7A7A82]">/{dailyGoalCalories}</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+                  <span className="flex items-center gap-2 text-[#E4E4E7] min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-white shrink-0" />
+                    <span className="truncate">Белки</span>
+                  </span>
+                  <span className="font-ndot text-sm sm:text-base font-bold tracking-wider shrink-0">
+                    <span className="text-white">{Math.round(t.protein)}</span>
+                    <span className="text-[#7A7A82]">/{dailyGoalProtein}</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+                  <span className="flex items-center gap-2 text-[#A1A1AA] min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-[#7A7A82] shrink-0" />
+                    <span className="truncate">Жиры · Угл.</span>
+                  </span>
+                  <span className="font-ndot text-xs sm:text-sm font-bold tracking-wider shrink-0">
+                    <span className="text-[#E4E4E7]">{Math.round(t.fat)}</span>
+                    <span className="text-[#6E6E75]">/{dailyGoalFat}</span>
+                    <span className="text-[#52525B] mx-1">·</span>
+                    <span className="text-[#E4E4E7]">{Math.round(t.carbs)}</span>
+                    <span className="text-[#6E6E75]">/{dailyGoalCarbs}</span>
+                  </span>
+                </div>
+              </div>
+            </NothingConcentricFrame>
+
+            <div className="px-2 pb-1 space-y-2">
+              <div className="nothing-dotted-divider" />
+
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-[#7A7A82] font-medium">
+                  {isOver ? 'Превышение нормы' : 'Осталось на сегодня'}
+                </span>
+                <span
+                  className={`font-ndot text-base font-bold ${
+                    isOver ? 'text-[#E02424]' : 'text-white'
+                  }`}
+                >
+                  {isOver ? `+${Math.round(overCal)}` : Math.round(remCal)}{' '}
+                  <span className="font-sans text-[11px] font-normal text-[#7A7A82]">ккал</span>
+                </span>
+              </div>
+
+              {isOver && weeklyBank && weeklyBank.balance > 0 && (
+                <div className="flex items-center justify-between text-[11px] text-[#E4E4E7] bg-[#111113] rounded-xl px-3 py-2">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-white shrink-0" />
+                    <span>Покрыто запасом недели</span>
+                  </span>
+                  <span className="font-ndot font-bold text-white">+{weeklyBank.balance}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Compact Yesterday Repeat Pill (only shown when yesterday had meals) */}
+          {previousDayMeals.length > 0 && (
+            <div className="bg-[#1A1A1D] rounded-[20px] px-4 py-3 flex items-center justify-between gap-2">
+              {breakfastMeals.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => interactive && copyMultipleMealsToDate(breakfastMeals.map((m) => m.id))}
+                  className="flex items-center gap-2.5 min-w-0 text-left group cursor-pointer active:scale-[0.98] transition-transform"
+                >
+                  <span className="w-8 h-8 rounded-full bg-[#2A2A2F] flex items-center justify-center text-[#E02424] shrink-0">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-white truncate">
+                      Повторить завтрак ({breakfastMeals.length})
+                    </div>
+                    <div className="font-ndot text-[11px] text-[#7A7A82]">
+                      {breakfastCalories} ккал · со вчера
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => interactive && copyMealToDate(previousDayMeals[0].id)}
+                  className="flex items-center gap-2.5 min-w-0 text-left group cursor-pointer active:scale-[0.98] transition-transform"
+                >
+                  <span className="w-8 h-8 rounded-full bg-[#2A2A2F] flex items-center justify-center text-[#E02424] shrink-0">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-white truncate">
+                      {previousDayMeals[0].name}
+                    </div>
+                    <div className="font-ndot text-[11px] text-[#7A7A82]">
+                      {Math.round(previousDayMeals[0].calories)} ккал · со вчера
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => interactive && setShowYesterdayList((v) => !v)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#111113] text-[11px] text-[#A1A1AA] hover:text-white cursor-pointer transition-colors shrink-0"
+              >
+                <span className="font-ndot">{previousDayMeals.length}</span>
+                {showYesterdayList ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Expandable Full Yesterday Dishes Drawer */}
+          {showYesterdayList && previousDayMeals.length > 0 && (
+            <div className="bg-[#1A1A1D] rounded-[22px] p-3.5 space-y-2 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-white flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-[#E02424]" />
+                  <span>Вчерашние блюда</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => interactive && setShowYesterdayList(false)}
+                  className="text-[11px] text-[#7A7A82] hover:text-white cursor-pointer"
+                >
+                  Свернуть
+                </button>
+              </div>
+              <div className="nothing-dotted-divider" />
+              <div className="grid grid-cols-1 gap-1.5">
+                {previousDayMeals.map((meal) => (
+                  <button
+                    key={meal.id}
+                    type="button"
+                    onClick={() => interactive && copyMealToDate(meal.id)}
+                    className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-[#111113] hover:bg-[#222226] text-left transition-colors cursor-pointer active:scale-[0.99] min-w-0"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                      <Plus className="w-3.5 h-3.5 text-[#E02424] shrink-0" />
+                      <span className="text-xs font-medium text-[#E4E4E7] truncate">
+                        {meal.name}
+                      </span>
+                    </div>
+                    <span className="font-ndot text-xs font-bold text-white shrink-0">
+                      {Math.round(meal.calories)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN (Meals Feed) */}
+        <div className="lg:col-span-7 space-y-3">
+          <MealList meals={snap.meals} isLoading={interactive ? showInitialSkeleton : false} />
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      {/* 7-Days Week Strip Calendar (FEAT-04) */}
+    <div className="space-y-4 pb-16 lg:pb-0">
+      {/* Desktop Top Header */}
+      <div className="hidden lg:flex items-end justify-between pb-1">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white my-0">Сегодня</h1>
+          <p className="text-xs text-[#7A7A82] mt-0.5 my-0">
+            Дневник питания, КБЖУ и быстрый ввод
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => openAddMeal()}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition-colors cursor-pointer active:scale-95"
+        >
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          <span>Записать блюдо</span>
+        </button>
+      </div>
+
+      {/* Other-date AI pending banner */}
+      {otherDatePendingCount > 0 && (
+        <div className="flex items-center justify-between bg-[#1A1A1D] border border-white/[0.08] rounded-[18px] px-4 py-2.5 text-xs">
+          <div className="flex items-center gap-2.5 text-white">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E02424] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E02424]" />
+            </span>
+            <span>
+              AI в фоне анализирует {otherDatePendingCount}{' '}
+              {pluralizeRu(otherDatePendingCount, ['блюдо', 'блюда', 'блюд'])}...
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={goToToday}
+            className="text-xs font-semibold text-white underline underline-offset-4 cursor-pointer"
+          >
+            К сегодня
+          </button>
+        </div>
+      )}
+
+      {/* 1. Week Strip Calendar */}
       <WeekStripCalendar
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
@@ -67,211 +554,32 @@ export const TodayPage: React.FC = () => {
         onWeeklyBankChange={setWeeklyBank}
       />
 
-      {/* Other date pending AI indicator */}
-      {otherDatePendingCount > 0 && (
-        <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-500/30 rounded-xl px-3.5 py-2 text-xs text-emerald-300">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-            <span>
-              AI в фоне анализирует {otherDatePendingCount}{' '}
-              {pluralizeRu(otherDatePendingCount, ['блюдо', 'блюда', 'блюд'])}...
-            </span>
-          </div>
-          <button
-            onClick={goToToday}
-            className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-200 underline cursor-pointer"
-          >
-            К сегодня
-          </button>
-        </div>
-      )}
-
-      {/* Daily Progress Card — Elevated Glass & Gradient Surface */}
-      <Card
-        variant="default"
-        padding="sm"
-        className="relative overflow-hidden bg-gradient-to-b from-[#1b1c22]/95 to-[#14151a]/95 border border-white/[0.08] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-3.5 sm:p-4"
+      {/* Top-to-Bottom Zero-Jitter Wipe Container */}
+      <div
+        className="relative overflow-hidden rounded-[24px]"
+        style={{ '--wipe-duration': `${DAY_WIPE_DURATION_MS}ms` } as React.CSSProperties}
       >
-        <div className="pointer-events-none absolute -top-16 -left-16 w-44 h-44 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="relative flex items-center justify-between gap-3 sm:gap-6">
-          {/* Compact Circular Calorie Ring */}
-          <div className="shrink-0 flex items-center justify-center pl-1 sm:pl-2">
-            <ProgressRing
-              current={totals.calories}
-              target={dailyGoalCalories}
-              size={116}
-              strokeWidth={9}
+        {isWipeActive && dayWipe.prev
+          ? renderDayContent(dayWipe.prev, false)
+          : renderDayContent(activeSnap, true)}
+
+        {isWipeActive && dayWipe.next && (
+          <>
+            <div
+              key={`today-wipe-layer-${dayWipe.id}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-20 bg-black wave-mode-wipe-reveal"
             >
-              <div className="flex flex-col items-center justify-center text-center">
-                <span className="text-xl font-extrabold text-white tracking-tight leading-none">
-                  {totals.calories}
-                </span>
-                <span className="text-[10px] text-neutral-400 font-medium mt-0.5">
-                  из {dailyGoalCalories}
-                </span>
-                <span
-                  className={`text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded-full ${
-                    totals.calories > dailyGoalCalories
-                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
-                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                  }`}
-                >
-                  {totals.calories > dailyGoalCalories
-                    ? `+${totals.calories - dailyGoalCalories}`
-                    : `ост. ${remainingCalories}`}
-                </span>
-              </div>
-            </ProgressRing>
-          </div>
-
-          {/* Macros Progress Bars */}
-          <div className="flex-1 min-w-0 space-y-2.5 pr-1">
-            <ProgressBar
-              current={totals.protein}
-              target={dailyGoalProtein}
-              label="Белки"
-              color="blue"
-              size="sm"
-              unit="г"
-            />
-            <ProgressBar
-              current={totals.fat}
-              target={dailyGoalFat}
-              label="Жиры"
-              color="amber"
-              size="sm"
-              unit="г"
-            />
-            <ProgressBar
-              current={totals.carbs}
-              target={dailyGoalCarbs}
-              label="Углеводы"
-              color="purple"
-              size="sm"
-              unit="г"
-            />
-          </div>
-        </div>
-
-        {/* Weekly Bank Supportive Status (GC-02) */}
-        {totals.calories > dailyGoalCalories && weeklyBank && weeklyBank.balance > 0 && (
-          <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs text-emerald-400">
-            <span className="flex items-center gap-1.5 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Превышение покрыто запасом недели</span>
-            </span>
-            <span className="font-semibold text-emerald-300">
-              +{weeklyBank.balance} ккал в запасе
-            </span>
-          </div>
-        )}
-      </Card>
-
-      {/* Meals List Header */}
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <h2 className="text-base font-bold text-white tracking-tight my-0">
-            Приёмы пищи
-          </h2>
-          <p className="text-xs text-neutral-400">
-            {pendingAnalyzingCount > 0 ? (
-              <span className="text-emerald-400 font-medium inline-flex items-center gap-1">
-                <Sparkles className="w-3 h-3 animate-spin" />
-                {pendingAnalyzingCount} на AI анализе...
-                {meals.length > 0 && ` (${meals.length} сохранено)`}
-              </span>
-            ) : totalDisplayCount > 0 ? (
-              `${totalDisplayCount} ${pluralizeRu(totalDisplayCount, ['запись', 'записи', 'записей'])} за день`
-            ) : (
-              'Дневник питания пуст'
-            )}
-          </p>
-        </div>
-
-        <button
-          onClick={() => openAddMeal()}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 rounded-xl border border-emerald-500/30 transition-all cursor-pointer active:scale-95 min-h-[40px]"
-        >
-          <Camera className="w-4 h-4" />
-          <span>Добавить</span>
-        </button>
-      </div>
-
-      {/* Meals List */}
-      <MealList meals={meals} isLoading={isLoading} />
-
-      {/* Compact Quick Repeat Widget from Previous Day (FEAT-02) - moved to bottom */}
-      {previousDayMeals.length > 0 && (
-        <div className="bg-[#161619] border border-neutral-800/80 rounded-2xl p-3 space-y-2 mt-6">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
-              <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Повторить со вчерашнего дня</span>
-              <span className="text-[10px] text-neutral-500 font-mono">
-                ({previousDayMeals.length})
-              </span>
+              {renderDayContent(dayWipe.next, false)}
             </div>
-            {previousDayMeals.length > 4 && (
-              <button
-                type="button"
-                onClick={() => setShowAllRepeats((prev) => !prev)}
-                className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                <span>{showAllRepeats ? 'Свернуть' : `Все (${previousDayMeals.length})`}</span>
-                {showAllRepeats ? (
-                  <ChevronUp className="w-3 h-3" />
-                ) : (
-                  <ChevronDown className="w-3 h-3" />
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Featured: Yesterday Breakfast Button */}
-          {breakfastMeals.length > 0 && (
-            <button
-              type="button"
-              onClick={() =>
-                copyMultipleMealsToDate(breakfastMeals.map((m) => m.id))
-              }
-              className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-left transition-all cursor-pointer active:scale-[0.98] group"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <RotateCcw className="w-3 h-3 text-emerald-400 group-hover:-rotate-45 transition-transform shrink-0" />
-                <span className="text-xs font-medium text-white truncate">
-                  Повторить вчерашний завтрак ({breakfastMeals.length} блюд, {breakfastCalories} ккал)
-                </span>
-              </div>
-              <span className="shrink-0 text-[10px] font-semibold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-all ml-2">
-                + В дневник
-              </span>
-            </button>
-          )}
-
-          {/* Compact responsive grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-            {(showAllRepeats ? previousDayMeals : previousDayMeals.slice(0, 4)).map((meal) => (
-              <button
-                key={meal.id}
-                type="button"
-                onClick={() => copyMealToDate(meal.id)}
-                className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-[#131316] hover:bg-[#1a1a1e] border border-neutral-800 hover:border-emerald-500/40 text-neutral-300 hover:text-white transition-all cursor-pointer active:scale-[0.98] group text-left min-w-0"
-                title={`Добавить "${meal.name}" в дневник`}
-              >
-                <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
-                  <Plus className="w-3 h-3 text-emerald-400 shrink-0" />
-                  <span className="text-xs font-medium truncate">
-                    {meal.name}
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-neutral-400 group-hover:text-emerald-400 font-mono shrink-0">
-                  {Math.round(meal.calories)} ккал
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+            <div
+              key={`today-wipe-line-${dayWipe.id}`}
+              aria-hidden="true"
+              className="wave-mode-wipe-line"
+            />
+          </>
+        )}
+      </div>
     </div>
   )
 }

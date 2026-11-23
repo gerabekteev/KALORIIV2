@@ -184,32 +184,32 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
 
   return (
     <div className="space-y-3.5">
-      {/* Header controls: Search, Favorites Filter & Add Recipe Button */}
+      {/* Header controls */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-2.5" />
+          <Search className="w-3.5 h-3.5 text-[#7A7A82] absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Поиск по рецептам..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#18181b] border border-neutral-800 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-emerald-500"
+            className="w-full bg-[#1A1A1D] border border-white/[0.08] rounded-full pl-9 pr-3 py-2 text-xs text-white placeholder-[#6E6E75] outline-none focus:border-white/40"
           />
         </div>
 
         <button
           type="button"
           onClick={() => setFilterFavorite(!filterFavorite)}
-          className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer ${
+          className={`px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
             filterFavorite
-              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm shadow-amber-500/20'
-              : 'bg-[#18181b] text-neutral-400 hover:text-white border-neutral-800'
+              ? 'bg-white text-black'
+              : 'bg-[#1A1A1D] text-[#A1A1AA] hover:text-white'
           }`}
           title="Только избранные рецепты"
         >
           <Star
             className={`w-3.5 h-3.5 ${
-              filterFavorite ? 'fill-amber-400 text-amber-400' : 'text-neutral-400'
+              filterFavorite ? 'fill-black text-black' : 'text-[#A1A1AA]'
             }`}
           />
           <span className="hidden sm:inline">Избранные</span>
@@ -219,7 +219,7 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
           type="button"
           size="sm"
           onClick={() => setIsCreateModalOpen(true)}
-          className="gap-1 shrink-0 px-2.5"
+          className="gap-1 shrink-0 px-3"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Новый</span>
@@ -229,36 +229,36 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
       {/* Recipes List */}
       {isLoading ? (
         <div className="space-y-2.5">
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
         </div>
       ) : filteredRecipes.length === 0 ? (
-        <div className="text-center py-8 bg-[#18181b]/50 border border-neutral-800/80 rounded-2xl p-6">
-          <BookOpen className="w-10 h-10 text-neutral-600 mx-auto mb-2.5" />
-          <h4 className="text-sm font-semibold text-white">
+        <div className="text-center py-8 bg-[#1A1A1D] rounded-[20px] p-6">
+          <BookOpen className="w-8 h-8 text-[#7A7A82] mx-auto mb-2.5" />
+          <h4 className="text-sm font-semibold text-white my-0">
             {filterFavorite
               ? 'Нет избранных рецептов'
               : searchQuery
               ? 'Рецепты не найдены'
-              : 'У вас пока нет сохранённых рецептов'}
+              : 'У вас пока нет рецептов'}
           </h4>
-          <p className="text-xs text-neutral-400 mt-1 max-w-xs mx-auto">
+          <p className="text-xs text-[#7A7A82] mt-1 max-w-xs mx-auto">
             {filterFavorite
-              ? 'Нажмите на звёздочку возле любого рецепта, чтобы добавить его в избранное'
-              : 'Создайте свой первый рецепт или сохраните блюдо из дневника'}
+              ? 'Нажмите на звёздочку у рецепта, чтобы добавить в избранное'
+              : 'Создайте рецепт или сохраните блюдо из дневника'}
           </p>
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            className="mt-3.5 gap-1.5"
+            className="mt-3.5"
             onClick={() => {
               if (filterFavorite) setFilterFavorite(false)
               else setIsCreateModalOpen(true)
             }}
           >
-            {filterFavorite ? 'Показать все рецепты' : 'Создать рецепт'}
+            {filterFavorite ? 'Показать все' : 'Создать рецепт'}
           </Button>
         </div>
       ) : (
@@ -270,70 +270,54 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
             return (
               <div
                 key={recipe.id}
-                className={`bg-[#1c1c20] hover:bg-[#202026] border rounded-2xl p-3.5 transition-all ${
-                  recipe.is_favorite
-                    ? 'border-amber-500/20 bg-gradient-to-r from-[#1c1c20] to-[#211f18]'
-                    : 'border-neutral-800/80'
-                }`}
+                className="bg-[#1A1A1D] hover:bg-[#222226] rounded-[20px] p-3.5 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h4 className="text-sm font-bold text-white truncate my-0">
+                      <h4 className="text-sm font-semibold text-white truncate my-0">
                         {recipe.name}
                       </h4>
                       <button
                         type="button"
                         onClick={(e) => handleToggleFavorite(e, recipe.id)}
-                        className="text-neutral-500 hover:text-amber-400 transition-colors p-0.5 cursor-pointer"
-                        title={
-                          recipe.is_favorite
-                            ? 'Удалить из избранного'
-                            : 'Добавить в избранное'
-                        }
+                        className="p-0.5 cursor-pointer"
+                        title={recipe.is_favorite ? 'Убрать из избранного' : 'В избранное'}
                       >
                         <Star
                           className={`w-3.5 h-3.5 ${
                             recipe.is_favorite
-                              ? 'fill-amber-400 text-amber-400'
-                              : 'text-neutral-500'
+                              ? 'fill-[#E02424] text-[#E02424]'
+                              : 'text-[#6E6E75] hover:text-white'
                           }`}
                         />
                       </button>
                     </div>
 
                     {recipe.description && (
-                      <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-1 italic">
+                      <p className="text-[11px] text-[#7A7A82] mt-0.5 line-clamp-1 italic my-0">
                         {recipe.description}
                       </p>
                     )}
 
-                    {/* Macros Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                    <div className="flex flex-wrap items-center gap-2 mt-2 font-ndot text-[11px]">
+                      <span className="font-bold text-white">
                         {Math.round(recipe.total_calories)} ккал
                       </span>
-                      <span className="text-[11px] text-neutral-300 bg-neutral-800/80 px-1.5 py-0.5 rounded-md">
-                        {weight} г
-                      </span>
-                      <span className="text-[10px] text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded-md">
-                        Б: {Math.round(recipe.total_protein * 10) / 10}г
-                      </span>
-                      <span className="text-[10px] text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-                        Ж: {Math.round(recipe.total_fat * 10) / 10}г
-                      </span>
-                      <span className="text-[10px] text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md">
-                        У: {Math.round(recipe.total_carbs * 10) / 10}г
-                      </span>
+                      <span className="text-[#52525B]">·</span>
+                      <span className="text-[#A1A1AA]">{weight}г</span>
+                      <span className="text-[#52525B]">·</span>
+                      <span className="text-[#D4D4D8]">Б {Math.round(recipe.total_protein * 10) / 10}</span>
+                      <span className="text-[#A1A1AA]">Ж {Math.round(recipe.total_fat * 10) / 10}</span>
+                      <span className="text-[#7A7A82]">У {Math.round(recipe.total_carbs * 10) / 10}</span>
                     </div>
                   </div>
 
-                  {/* Actions right side */}
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleQuickLogFullPortion(recipe)}
-                      className="px-3 py-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 text-xs font-semibold bg-white hover:bg-neutral-200 active:scale-95 text-black rounded-full transition-all cursor-pointer flex items-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Записать</span>
@@ -350,13 +334,11 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                             setPortionWeight(weight.toString())
                           }
                         }}
-                        className="text-[11px] text-neutral-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-neutral-800 transition-colors cursor-pointer flex items-center gap-0.5"
+                        className="text-[11px] text-[#A1A1AA] hover:text-white px-2 py-0.5 rounded-full hover:bg-[#2A2A2F] transition-colors cursor-pointer flex items-center gap-0.5"
                       >
                         <span>Порция</span>
                         <ChevronDown
-                          className={`w-3 h-3 transition-transform ${
-                            isExpanded ? 'rotate-180' : ''
-                          }`}
+                          className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                         />
                       </button>
 
@@ -367,8 +349,8 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                           setEditingRecipe(recipe)
                           setIsCreateModalOpen(true)
                         }}
-                        className="text-neutral-500 hover:text-white p-1 rounded transition-colors cursor-pointer"
-                        title="Редактировать рецепт"
+                        className="text-[#7A7A82] hover:text-white p-1 rounded-full transition-colors cursor-pointer"
+                        title="Редактировать"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
@@ -379,8 +361,8 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                           e.stopPropagation()
                           setRecipeToDelete({ id: recipe.id, name: recipe.name })
                         }}
-                        className="text-neutral-500 hover:text-red-400 p-1 rounded transition-colors cursor-pointer"
-                        title="Удалить рецепт"
+                        className="text-[#7A7A82] hover:text-[#E02424] p-1 rounded-full transition-colors cursor-pointer"
+                        title="Удалить"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -388,32 +370,30 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                   </div>
                 </div>
 
-                {/* Expanded Custom Portion Calculator */}
                 {isExpanded && (
-                  <div className="mt-3 pt-3 border-t border-neutral-800 space-y-2 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between text-xs text-neutral-300">
-                      <span>Настроить размер порции:</span>
-                      <div className="flex gap-1.5">
+                  <div className="mt-3 pt-2.5 space-y-2.5 animate-in fade-in duration-150">
+                    <div className="nothing-dotted-divider" />
+                    <div className="flex items-center justify-between text-xs text-[#A1A1AA]">
+                      <span>Размер порции:</span>
+                      <div className="flex gap-1.5 font-ndot">
                         <button
                           type="button"
                           onClick={() => setPortionWeight(weight.toString())}
-                          className="px-2 py-0.5 text-[10px] bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300 cursor-pointer"
+                          className="px-2 py-0.5 text-[10px] bg-[#2A2A2F] hover:bg-white hover:text-black rounded-full text-white cursor-pointer"
                         >
-                          Вся ({weight}г)
+                          {weight}г
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            setPortionWeight(Math.round(weight / 2).toString())
-                          }
-                          className="px-2 py-0.5 text-[10px] bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300 cursor-pointer"
+                          onClick={() => setPortionWeight(Math.round(weight / 2).toString())}
+                          className="px-2 py-0.5 text-[10px] bg-[#2A2A2F] hover:bg-white hover:text-black rounded-full text-white cursor-pointer"
                         >
-                          1/2 ({Math.round(weight / 2)}г)
+                          ½ ({Math.round(weight / 2)}г)
                         </button>
                         <button
                           type="button"
                           onClick={() => setPortionWeight('100')}
-                          className="px-2 py-0.5 text-[10px] bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300 cursor-pointer"
+                          className="px-2 py-0.5 text-[10px] bg-[#2A2A2F] hover:bg-white hover:text-black rounded-full text-white cursor-pointer"
                         >
                           100г
                         </button>
@@ -424,14 +404,12 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                       <div className="relative flex-1">
                         <input
                           type="number"
-                          placeholder="Вес порции, г"
+                          placeholder="Вес, г"
                           value={portionWeight}
                           onChange={(e) => setPortionWeight(e.target.value)}
-                          className="w-full bg-[#121214] border border-neutral-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                          className="w-full bg-[#111113] border border-white/[0.1] rounded-full px-3.5 py-1.5 font-ndot text-xs text-white outline-none focus:border-white/40"
                         />
-                        <span className="absolute right-3 top-1.5 text-xs text-neutral-500">
-                          г
-                        </span>
+                        <span className="absolute right-3.5 top-1.5 text-xs text-[#7A7A82]">г</span>
                       </div>
 
                       <Button
@@ -440,14 +418,12 @@ export const RecipeList: React.FC<RecipeListProps> = ({ onSelectRecipe }) => {
                         onClick={() => handleLogCustomPortion(recipe)}
                         leftIcon={<Check className="w-3.5 h-3.5" />}
                       >
-                        Записать{' '}
                         {portionWeight && !isNaN(parseFloat(portionWeight))
                           ? `${Math.round(
-                              (recipe.total_calories *
-                                parseFloat(portionWeight)) /
+                              (recipe.total_calories * parseFloat(portionWeight)) /
                                 (recipe.total_weight_grams || 100)
                             )} ккал`
-                          : ''}
+                          : 'Записать'}
                       </Button>
                     </div>
                   </div>

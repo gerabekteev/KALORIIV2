@@ -86,41 +86,31 @@ export const AIResultModal: React.FC = () => {
       maxWidth="md"
     >
       <div className="space-y-4">
-        {/* Photo Preview if available or text AI card */}
         {photoPreview ? (
-          <div className="relative rounded-2xl overflow-hidden border border-neutral-700 bg-neutral-900 aspect-video max-h-48 flex items-center justify-center">
+          <div className="relative rounded-[20px] overflow-hidden bg-black aspect-video max-h-48 flex items-center justify-center">
             <img
               src={photoPreview}
               alt="Распознанное блюдо"
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-2 right-2 bg-emerald-500/90 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-              <Sparkles className="w-3 h-3" /> AI Оценка
+            <div className="absolute top-2.5 right-2.5 bg-black/80 text-white text-[11px] font-ndot font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E02424]" />
+              AI ОЦЕНКА
             </div>
           </div>
         ) : (
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/30 to-blue-950/20 border border-emerald-500/20 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
-              <Sparkles className="w-5 h-5" />
+          <div className="p-3.5 rounded-[18px] bg-[#1A1A1D] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#2A2A2F] flex items-center justify-center text-white shrink-0">
+              <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-white">Расчёт через нейросеть AI</div>
-              <div className="text-[11px] text-neutral-400">
-                КБЖУ и порция определены на основе вашего текстового описания
+              <div className="text-xs font-semibold text-white">Расчёт через AI</div>
+              <div className="text-[11px] text-[#7A7A82]">
+                КБЖУ и порция определены по вашему описанию
               </div>
             </div>
           </div>
         )}
-
-        {/* AI Notification Banner */}
-        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs">
-          <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
-          <span>
-            {photoPreview
-              ? 'Искусственный интеллект проанализировал фото. Вы можете скорректировать любые значения перед сохранением.'
-              : 'Искусственный интеллект рассчитал КБЖУ по вашему описанию. Вы можете скорректировать любые значения перед сохранением.'}
-          </span>
-        </div>
 
         <form onSubmit={handleSave} className="space-y-3">
           <Input
@@ -182,12 +172,14 @@ export const AIResultModal: React.FC = () => {
             onChange={(e) => setForm({ ...form, meal_time: e.target.value })}
           />
 
-          <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-            <AlertCircle className="w-3.5 h-3.5 text-neutral-500" />
-            <span>Все поля можно свободно изменить</span>
+          <div className="flex items-center gap-1.5 text-xs text-[#7A7A82]">
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>Все поля можно свободно скорректировать</span>
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="nothing-dotted-divider" />
+
+          <div className="flex gap-2 pt-1">
             <Button
               type="button"
               variant="secondary"
@@ -196,11 +188,7 @@ export const AIResultModal: React.FC = () => {
             >
               Отмена
             </Button>
-            <Button
-              type="submit"
-              className="w-1/2"
-              isLoading={isSaving}
-            >
+            <Button type="submit" className="w-1/2" isLoading={isSaving}>
               Сохранить
             </Button>
           </div>

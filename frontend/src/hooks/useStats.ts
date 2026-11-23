@@ -1,61 +1,63 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { StatsResponse, WeightLog } from '../types'
 import { statsApi } from '../api/stats'
 import { PeriodType } from '../components/stats/PeriodSelector'
 
-export const useStats = (
-  initialPeriod: PeriodType = 'week',
-  initialStartDate?: string,
-  initialEndDate?: string
-) => {
+export const useStats = (initialPeriod: PeriodType = 'month') => {
   const [period, setPeriod] = useState<PeriodType>(initialPeriod)
-  const [customStartDate, setCustomStartDate] = useState<string>(initialStartDate || '')
-  const [customEndDate, setCustomEndDate] = useState<string>(initialEndDate || '')
   const [stats, setStats] = useState<StatsResponse | null>(null)
+  const [statsPeriod, setStatsPeriod] = useState<PeriodType>(initialPeriod)
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const requestIdRef = useRef(0)
+  const cacheRef = useRef<Partial<Record<PeriodType, StatsResponse>>>({})
 
-  const fetchStats = async (
-    targetPeriod?: PeriodType,
-    startDate?: string,
-    endDate?: string
-  ) => {
-    const currentPeriod = targetPeriod || period
-    const start = startDate !== undefined ? startDate : customStartDate
-    const end = endDate !== undefined ? endDate : customEndDate
-    const requestId = ++requestIdRef.current
-    setIsLoading(true)
-    setError(null)
-    try {
-      const [statsData, weightsData] = await Promise.all([
-        statsApi.getStats(currentPeriod, start || undefined, end || undefined),
-        statsApi.getWeightLogs(),
-      ])
-      if (requestId !== requestIdRef.current) return
-      setStats(statsData)
-      setWeightLogs(weightsData || [])
-      setIsLoading(false)
-    } catch (err: any) {
-      if (requestId !== requestIdRef.current) return
-      setError(err.message || 'Ошибка загрузки статистики')
-      setIsLoading(false)
-    }
-  }
+  const fetchStats = useCallback(
+    async (targetPeriod?: PeriodType) => {
+      const currentPeriod = targetPeriod || period
+      const requestId = ++requestIdRef.current
+      const cached = cacheRef.current[currentPeriod]
+
+      // If cached, deliver immediately so the pixel-wave transition starts without waiting
+      if (cached) {
+        setStats(cached)
+        setStatsPeriod(currentPeriod)
+        setIsLoading(false)
+      } else {
+        setIsLoading(true)
+      }
+      setError(null)
+
+      try {
+        const [statsData, weightsData] = await Promise.all([
+          statsApi.getStats(currentPeriod),
+          statsApi.getWeightLogs(),
+        ])
+        if (requestId !== requestIdRef.current) return
+        cacheRef.current[currentPeriod] = statsData
+        setStats(statsData)
+        setStatsPeriod(currentPeriod)
+        setWeightLogs(weightsData || [])
+        setIsLoading(false)
+      } catch (err: any) {
+        if (requestId !== requestIdRef.current) return
+        setError(err.message || 'Ошибка загрузки статистики')
+        setIsLoading(false)
+      }
+    },
+    [period]
+  )
 
   useEffect(() => {
-    fetchStats(period, customStartDate, customEndDate)
-  }, [period, customStartDate, customEndDate])
+    fetchStats(period)
+  }, [period, fetchStats])
 
   return {
     period,
     setPeriod,
-    customStartDate,
-    setCustomStartDate,
-    customEndDate,
-    setCustomEndDate,
     stats,
+    statsPeriod,
     weightLogs,
     isLoading,
     error,

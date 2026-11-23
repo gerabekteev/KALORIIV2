@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  ChefHat,
   Sparkles,
   Calendar,
   Pin,
@@ -514,24 +513,22 @@ export const MealPlanPage: React.FC = () => {
       {/* Header & Date Switcher */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2 my-0">
-            <ChefHat className="w-5 h-5 text-emerald-400" />
-            <span>AI-Ассистент: Что съесть?</span>
+          <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-white my-0">
+            Что съесть
           </h1>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Подбор 1 блюда на ужин или рациона под ваш точный остаток БЖУ
+          <p className="text-xs text-[#7A7A82] my-0 lg:mt-0.5">
+            AI-подбор 1 блюда или полного рациона под точный остаток КБЖУ
           </p>
         </div>
 
-        {/* Compact Date Switcher */}
-        <div className="flex items-center gap-1 bg-[#141418] border border-white/[0.07] p-1 rounded-xl">
+        <div className="flex items-center gap-1 bg-[#1A1A1D] p-1 rounded-full">
           <button
             type="button"
             onClick={() => setPlanDate(todayStr)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
               planDate === todayStr
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-white text-black'
+                : 'text-[#8E8E96] hover:text-white'
             }`}
           >
             Сегодня
@@ -539,10 +536,10 @@ export const MealPlanPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setPlanDate(tomorrowStr)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
               planDate === tomorrowStr
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-white text-black'
+                : 'text-[#8E8E96] hover:text-white'
             }`}
           >
             Завтра
@@ -550,534 +547,457 @@ export const MealPlanPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Live Remaining KBJU Status Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-950/50 via-[#151c19] to-[#141418] border border-emerald-500/25 p-3.5 shadow-lg">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <Flame className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-semibold text-emerald-300/90 uppercase tracking-wider block">
-                Свободный остаток на {planDate === todayStr ? 'сегодня' : planDate === tomorrowStr ? 'завтра' : planDate}
-              </span>
-              <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
-                <span className="text-lg font-extrabold text-white tracking-tight">
-                  {remCalActual} <span className="text-xs font-semibold text-neutral-400">ккал</span>
+      {/* Desktop Adaptive 2-col Bento: Left = Generator & Controls, Right = Generated Menu */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:items-start">
+        <div className={`${currentPlan && currentPlan.meals.length > 0 ? 'lg:col-span-5' : 'lg:col-span-12 max-w-2xl'} space-y-3.5`}>
+          {/* Live Remaining KBJU Card */}
+          <div className="rounded-[22px] bg-[#1A1A1D] p-4 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <span className="text-[11px] font-medium text-[#7A7A82] block">
+                  Свободный остаток ({planDate === todayStr ? 'сегодня' : planDate === tomorrowStr ? 'завтра' : planDate})
                 </span>
-                <span className="text-[11px] text-neutral-500">
-                  (съедено {eatenStats.calories} из {goalCal})
-                </span>
+                <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+                  <span className="font-ndot text-2xl font-bold text-white leading-none">
+                    {remCalActual}
+                  </span>
+                  <span className="text-xs text-[#7A7A82]">
+                    ккал · съедено {eatenStats.calories}/{goalCal}
+                  </span>
+                </div>
               </div>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#E02424] shrink-0" />
+            </div>
+
+            <div className="nothing-dotted-divider" />
+
+            <div className="flex items-center gap-3 font-ndot text-xs">
+              <span className="text-white font-bold">Б {remProtActual}г</span>
+              <span className="text-[#52525B]">·</span>
+              <span className="text-[#A1A1AA] font-bold">Ж {remFatActual}г</span>
+              <span className="text-[#52525B]">·</span>
+              <span className="text-[#7A7A82] font-bold">У {remCarbsActual}г</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] font-bold text-blue-300">
-              Б: {remProtActual}г
-            </span>
-            <span className="px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-300">
-              Ж: {remFatActual}г
-            </span>
-            <span className="px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-[11px] font-bold text-purple-300">
-              У: {remCarbsActual}г
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Instant 1-Click Smart Scenarios */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-0.5">
-          <span className="text-xs font-bold text-neutral-200 flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Быстрый подбор в 1 нажатие:</span>
-          </span>
-          <span className="text-[11px] text-neutral-500">Нажмите карточку для старта AI</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleRunSmartScenario('single')}
-            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
-              activeScenario === 'single'
-                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_8px_25px_-6px_rgba(16,185,129,0.25)]'
-                : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
-                <Utensils className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
-                1 блюдо
+          {/* 2×2 Quick 1-Click Smart Scenarios */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-medium text-[#A1A1AA] flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-[#E02424]" />
+                <span>Быстрый подбор в 1 клик</span>
               </span>
             </div>
-            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
-              На ужин / перекус
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
-              Под остаток {Math.max(220, remCalActual)} ккал
-            </div>
-          </button>
 
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleRunSmartScenario('protein')}
-            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
-              activeScenario === 'protein'
-                ? 'bg-blue-500/15 border-blue-500/50 shadow-[0_8px_25px_-6px_rgba(59,130,246,0.25)]'
-                : 'bg-[#151519] border-white/[0.07] hover:border-blue-500/30 hover:bg-[#19191f]'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400">
-                <Flame className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300">
-                Белковый буст
-              </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                {
+                  key: 'single' as const,
+                  tag: '1 блюдо',
+                  title: 'На ужин / перекус',
+                  sub: `до ${Math.max(220, remCalActual)} ккал`,
+                  icon: <Utensils className="w-4 h-4" />,
+                },
+                {
+                  key: 'protein' as const,
+                  tag: 'Белок',
+                  title: 'Добрать белок',
+                  sub: `~${Math.max(30, remProtActual)}г белка`,
+                  icon: <Flame className="w-4 h-4" />,
+                },
+                {
+                  key: 'remaining' as const,
+                  tag: '2 блюда',
+                  title: 'На остаток дня',
+                  sub: `${Math.max(220, remCalActual)} ккал`,
+                  icon: <Layers className="w-4 h-4" />,
+                },
+                {
+                  key: 'fullday' as const,
+                  tag: '3 блюда',
+                  title: 'Полный рацион',
+                  sub: `${goalCal} ккал`,
+                  icon: <Calendar className="w-4 h-4" />,
+                },
+              ].map((s) => {
+                const isActive = activeScenario === s.key
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    disabled={isGenerating}
+                    onClick={() => handleRunSmartScenario(s.key)}
+                    className={`text-left p-3.5 rounded-[20px] transition-all cursor-pointer active:scale-[0.98] ${
+                      isActive
+                        ? 'bg-[#1A1A1D] ring-1 ring-[#E02424]'
+                        : 'bg-[#1A1A1D] hover:bg-[#222226]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          isActive ? 'bg-[#E02424] text-white' : 'bg-[#2A2A2F] text-white'
+                        }`}
+                      >
+                        {s.icon}
+                      </div>
+                      <span className="font-ndot text-[10px] font-bold text-[#7A7A82] uppercase">
+                        {s.tag}
+                      </span>
+                    </div>
+                    <div className="text-xs font-semibold text-white truncate">{s.title}</div>
+                    <div className="font-ndot text-[11px] text-[#7A7A82] mt-0.5 truncate">
+                      {s.sub}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
-            <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
-              Добрать белок
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
-              Цель ~{Math.max(30, remProtActual)}г белка, мин. жиров
-            </div>
-          </button>
-
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleRunSmartScenario('remaining')}
-            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
-              activeScenario === 'remaining'
-                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_8px_25px_-6px_rgba(16,185,129,0.25)]'
-                : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-emerald-400">
-                <Layers className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
-                2 блюда
-              </span>
-            </div>
-            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
-              На остаток дня
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
-              Обед + ужин на {Math.max(220, remCalActual)} ккал
-            </div>
-          </button>
-
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleRunSmartScenario('fullday')}
-            className={`text-left p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
-              activeScenario === 'fullday'
-                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_8px_25px_-6px_rgba(16,185,129,0.25)]'
-                : 'bg-[#151519] border-white/[0.07] hover:border-emerald-500/30 hover:bg-[#19191f]'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-emerald-400">
-                <Calendar className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
-                3 блюда
-              </span>
-            </div>
-            <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
-              Полный рацион
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5 truncate">
-              Весь день на {goalCal} ккал
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Main Generator Card with Quick Preference Chips & Collapsible Fine-Tuning */}
-      <Card variant="default" padding="md" className="space-y-3.5">
-        {/* Quick Preference Chips */}
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-neutral-200 block">
-            Пожелания к блюдам (нажмите или допишите свои):
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_PREFERENCE_TAGS.map((tag) => {
-              const cleanTag = tag.replace(/^[^\p{L}\p{N}]+\s*/u, '').trim()
-              const isSelected = preferences.toLowerCase().includes(cleanTag.toLowerCase())
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => handleToggleQuickPreference(tag)}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                      : 'bg-[#121216] border-neutral-800 text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
-                  }`}
-                >
-                  {tag}
-                </button>
-              )
-            })}
           </div>
 
-          <input
-            type="text"
-            placeholder="Свои пожелания: например, есть творог и яйца, без духовки..."
-            value={preferences}
-            onChange={(e) => setPreferences(e.target.value)}
-            className="w-full bg-[#121216] border border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-emerald-500 transition-colors"
-          />
-        </div>
-
-        {/* Collapsible Fine-Tuning Toggle */}
-        <div className="border-t border-neutral-800/80 pt-2.5">
-          <button
-            type="button"
-            onClick={() => setShowAdvancedConfig((v) => !v)}
-            className="w-full flex items-center justify-between text-xs text-neutral-300 hover:text-white py-1 cursor-pointer transition-colors"
-          >
-            <span className="flex items-center gap-1.5 font-medium">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
-              <span>
-                Точная настройка:{' '}
-                <b className="text-white">
-                  {mealsCount} {pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])}
-                </b>{' '}
-                • лимит <b className="text-emerald-400">{targetCalories} ккал</b> (Б:{targetProtein} Ж:{targetFat} У:{targetCarbs})
-              </span>
-            </span>
-            {showAdvancedConfig ? (
-              <ChevronUp className="w-4 h-4 text-neutral-400 shrink-0" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
-            )}
-          </button>
-
-          {showAdvancedConfig && (
-            <div className="space-y-3.5 pt-3 mt-2 border-t border-neutral-800/60 animate-in fade-in duration-150">
-              {/* Custom Date Picker */}
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-medium text-neutral-300 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Дата плана:</span>
-                </label>
-                <input
-                  type="date"
-                  value={planDate}
-                  onChange={(e) => e.target.value && setPlanDate(e.target.value)}
-                  className="bg-[#121216] border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              {/* Number of Meals Selector */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-neutral-300 block">
-                  Количество блюд:
-                </label>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {[1, 2, 3, 4, 5].map((cnt) => (
+          {/* Generator Card: Preferences & Fine-Tuning */}
+          <Card variant="default" padding="md" className="space-y-3.5">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[#A1A1AA] block">
+                Пожелания к блюдам
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_PREFERENCE_TAGS.map((tag) => {
+                  const cleanTag = tag.replace(/^[^\p{L}\p{N}]+\s*/u, '').trim()
+                  const isSelected = preferences.toLowerCase().includes(cleanTag.toLowerCase())
+                  return (
                     <button
-                      key={cnt}
+                      key={tag}
                       type="button"
-                      onClick={() => setMealsCount(cnt)}
-                      className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        mealsCount === cnt
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm'
-                          : 'bg-[#121216] border-neutral-800 text-neutral-400 hover:text-white'
+                      onClick={() => handleToggleQuickPreference(tag)}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-white text-black'
+                          : 'bg-[#111113] text-[#A1A1AA] hover:text-white'
                       }`}
                     >
-                      {cnt} {pluralizeRu(cnt, ['блюдо', 'блюда', 'блюд'])}
+                      {tag}
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
 
-              {/* Target KBJU Inputs */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <span className="text-xs font-medium text-neutral-300">
-                    Целевые КБЖУ:
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={handleBalanceWeek}
-                      className="text-[10px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20 cursor-pointer flex items-center gap-1"
-                      title="Сбалансировать остаток недельного бюджета калорий"
-                    >
-                      <Scale className="w-2.5 h-2.5" />
-                      <span>Баланс недели</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFillRemaining}
-                      className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 cursor-pointer"
-                    >
-                      Остаток ({remCalActual} ккал)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFillFullDayGoal}
-                      className="text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-800 px-2 py-0.5 rounded-lg cursor-pointer"
-                    >
-                      Вся норма ({goalCal} ккал)
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <Input
-                    label="Макс. Калории *"
-                    type="number"
-                    min="100"
-                    max="15000"
-                    value={targetCalories}
-                    onChange={(e) => setTargetCalories(e.target.value)}
-                  />
-                  <Input
-                    label="Белки (г)"
-                    type="number"
-                    min="0"
-                    value={targetProtein}
-                    onChange={(e) => setTargetProtein(e.target.value)}
-                  />
-                  <Input
-                    label="Жиры (г)"
-                    type="number"
-                    min="0"
-                    value={targetFat}
-                    onChange={(e) => setTargetFat(e.target.value)}
-                  />
-                  <Input
-                    label="Углеводы (г)"
-                    type="number"
-                    min="0"
-                    value={targetCarbs}
-                    onChange={(e) => setTargetCarbs(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/90 bg-emerald-950/30 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>
-                    AI строго <b>не выйдет за предел {targetCalories || 0} ккал</b> и укажет граммовки.
-                  </span>
-                </div>
-              </div>
+              <input
+                type="text"
+                placeholder="Например: есть творог и яйца, без духовки..."
+                value={preferences}
+                onChange={(e) => setPreferences(e.target.value)}
+                className="w-full bg-[#111113] border border-white/[0.08] rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-[#6E6E75] outline-none focus:border-white/40 transition-colors"
+              />
             </div>
-          )}
-        </div>
 
-        {/* Action Buttons: Generate All vs Regenerate Unlocked */}
-        <div className="flex flex-col sm:flex-row gap-2 pt-1">
-          {lockedCount > 0 && currentPlan ? (
-            <>
-              <Button
+            <div className="nothing-dotted-divider" />
+
+            {/* Collapsible Fine-Tuning */}
+            <div>
+              <button
                 type="button"
-                className="flex-1"
-                size="md"
-                isLoading={isGenerating}
-                onClick={() => handleGenerate(true)}
-                leftIcon={<RefreshCw className="w-4 h-4" />}
+                onClick={() => setShowAdvancedConfig((v) => !v)}
+                className="w-full flex items-center justify-between text-xs text-[#A1A1AA] hover:text-white py-1 cursor-pointer transition-colors"
               >
-                Заменить незакреплённые (оставить {lockedCount})
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                disabled={isGenerating}
-                onClick={() => handleGenerate(false)}
-                leftIcon={<RotateCcw className="w-4 h-4" />}
-              >
-                Всё заново
-              </Button>
-            </>
-          ) : (
-            <Button
-              type="button"
-              className="w-full"
-              size="lg"
-              isLoading={isGenerating}
-              onClick={() => handleGenerate(false)}
-              leftIcon={<Sparkles className="w-4 h-4" />}
-            >
-              {currentPlan
-                ? `Подобрать другие варианты (${mealsCount} ${pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])})`
-                : `Подобрать ${mealsCount} ${pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])} на ${targetCalories} ккал`}
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      {/* Step 2: Generated Meal Plan Result */}
-      {currentPlan && currentPlan.meals.length > 0 && (
-        <div className="space-y-3 animate-in fade-in duration-200">
-          {/* Totals Summary Bar */}
-          <Card variant="default" padding="sm" className="bg-[#161f1c] border-emerald-500/30">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <span className="text-[11px] text-emerald-300 font-semibold block">
-                  Итого по сгенерированному меню ({currentPlan.meals.length}{' '}
-                  {pluralizeRu(currentPlan.meals.length, ['блюдо', 'блюда', 'блюд'])}):
-                </span>
-                <div className="flex items-center gap-2 mt-0.5 text-xs">
-                  <span className="font-extrabold text-white text-sm">
-                    {Math.round(currentPlan.total_generated_calories)} /{' '}
-                    {Math.round(currentPlan.target_calories)} ккал
-                  </span>
-                  <span className="text-blue-300">
-                    Б: {Math.round(currentPlan.total_generated_protein)}г
-                  </span>
-                  <span className="text-amber-300">
-                    Ж: {Math.round(currentPlan.total_generated_fat)}г
-                  </span>
-                  <span className="text-purple-300">
-                    У: {Math.round(currentPlan.total_generated_carbs)}г
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleOpenShoppingList}
-                  className="gap-1.5 text-xs border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 cursor-pointer"
-                  leftIcon={<ShoppingCart className="w-3.5 h-3.5 text-emerald-400" />}
-                >
-                  Список покупок
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Planned Meal Cards */}
-          {currentPlan.meals.map((meal, idx) => (
-            <Card
-              key={meal.id}
-              variant="default"
-              padding="md"
-              className={`space-y-3 transition-all ${
-                meal.locked
-                  ? 'border-emerald-500/50 bg-[#18221f]'
-                  : 'border-neutral-800/90'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-300">
-                      {meal.meal_label}
+                <span className="flex items-center gap-2 font-medium truncate">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-white shrink-0" />
+                  <span className="truncate">
+                    Настройка:{' '}
+                    <span className="font-ndot text-white font-bold">
+                      {mealsCount} · {targetCalories} ккал
                     </span>
-                    <span className="text-xs text-neutral-400 font-medium">
-                      {Math.round(meal.weight_grams)} г
-                    </span>
-                    {meal.added_to_diary && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        <Check className="w-3 h-3" />
-                        <span>В дневнике</span>
-                      </span>
-                    )}
+                  </span>
+                </span>
+                {showAdvancedConfig ? (
+                  <ChevronUp className="w-4 h-4 text-[#7A7A82] shrink-0" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-[#7A7A82] shrink-0" />
+                )}
+              </button>
+
+              {showAdvancedConfig && (
+                <div className="space-y-3.5 pt-3 mt-2 border-t border-white/[0.06] animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-medium text-[#A1A1AA] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Дата плана</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={planDate}
+                      onChange={(e) => e.target.value && setPlanDate(e.target.value)}
+                      className="bg-[#111113] border border-white/[0.1] rounded-full px-3 py-1.5 font-ndot text-xs text-white outline-none focus:border-white/40"
+                    />
                   </div>
-                  <h3 className="text-sm sm:text-base font-bold text-white mt-1">
-                    {meal.name}
-                  </h3>
-                </div>
 
-                {/* Lock / Keep Button */}
-                <button
-                  type="button"
-                  onClick={() => toggleLockMeal(planDate, meal.id)}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shrink-0 ${
-                    meal.locked
-                      ? 'bg-emerald-500 text-white border-emerald-400 shadow-sm'
-                      : 'bg-[#141418] text-neutral-400 hover:text-white border-neutral-700'
-                  }`}
-                  title="Закрепить это блюдо при перегенерации остальных"
-                >
-                  <Pin className="w-3.5 h-3.5" />
-                  <span>{meal.locked ? 'Оставлено' : 'Оставить'}</span>
-                </button>
-              </div>
-
-              {/* Macros Row */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                  {Math.round(meal.calories)} ккал
-                </span>
-                <span className="text-[11px] font-medium text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded-md">
-                  Б: {meal.protein}г
-                </span>
-                <span className="text-[11px] font-medium text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-                  Ж: {meal.fat}г
-                </span>
-                <span className="text-[11px] font-medium text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md">
-                  У: {meal.carbs}г
-                </span>
-              </div>
-
-              {/* Recipe = Simple Ingredients Composition */}
-              {meal.ingredients && meal.ingredients.length > 0 && (
-                <div className="bg-[#141417] border border-neutral-800/80 rounded-xl p-2.5 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-300">
-                    <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Состав блюда (ингредиенты):</span>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[#A1A1AA] block">
+                      Количество блюд
+                    </label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1, 2, 3, 4, 5].map((cnt) => (
+                        <button
+                          key={cnt}
+                          type="button"
+                          onClick={() => setMealsCount(cnt)}
+                          className={`py-2 rounded-full font-ndot text-xs font-bold transition-colors cursor-pointer ${
+                            mealsCount === cnt
+                              ? 'bg-white text-black'
+                              : 'bg-[#111113] text-[#8E8E96] hover:text-white'
+                          }`}
+                        >
+                          {cnt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="divide-y divide-neutral-800/60">
-                    {meal.ingredients.map((ing, i) => (
-                      <div
-                        key={i}
-                        className="py-1 flex items-center justify-between text-xs gap-2"
-                      >
-                        <span className="text-neutral-200 truncate">{ing.name}</span>
-                        <span className="text-neutral-400 font-mono text-[11px] shrink-0">
-                          {Math.round(ing.weight_grams)}г • {Math.round(ing.calories)} ккал
-                        </span>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <span className="text-xs font-medium text-[#A1A1AA]">Целевые КБЖУ</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleBalanceWeek}
+                          className="text-[10px] font-semibold text-white bg-[#2A2A2F] hover:bg-white hover:text-black px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-colors"
+                        >
+                          <Scale className="w-2.5 h-2.5" />
+                          <span>Баланс</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleFillRemaining}
+                          className="text-[10px] font-semibold text-white bg-[#2A2A2F] hover:bg-white hover:text-black px-2.5 py-1 rounded-full cursor-pointer transition-colors"
+                        >
+                          Остаток ({remCalActual})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleFillFullDayGoal}
+                          className="text-[10px] font-semibold text-[#A1A1AA] hover:text-white bg-[#111113] px-2.5 py-1 rounded-full cursor-pointer"
+                        >
+                          Норма ({goalCal})
+                        </button>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <Input
+                        label="Калории *"
+                        type="number"
+                        min="100"
+                        max="15000"
+                        value={targetCalories}
+                        onChange={(e) => setTargetCalories(e.target.value)}
+                      />
+                      <Input
+                        label="Белки (г)"
+                        type="number"
+                        min="0"
+                        value={targetProtein}
+                        onChange={(e) => setTargetProtein(e.target.value)}
+                      />
+                      <Input
+                        label="Жиры (г)"
+                        type="number"
+                        min="0"
+                        value={targetFat}
+                        onChange={(e) => setTargetFat(e.target.value)}
+                      />
+                      <Input
+                        label="Углеводы (г)"
+                        type="number"
+                        min="0"
+                        value={targetCarbs}
+                        onChange={(e) => setTargetCarbs(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-[#A1A1AA] bg-[#111113] px-3 py-2 rounded-2xl">
+                      <ShieldCheck className="w-4 h-4 text-white shrink-0" />
+                      <span>
+                        AI строго уложится в{' '}
+                        <b className="font-ndot text-white">{targetCalories || 0} ккал</b>
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* One-Click Add to Eaten Diary */}
-              <div className="pt-1 flex justify-end">
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              {lockedCount > 0 && currentPlan ? (
+                <>
+                  <Button
+                    type="button"
+                    className="flex-1"
+                    size="md"
+                    isLoading={isGenerating}
+                    onClick={() => handleGenerate(true)}
+                    leftIcon={<RefreshCw className="w-4 h-4" />}
+                  >
+                    Заменить незакреплённые ({lockedCount})
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    disabled={isGenerating}
+                    onClick={() => handleGenerate(false)}
+                    leftIcon={<RotateCcw className="w-4 h-4" />}
+                  >
+                    Всё заново
+                  </Button>
+                </>
+              ) : (
                 <Button
                   type="button"
-                  size="sm"
-                  variant={meal.added_to_diary ? 'secondary' : 'primary'}
-                  isLoading={addingMealId === meal.id}
-                  onClick={() => handleAddMealToDiary(meal, idx)}
-                  leftIcon={
-                    meal.added_to_diary ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Plus className="w-3.5 h-3.5" />
-                    )
-                  }
+                  className="w-full"
+                  size="lg"
+                  isLoading={isGenerating}
+                  onClick={() => handleGenerate(false)}
+                  leftIcon={<Sparkles className="w-4 h-4" />}
                 >
-                  {meal.added_to_diary
-                    ? 'Добавить в съеденное ещё раз'
-                    : 'Добавить в съеденное'}
+                  {currentPlan
+                    ? `Другие варианты (${mealsCount} ${pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])})`
+                    : `Подобрать ${mealsCount} ${pluralizeRu(mealsCount, ['блюдо', 'блюда', 'блюд'])} · ${targetCalories} ккал`}
                 </Button>
-              </div>
-            </Card>
-          ))}
+              )}
+            </div>
+          </Card>
         </div>
-      )}
 
-      {/* Shopping List Modal (GC-01) */}
+        {/* Right Column: Generated Meal Plan Result */}
+        {currentPlan && currentPlan.meals.length > 0 && (
+          <div className="lg:col-span-7 space-y-3 animate-in fade-in duration-200">
+            {/* Totals Bar */}
+            <div className="bg-[#1A1A1D] rounded-[22px] p-4 flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <span className="text-[11px] text-[#7A7A82] font-medium block">
+                  Сгенерированное меню ({currentPlan.meals.length}{' '}
+                  {pluralizeRu(currentPlan.meals.length, ['блюдо', 'блюда', 'блюд'])})
+                </span>
+                <div className="flex items-center gap-3 mt-1 font-ndot text-xs">
+                  <span className="font-bold text-white text-base">
+                    {Math.round(currentPlan.total_generated_calories)}/
+                    {Math.round(currentPlan.target_calories)}
+                  </span>
+                  <span className="text-[#D4D4D8]">Б {Math.round(currentPlan.total_generated_protein)}</span>
+                  <span className="text-[#A1A1AA]">Ж {Math.round(currentPlan.total_generated_fat)}</span>
+                  <span className="text-[#7A7A82]">У {Math.round(currentPlan.total_generated_carbs)}</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={handleOpenShoppingList}
+                leftIcon={<ShoppingCart className="w-3.5 h-3.5" />}
+              >
+                Список покупок
+              </Button>
+            </div>
+
+            {/* Planned Meal Cards */}
+            {currentPlan.meals.map((meal, idx) => (
+              <Card
+                key={meal.id}
+                variant="default"
+                padding="md"
+                className={`space-y-3 ${meal.locked ? 'ring-1 ring-[#E02424]' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-ndot text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#2A2A2F] text-white">
+                        {meal.meal_label}
+                      </span>
+                      <span className="font-ndot text-xs text-[#7A7A82]">
+                        {Math.round(meal.weight_grams)}г
+                      </span>
+                      {meal.added_to_diary && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white text-black">
+                          <Check className="w-3 h-3" />
+                          <span>В дневнике</span>
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-sm sm:text-base font-semibold text-white mt-1.5 my-0">
+                      {meal.name}
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleLockMeal(planDate, meal.id)}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                      meal.locked
+                        ? 'bg-[#E02424] text-white'
+                        : 'bg-[#2A2A2F] text-[#A1A1AA] hover:text-white'
+                    }`}
+                    title="Закрепить это блюдо при перегенерации"
+                  >
+                    <Pin className="w-3 h-3" />
+                    <span>{meal.locked ? 'Закреплено' : 'Оставить'}</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 font-ndot text-xs">
+                  <span className="font-bold text-white text-sm">
+                    {Math.round(meal.calories)} ккал
+                  </span>
+                  <span className="text-[#52525B]">·</span>
+                  <span className="text-[#D4D4D8]">Б {meal.protein}г</span>
+                  <span className="text-[#A1A1AA]">Ж {meal.fat}г</span>
+                  <span className="text-[#7A7A82]">У {meal.carbs}г</span>
+                </div>
+
+                {meal.ingredients && meal.ingredients.length > 0 && (
+                  <div className="bg-[#111113] rounded-[16px] p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#A1A1AA]">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Состав блюда</span>
+                    </div>
+                    <div className="divide-y divide-white/[0.06]">
+                      {meal.ingredients.map((ing, i) => (
+                        <div key={i} className="py-1.5 flex items-center justify-between text-xs gap-2">
+                          <span className="text-[#E4E4E7] truncate">{ing.name}</span>
+                          <span className="font-ndot text-[11px] text-[#7A7A82] shrink-0">
+                            {Math.round(ing.weight_grams)}г · {Math.round(ing.calories)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-1 flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={meal.added_to_diary ? 'secondary' : 'primary'}
+                    isLoading={addingMealId === meal.id}
+                    onClick={() => handleAddMealToDiary(meal, idx)}
+                    leftIcon={
+                      meal.added_to_diary ? (
+                        <Check className="w-3.5 h-3.5" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )
+                    }
+                  >
+                    {meal.added_to_diary ? 'Добавить ещё раз' : 'В съеденное'}
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Shopping List Modal */}
       <Modal
         isOpen={isShoppingListOpen}
         onClose={() => setIsShoppingListOpen(false)}
@@ -1085,17 +1005,16 @@ export const MealPlanPage: React.FC = () => {
         maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-neutral-400 border-b border-neutral-800 pb-2">
-            <span>Ингредиенты из меню на {planDate}</span>
-            <span className="font-semibold text-white">
-              {groceryItems.filter((i) => !i.checked).length} из {groceryItems.length} к покупке
+          <div className="flex items-center justify-between text-xs text-[#7A7A82]">
+            <span>Ингредиенты на {planDate}</span>
+            <span className="font-ndot font-bold text-white">
+              {groceryItems.filter((i) => !i.checked).length}/{groceryItems.length}
             </span>
           </div>
 
-          {/* Grouped by Aisles */}
           <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
             {groceryItems.length === 0 ? (
-              <p className="text-xs text-neutral-500 text-center py-6">
+              <p className="text-xs text-[#7A7A82] text-center py-6">
                 В выбранном меню пока нет ингредиентов
               </p>
             ) : (
@@ -1108,34 +1027,34 @@ export const MealPlanPage: React.FC = () => {
                 }, {} as Record<string, GroceryItem[]>)
               ).map(([categoryName, items]) => (
                 <div key={categoryName} className="space-y-1.5">
-                  <span className="text-[11px] font-bold text-neutral-300 uppercase tracking-wider block px-1">
+                  <span className="font-ndot text-[10px] font-bold text-[#7A7A82] uppercase tracking-wider block px-1">
                     {categoryName}
                   </span>
-                  <div className="bg-[#141417] rounded-xl border border-neutral-800 divide-y divide-neutral-800/60 overflow-hidden">
+                  <div className="bg-[#1A1A1D] rounded-[18px] divide-y divide-white/[0.06] overflow-hidden">
                     {items.map((item) => (
                       <div
                         key={item.id}
                         onClick={() => handleToggleGroceryItem(item.id)}
-                        className={`flex items-center justify-between p-2.5 transition-colors cursor-pointer text-xs ${
-                          item.checked ? 'bg-neutral-900/60 opacity-60' : 'hover:bg-neutral-850'
+                        className={`flex items-center justify-between p-3 transition-colors cursor-pointer text-xs ${
+                          item.checked ? 'opacity-45' : 'hover:bg-[#222226]'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           {item.checked ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <CheckSquare className="w-4 h-4 text-white shrink-0" />
                           ) : (
-                            <Square className="w-4 h-4 text-neutral-500 shrink-0" />
+                            <Square className="w-4 h-4 text-[#6E6E75] shrink-0" />
                           )}
                           <span
                             className={`font-medium truncate ${
-                              item.checked ? 'line-through text-neutral-500' : 'text-neutral-200'
+                              item.checked ? 'line-through text-[#7A7A82]' : 'text-white'
                             }`}
                           >
                             {item.name}
                           </span>
                         </div>
                         {item.totalGrams > 0 && (
-                          <span className="font-mono text-[11px] text-neutral-400 shrink-0 ml-2">
+                          <span className="font-ndot text-[11px] text-[#A1A1AA] shrink-0 ml-2">
                             {item.totalGrams}г
                           </span>
                         )}
@@ -1147,8 +1066,9 @@ export const MealPlanPage: React.FC = () => {
             )}
           </div>
 
-          {/* Send to Telegram & Close Action Buttons */}
-          <div className="pt-2 border-t border-neutral-800 flex gap-2">
+          <div className="nothing-dotted-divider" />
+
+          <div className="flex gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -1162,9 +1082,9 @@ export const MealPlanPage: React.FC = () => {
               className="w-2/3"
               isLoading={isSendingTelegram}
               onClick={handleSendToTelegram}
-              leftIcon={<Send className="w-4 h-4 text-blue-300" />}
+              leftIcon={<Send className="w-4 h-4" />}
             >
-              Отправить в Telegram
+              В Telegram
             </Button>
           </div>
         </div>

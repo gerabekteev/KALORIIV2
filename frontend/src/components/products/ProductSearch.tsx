@@ -199,11 +199,11 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
         <button
           type="button"
           onClick={() => handleStartCreate(query)}
-          className="h-10 px-3 bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-emerald-400 rounded-xl border border-neutral-700 hover:border-emerald-500/50 flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
+          className="h-11 px-3.5 bg-[#1A1A1D] hover:bg-white hover:text-black text-xs font-semibold text-white rounded-full flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
           title="Создать свой продукт"
         >
           <Plus className="w-4 h-4" />
-          <span>Свой продукт</span>
+          <span>Свой</span>
         </button>
       </div>
 
@@ -211,17 +211,17 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
       {isCreating && (
         <form
           onSubmit={handleCreateProduct}
-          className="p-4 rounded-2xl bg-[#18181d] border border-emerald-500/40 space-y-3.5 animate-in fade-in"
+          className="p-4 rounded-[20px] bg-[#1A1A1D] space-y-3.5 animate-in fade-in"
         >
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <Plus className="w-4 h-4 text-emerald-400" />
-              <span>Новый продукт (КБЖУ на 100 г)</span>
+            <h4 className="text-sm font-semibold text-white flex items-center gap-1.5 my-0">
+              <Plus className="w-4 h-4 text-[#E02424]" />
+              <span>Новый продукт (на 100 г)</span>
             </h4>
             <button
               type="button"
               onClick={handleCancelCreate}
-              className="text-neutral-400 hover:text-white p-1 rounded-lg cursor-pointer"
+              className="text-[#7A7A82] hover:text-white p-1 rounded-full cursor-pointer"
               title="Отмена"
             >
               <X className="w-4 h-4" />
@@ -244,7 +244,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                 label="Вес упаковки (г)"
                 type="number"
                 min="1"
-                placeholder="Напр. 180"
+                placeholder="180"
                 value={newProduct.package_weight_grams}
                 onChange={(e) => {
                   const val = e.target.value
@@ -260,10 +260,10 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
-                Пищевая ценность на 100 грамм (с пачки)
+              <span className="text-[11px] font-medium text-[#A1A1AA]">
+                КБЖУ на 100 грамм
               </span>
               {newProdMacroCal > 0 && (
                 <button
@@ -271,17 +271,17 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                   onClick={() =>
                     setNewProduct((prev) => ({ ...prev, calories: String(newProdMacroCal) }))
                   }
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-lg cursor-pointer"
+                  className="inline-flex items-center gap-1 font-ndot text-[11px] font-bold text-black bg-white px-2.5 py-0.5 rounded-full cursor-pointer"
                 >
                   <Calculator className="w-3 h-3" />
-                  <span>Авто: {newProdMacroCal} ккал</span>
+                  <span>Авто: {newProdMacroCal}</span>
                 </button>
               )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <Input
-                label="Ккал / 100г *"
+                label="Ккал *"
                 type="number"
                 min="0"
                 step="any"
@@ -290,7 +290,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                 onChange={(e) => setNewProduct({ ...newProduct, calories: e.target.value })}
               />
               <Input
-                label="Белки / 100г"
+                label="Белки"
                 type="number"
                 step="any"
                 min="0"
@@ -299,7 +299,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                 onChange={(e) => setNewProduct({ ...newProduct, protein: e.target.value })}
               />
               <Input
-                label="Жиры / 100г"
+                label="Жиры"
                 type="number"
                 step="any"
                 min="0"
@@ -308,7 +308,7 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                 onChange={(e) => setNewProduct({ ...newProduct, fat: e.target.value })}
               />
               <Input
-                label="Углеводы / 100г"
+                label="Углеводы"
                 type="number"
                 step="any"
                 min="0"
@@ -319,15 +319,14 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             </div>
           </div>
 
-          {/* Inline Portion Weight Selector for immediate addition */}
-          <div className="p-3 rounded-xl bg-[#121317] border border-neutral-800 space-y-2">
+          <div className="p-3 rounded-2xl bg-[#111113] space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
-                <Scale className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Ваша порция сейчас (г):</span>
+              <span className="text-xs font-medium text-[#A1A1AA] flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5" />
+                <span>Ваша порция (г):</span>
               </span>
-              <span className="text-xs font-bold text-emerald-400">
-                Итого: {newProdPortionCal} ккал ({Math.round(newProdPortionGrams)} г)
+              <span className="font-ndot text-xs font-bold text-white">
+                {newProdPortionCal} ккал · {Math.round(newProdPortionGrams)}г
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -336,23 +335,19 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                 min="1"
                 step="any"
                 value={newProduct.portion_grams}
-                onChange={(e) =>
-                  setNewProduct({ ...newProduct, portion_grams: e.target.value })
-                }
-                className="w-24 bg-[#18181d] border border-neutral-700 focus:border-emerald-500 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white outline-none text-center"
+                onChange={(e) => setNewProduct({ ...newProduct, portion_grams: e.target.value })}
+                className="w-20 bg-[#1A1A1D] border border-white/[0.1] focus:border-white rounded-full px-2.5 py-1.5 font-ndot text-sm font-bold text-white outline-none text-center"
               />
               <div className="flex flex-wrap gap-1 flex-1">
                 {[50, 100, 150, 200, 250].map((g) => (
                   <button
                     key={g}
                     type="button"
-                    onClick={() =>
-                      setNewProduct((prev) => ({ ...prev, portion_grams: String(g) }))
-                    }
-                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors ${
+                    onClick={() => setNewProduct((prev) => ({ ...prev, portion_grams: String(g) }))}
+                    className={`font-ndot px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${
                       Math.round(newProdPortionGrams) === g
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-neutral-800 text-neutral-300 hover:text-white'
+                        ? 'bg-white text-black'
+                        : 'bg-[#1A1A1D] text-[#A1A1AA] hover:text-white'
                     }`}
                   >
                     {g}г
@@ -373,13 +368,8 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             >
               Только в базу
             </Button>
-            <Button
-              type="submit"
-              size="sm"
-              className="sm:w-3/5"
-              isLoading={isSavingProduct}
-            >
-              {`Создать и в дневник (${newProdPortionCal} ккал)`}
+            <Button type="submit" size="sm" className="sm:w-3/5" isLoading={isSavingProduct}>
+              {`В дневник (${newProdPortionCal} ккал)`}
             </Button>
           </div>
         </form>
@@ -387,83 +377,72 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
 
       {/* Selected Product Portion Drawer */}
       {selectedProduct && (
-        <div className="p-4 rounded-2xl bg-[#181a20] border border-emerald-500/40 space-y-3 animate-in fade-in">
+        <div className="p-4 rounded-[20px] bg-[#1A1A1D] space-y-3 animate-in fade-in">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h4 className="text-sm font-bold text-white truncate">
+              <h4 className="text-sm font-semibold text-white truncate my-0">
                 {selectedProduct.name}
               </h4>
-              <span className="text-[11px] text-neutral-400">
-                На 100 г: {Math.round(selectedProduct.calories_per_100g)} ккал • Б:{' '}
-                {selectedProduct.protein_per_100g}г • Ж: {selectedProduct.fat_per_100g}г • У:{' '}
-                {selectedProduct.carbs_per_100g}г
+              <span className="font-ndot text-[11px] text-[#7A7A82]">
+                {Math.round(selectedProduct.calories_per_100g)} ккал · Б {selectedProduct.protein_per_100g} · Ж {selectedProduct.fat_per_100g} · У {selectedProduct.carbs_per_100g}
               </span>
             </div>
             <button
               type="button"
               onClick={() => setSelectedProduct(null)}
-              className="text-xs text-neutral-400 hover:text-white shrink-0 cursor-pointer"
+              className="text-xs text-[#A1A1AA] hover:text-white shrink-0 cursor-pointer"
             >
               Сменить
             </button>
           </div>
 
-          {/* Quick portion chips */}
-          <div className="space-y-1.5">
-            <span className="text-[10px] text-neutral-400 font-medium">Быстрый выбор веса порции:</span>
-            <div className="flex flex-wrap gap-1.5">
-              {[30, 50, 100, 150, 200, 250, 300].map((chipGrams) => (
+          <div className="flex flex-wrap gap-1.5">
+            {[30, 50, 100, 150, 200, 250, 300].map((chipGrams) => (
+              <button
+                key={chipGrams}
+                type="button"
+                onClick={() => setGrams(String(chipGrams))}
+                className={`font-ndot px-2.5 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                  Math.round(parseFloat(grams) || 0) === chipGrams
+                    ? 'bg-white text-black'
+                    : 'bg-[#111113] text-[#A1A1AA] hover:text-white'
+                }`}
+              >
+                {chipGrams}г
+              </button>
+            ))}
+            {Boolean(selectedProduct.package_weight_grams && selectedProduct.package_weight_grams > 0) && (
+              <>
                 <button
-                  key={chipGrams}
                   type="button"
-                  onClick={() => setGrams(String(chipGrams))}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    Math.round(parseFloat(grams) || 0) === chipGrams
-                      ? 'bg-emerald-500 text-white font-semibold shadow-sm'
-                      : 'bg-neutral-900 border border-neutral-700/80 text-neutral-300 hover:bg-neutral-800'
+                  onClick={() =>
+                    setGrams(String(Math.round((selectedProduct.package_weight_grams || 100) * 0.5)))
+                  }
+                  className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#111113] text-white hover:bg-[#2A2A2F] transition-colors cursor-pointer"
+                >
+                  ½ пачки ({Math.round((selectedProduct.package_weight_grams || 100) * 0.5)}г)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGrams(String(Math.round(selectedProduct.package_weight_grams || 100)))}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                    Math.round(parseFloat(grams) || 0) === Math.round(selectedProduct.package_weight_grams || 0)
+                      ? 'bg-white text-black'
+                      : 'bg-[#111113] text-white hover:bg-[#2A2A2F]'
                   }`}
                 >
-                  {chipGrams}г
+                  Вся пачка ({Math.round(selectedProduct.package_weight_grams || 100)}г)
                 </button>
-              ))}
-              {Boolean(
-                selectedProduct.package_weight_grams &&
-                  selectedProduct.package_weight_grams > 0
-              ) && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setGrams(String(Math.round((selectedProduct.package_weight_grams || 100) * 0.5)))
-                    }
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-neutral-900 border border-emerald-500/30 text-emerald-300 hover:bg-neutral-800 transition-colors cursor-pointer"
-                  >
-                    ½ пачки ({Math.round((selectedProduct.package_weight_grams || 100) * 0.5)}г)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGrams(String(Math.round(selectedProduct.package_weight_grams || 100)))}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      Math.round(parseFloat(grams) || 0) === Math.round(selectedProduct.package_weight_grams || 0)
-                        ? 'bg-emerald-500 text-white font-semibold shadow-sm'
-                        : 'bg-neutral-900 border border-emerald-500/30 text-emerald-300 hover:bg-neutral-800'
-                    }`}
-                  >
-                    Вся пачка ({Math.round(selectedProduct.package_weight_grams || 100)}г)
-                  </button>
-                </>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
-          <div className="flex items-center justify-between gap-3 bg-[#121317] p-2.5 rounded-xl border border-neutral-800">
+          <div className="flex items-center justify-between gap-3 bg-[#111113] p-3 rounded-2xl">
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() =>
-                  setGrams(String(Math.max(5, Math.round((parseFloat(grams) || 100) - 25))))
-                }
-                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer"
+                onClick={() => setGrams(String(Math.max(5, Math.round((parseFloat(grams) || 100) - 25))))}
+                className="w-8 h-8 rounded-full bg-[#2A2A2F] hover:bg-[#34343B] text-white flex items-center justify-center cursor-pointer"
                 title="-25 г"
               >
                 <Minus className="w-3.5 h-3.5" />
@@ -478,48 +457,35 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
                   if (isNaN(num) || num <= 0) setGrams('100')
                 }}
                 placeholder="100"
-                className="w-20 bg-[#18181b] border border-neutral-700 rounded-lg px-2 py-1 text-center text-sm font-bold text-white focus:border-emerald-500 outline-none"
+                className="w-20 bg-[#1A1A1D] border border-white/[0.12] rounded-full px-2 py-1.5 text-center font-ndot text-sm font-bold text-white focus:border-white outline-none"
               />
-              <span className="text-xs text-neutral-400">г</span>
+              <span className="text-xs text-[#7A7A82]">г</span>
               <button
                 type="button"
-                onClick={() =>
-                  setGrams(String(Math.round((parseFloat(grams) || 100) + 25)))
-                }
-                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer"
+                onClick={() => setGrams(String(Math.round((parseFloat(grams) || 100) + 25)))}
+                className="w-8 h-8 rounded-full bg-[#2A2A2F] hover:bg-[#34343B] text-white flex items-center justify-center cursor-pointer"
                 title="+25 г"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="text-right">
-              <span className="text-sm font-extrabold text-emerald-400 block">
+            <div className="text-right font-ndot">
+              <span className="text-base font-bold text-[#E02424] block">
                 {Math.round(selectedProduct.calories_per_100g * ((parseFloat(grams) || 100) / 100))} ккал
               </span>
-              <span className="text-[10px] text-neutral-400 block">
-                Б: {Math.round(selectedProduct.protein_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}г • Ж:{' '}
-                {Math.round(selectedProduct.fat_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}г • У:{' '}
-                {Math.round(selectedProduct.carbs_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}г
+              <span className="text-[10px] text-[#7A7A82] block">
+                Б {Math.round(selectedProduct.protein_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10} · Ж{' '}
+                {Math.round(selectedProduct.fat_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10} · У{' '}
+                {Math.round(selectedProduct.carbs_per_100g * ((parseFloat(grams) || 100) / 100) * 10) / 10}
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => handleConfirmPortion(true)}
-              className="text-xs font-medium"
-            >
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            <Button type="button" variant="secondary" size="sm" onClick={() => handleConfirmPortion(true)}>
               + Добавить ещё
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => handleConfirmPortion(false)}
-              className="text-xs font-medium"
-            >
+            <Button type="button" size="sm" onClick={() => handleConfirmPortion(false)}>
               В дневник
             </Button>
           </div>
@@ -529,8 +495,8 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
       {/* Results List */}
       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
         {isLoading ? (
-          <div className="flex items-center justify-center py-6 text-neutral-500">
-            <Loader2 className="w-5 h-5 animate-spin mr-2 text-emerald-500" />
+          <div className="flex items-center justify-center py-6 text-[#7A7A82]">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-white" />
             <span className="text-xs">Поиск...</span>
           </div>
         ) : products.length > 0 ? (
@@ -542,8 +508,8 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
             />
           ))
         ) : query ? (
-          <div className="text-center py-6 px-4 space-y-3 rounded-xl bg-neutral-900/50 border border-neutral-800">
-            <p className="text-xs text-neutral-400">
+          <div className="text-center py-6 px-4 space-y-3 rounded-[18px] bg-[#1A1A1D] border border-white/10">
+            <p className="text-xs text-[#A1A1AA]">
               По запросу «<span className="text-white font-medium">{query}</span>» ничего не найдено.
             </p>
             <Button
@@ -553,12 +519,12 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onSelectProduct })
               onClick={() => handleStartCreate(query)}
               className="mx-auto"
             >
-              <Plus className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
+              <Plus className="w-3.5 h-3.5 mr-1.5 text-white" />
               Создать продукт «{query}»
             </Button>
           </div>
         ) : (
-          <div className="text-center py-6 text-xs text-neutral-500">
+          <div className="text-center py-6 text-xs text-[#7A7A82]">
             Начните вводить название продукта
           </div>
         )}

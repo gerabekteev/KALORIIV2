@@ -1,60 +1,66 @@
 import React from 'react'
-import { Flame, Sparkles } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { useMealsStore } from '../../store/mealsStore'
 
 interface HeaderProps {
   title?: string
   subtitle?: string
-  showDate?: boolean
-  selectedDate?: string
 }
 
-export const Header: React.FC<HeaderProps> = ({
-  title,
-  subtitle,
-}) => {
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'Сегодня',
+  '/meal-plan': 'Что съесть',
+  '/stats': 'Статистика',
+  '/profile': 'Профиль',
+}
+
+export const Header: React.FC<HeaderProps> = ({ title }) => {
   const { user } = useAuthStore()
+  const { pendingMeals } = useMealsStore()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const pageTitle = title || ROUTE_TITLES[location.pathname] || 'KaloriiAI'
+  const hasAnalyzing = pendingMeals.some((p) => p.status === 'analyzing')
 
   return (
-    <header className="sticky top-0 z-30 bg-[#0b0b0e]/80 backdrop-blur-2xl border-b border-white/[0.06] px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3 transition-all">
-      <div className="max-w-lg mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.28)] ring-1 ring-white/20">
-            <Flame className="w-5 h-5 text-white fill-white drop-shadow-sm" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-white via-neutral-100 to-neutral-300 bg-clip-text text-transparent">
-                {title || 'KaloriiAI'}
+    <header className="lg:hidden sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-2.5">
+      <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h1 className="text-[22px] font-semibold tracking-tight text-white truncate my-0">
+            {pageTitle}
+          </h1>
+          {hasAnalyzing && (
+            <span
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#1A1A1D] text-[10px] font-ndot font-bold text-white"
+              title="ИИ анализирует блюдо в фоне"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E02424] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E02424]" />
               </span>
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shadow-[0_0_10px_rgba(16,185,129,0.12)]">
-                <Sparkles className="w-2.5 h-2.5 text-emerald-400" /> AI
-              </span>
-            </div>
-            {subtitle && (
-              <p className="text-[11px] text-neutral-400 font-medium leading-none mt-0.5">
-                {subtitle}
-              </p>
-            )}
-          </div>
+              AI
+            </span>
+          )}
         </div>
 
         {user && (
-          <div className="flex items-center gap-2.5 bg-white/[0.03] border border-white/[0.07] pl-3 pr-1.5 py-1 rounded-full">
-            <div className="flex flex-col items-end">
-              <span className="text-xs font-semibold text-neutral-100 leading-tight">
-                {user.name || user.email.split('@')[0]}
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-2 bg-[#1A1A1D] hover:bg-[#222226] pl-3 pr-1.5 py-1 rounded-full transition-colors cursor-pointer shrink-0 active:scale-95"
+            aria-label="Открыть профиль"
+          >
+            {user.daily_calories_goal ? (
+              <span className="font-ndot text-xs font-bold text-[#A1A1AA]">
+                {user.daily_calories_goal}
               </span>
-              {user.daily_calories_goal ? (
-                <span className="text-[10px] text-emerald-400/90 font-medium leading-tight">
-                  {user.daily_calories_goal} ккал
-                </span>
-              ) : null}
-            </div>
-            <div className="w-7 h-7 rounded-full bg-gradient-to-b from-neutral-700 to-neutral-800 border border-white/10 flex items-center justify-center text-xs font-bold text-emerald-400 shadow-inner">
+            ) : null}
+            <div className="w-7 h-7 rounded-full bg-[#2A2A2F] flex items-center justify-center text-xs font-semibold text-white">
               {(user.name?.[0] || user.email[0] || 'U').toUpperCase()}
             </div>
-          </div>
+          </button>
         )}
       </div>
     </header>

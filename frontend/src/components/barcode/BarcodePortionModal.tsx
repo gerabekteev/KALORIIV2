@@ -286,10 +286,10 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
     >
       <div className="space-y-4">
         {/* Product Card Header */}
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-[#19191e] border border-neutral-800 space-y-3">
-          <div className="flex items-start gap-3 sm:gap-3.5">
+        <div className="p-3.5 rounded-[20px] bg-[#1A1A1D] space-y-3">
+          <div className="flex items-start gap-3">
             {product.image_url ? (
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-neutral-900 border border-neutral-700/80 overflow-hidden shrink-0 flex items-center justify-center">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#111113] overflow-hidden shrink-0 flex items-center justify-center">
                 <img
                   src={resolveMediaUrl(product.image_url)}
                   alt={product.name}
@@ -300,8 +300,8 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                 />
               </div>
             ) : (
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                <Package className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2A2A2F] flex items-center justify-center text-white shrink-0">
+                <Package className="w-7 h-7" />
               </div>
             )}
 
@@ -309,63 +309,58 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
               <div className="flex items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                   {product.is_honest_sign ? (
-                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                      <ShieldCheck className="w-3 h-3" /> Честный Знак
+                    <span className="text-[10px] font-semibold text-white bg-[#2A2A2F] px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                      <ShieldCheck className="w-3 h-3 text-[#E02424]" /> Честный Знак
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[10px] font-semibold text-[#A1A1AA] bg-[#2A2A2F] px-2 py-0.5 rounded-full shrink-0">
                       Штрихкод
                     </span>
                   )}
 
                   {product.brand && (
-                    <span className="text-[11px] text-neutral-400 font-medium truncate max-w-[120px] sm:max-w-[160px]">
+                    <span className="text-[11px] text-[#7A7A82] font-medium truncate max-w-[140px]">
                       {product.brand}
                     </span>
                   )}
                 </div>
 
-                {/* Toggle inline product editor */}
                 <button
                   type="button"
                   onClick={() => setIsEditingProduct(!isEditingProduct)}
-                  className={`text-[11px] font-medium flex items-center gap-1 px-2.5 py-1 rounded-xl transition-all cursor-pointer shrink-0 ${
+                  className={`text-[11px] font-semibold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors cursor-pointer shrink-0 ${
                     isEditingProduct
-                      ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
-                      : 'text-neutral-400 hover:text-white bg-[#141418] hover:bg-neutral-800 border border-neutral-700/60'
+                      ? 'text-black bg-white'
+                      : 'text-[#A1A1AA] hover:text-white bg-[#2A2A2F]'
                   }`}
-                  title="Отредактировать неверные данные товара и сохранить в БД"
+                  title="Отредактировать данные товара"
                 >
-                  <Edit2 className="w-3.5 h-3.5" />
+                  <Edit2 className="w-3 h-3" />
                   <span>{isEditingProduct ? 'Скрыть' : 'Исправить'}</span>
                 </button>
               </div>
 
-              <h3 className="text-sm font-bold text-white line-clamp-2" title={product.name}>
+              <h3 className="text-sm font-semibold text-white line-clamp-2 my-0" title={product.name}>
                 {product.name}
               </h3>
 
-              <p className="text-[11px] text-neutral-400 mt-0.5">
-                Упаковка:{' '}
-                <span className="text-white font-medium">
-                  {safeBaseWeight} г
-                </span>{' '}
-                • {Math.round(calPer100)} ккал / 100г
+              <p className="font-ndot text-[11px] text-[#7A7A82] mt-1 my-0">
+                Упаковка <span className="text-white font-bold">{safeBaseWeight}г</span> ·{' '}
+                {Math.round(calPer100)} ккал/100г
               </p>
             </div>
           </div>
 
           {/* Inline Product Editor Drawer */}
           {isEditingProduct && (
-            <div className="mt-2 pt-3 border-t border-neutral-800/80 space-y-3 animate-in fade-in duration-200">
+            <div className="pt-3 space-y-3 animate-in fade-in duration-200">
+              <div className="nothing-dotted-divider" />
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>Коррекция товара в базе данных</span>
+                <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <Edit2 className="w-3.5 h-3.5 text-[#E02424]" />
+                  <span>Коррекция товара в базе</span>
                 </span>
-                <span className="text-[10px] text-neutral-500">
-                  Сохранится навсегда
-                </span>
+                <span className="text-[10px] text-[#7A7A82]">Сохранится навсегда</span>
               </div>
 
               <div className="space-y-2.5">
@@ -373,17 +368,13 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                   <Input
                     label="Название товара *"
                     value={editForm.name}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, name: e.target.value })
-                    }
-                    placeholder="Например: Творог 9% рассыпчатый"
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    placeholder="Например: Творог 9%"
                   />
                   <Input
-                    label="Бренд / производитель"
+                    label="Бренд"
                     value={editForm.brand}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, brand: e.target.value })
-                    }
+                    onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
                     placeholder="Например: Простоквашино"
                   />
                 </div>
@@ -395,61 +386,45 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                     min="0"
                     step="0.1"
                     value={editForm.calories}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, calories: e.target.value })
-                    }
+                    onChange={(e) => setEditForm({ ...editForm, calories: e.target.value })}
                   />
                   <Input
-                    label="Белки / 100г"
+                    label="Белки"
                     type="number"
                     min="0"
                     step="0.1"
                     value={editForm.protein}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, protein: e.target.value })
-                    }
+                    onChange={(e) => setEditForm({ ...editForm, protein: e.target.value })}
                   />
                   <Input
-                    label="Жиры / 100г"
+                    label="Жиры"
                     type="number"
                     min="0"
                     step="0.1"
                     value={editForm.fat}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, fat: e.target.value })
-                    }
+                    onChange={(e) => setEditForm({ ...editForm, fat: e.target.value })}
                   />
                   <Input
-                    label="Углеводы / 100г"
+                    label="Углеводы"
                     type="number"
                     min="0"
                     step="0.1"
                     value={editForm.carbs}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, carbs: e.target.value })
-                    }
+                    onChange={(e) => setEditForm({ ...editForm, carbs: e.target.value })}
                   />
                 </div>
 
-                <div>
-                  <Input
-                    label="Вес базовой упаковки (г)"
-                    type="number"
-                    min="1"
-                    max="10000"
-                    value={editForm.packageWeight}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        packageWeight: e.target.value,
-                      })
-                    }
-                    placeholder="200"
-                  />
-                </div>
+                <Input
+                  label="Вес упаковки (г)"
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={editForm.packageWeight}
+                  onChange={(e) => setEditForm({ ...editForm, packageWeight: e.target.value })}
+                  placeholder="200"
+                />
               </div>
 
-              {/* Editor Buttons */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <Button
                   type="button"
@@ -460,7 +435,7 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                   leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
                   className="text-xs"
                 >
-                  Обновить из сети
+                  Из сети
                 </Button>
 
                 <div className="flex items-center gap-2">
@@ -482,7 +457,7 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                     leftIcon={<Save className="w-3.5 h-3.5" />}
                     className="text-xs"
                   >
-                    Сохранить в базу
+                    Сохранить
                   </Button>
                 </div>
               </div>
@@ -490,20 +465,17 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
           )}
         </div>
 
-        {/* Regular Portion Addition Form */}
+        {/* Portion Form */}
         <form onSubmit={handleAddMeal} className="space-y-4">
-          {/* Portion Multiplier Chips (Thumb-Friendly, Min 44px Height, Responsive) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-neutral-200">
-                Количество порций / упаковок:
-              </span>
-              <span className="text-emerald-400 font-bold">
-                {multiplier}x ({currentWeightGrams} г)
+              <span className="font-medium text-[#A1A1AA]">Количество порций</span>
+              <span className="font-ndot text-white font-bold">
+                {multiplier}x · {currentWeightGrams}г
               </span>
             </div>
 
-            <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-6 gap-1.5">
               {PRESET_MULTIPLIERS.map((val) => {
                 const isSelected = multiplier === val
                 return (
@@ -511,10 +483,10 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                     key={val}
                     type="button"
                     onClick={() => handleSelectMultiplier(val)}
-                    className={`min-h-[44px] py-2 px-0.5 sm:px-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all cursor-pointer text-center flex items-center justify-center ${
+                    className={`min-h-[44px] py-2 font-ndot text-xs font-bold rounded-full transition-all cursor-pointer flex items-center justify-center ${
                       isSelected
-                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-[1.02]'
-                        : 'bg-[#18181c] text-neutral-300 hover:text-white hover:bg-[#222228] border border-neutral-800 active:scale-95'
+                        ? 'bg-white text-black'
+                        : 'bg-[#1A1A1D] text-[#A1A1AA] hover:text-white hover:bg-[#222226] active:scale-95'
                     }`}
                   >
                     {val}x
@@ -524,11 +496,10 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
             </div>
           </div>
 
-          {/* Grams and Time inputs */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="text-[11px] text-neutral-400 block mb-1 font-medium flex items-center gap-1">
-                <Scale className="w-3.5 h-3.5 text-emerald-400" /> Точный вес (г)
+              <label className="text-[11px] text-[#7A7A82] mb-1.5 font-medium flex items-center gap-1">
+                <Scale className="w-3.5 h-3.5" /> Точный вес (г)
               </label>
               <input
                 type="text"
@@ -538,66 +509,65 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
                 onChange={(e) => handleGramsChange(e.target.value)}
                 onBlur={handleGramsBlur}
                 placeholder="100"
-                className="w-full min-h-[42px] bg-[#18181b] border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none"
+                className="w-full min-h-[44px] bg-[#1A1A1D] border border-white/[0.08] rounded-2xl px-3.5 py-2 font-ndot text-sm font-bold text-white focus:border-white/40 outline-none"
               />
             </div>
 
             <div>
-              <label className="text-[11px] text-neutral-400 block mb-1 font-medium flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-emerald-400" /> Время приёма
+              <label className="text-[11px] text-[#7A7A82] mb-1.5 font-medium flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Время приёма
               </label>
               <input
                 type="time"
                 value={mealTime}
                 onChange={(e) => setMealTime(e.target.value)}
-                className="w-full min-h-[42px] bg-[#18181b] border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none"
+                className="w-full min-h-[44px] bg-[#1A1A1D] border border-white/[0.08] rounded-2xl px-3.5 py-2 font-ndot text-sm font-bold text-white focus:border-white/40 outline-none"
               />
             </div>
           </div>
 
           {/* Recalculated Nutrition Plate */}
-          <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/30 space-y-2">
+          <div className="p-3.5 rounded-[20px] bg-[#1A1A1D] space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-neutral-300 font-medium">
-                Итого за выбранную порцию ({currentWeightGrams} г):
+              <span className="text-xs text-[#A1A1AA] font-medium">
+                Итого ({currentWeightGrams} г)
               </span>
               <div className="text-right">
-                <span className="text-2xl font-black text-emerald-400">
+                <span className="font-ndot text-2xl font-bold text-[#E02424]">
                   {calculatedCalories}
                 </span>
-                <span className="text-xs text-emerald-400 ml-1 font-semibold">
-                  ккал
-                </span>
+                <span className="text-xs text-[#7A7A82] ml-1">ккал</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 border-t border-emerald-500/20 text-center text-xs">
-              <div className="bg-[#141417]/80 py-2 px-1 sm:px-2 rounded-xl border border-neutral-800">
-                <span className="text-[10px] text-neutral-400 block">Белки</span>
-                <span className="font-bold text-blue-400 text-xs sm:text-sm">
-                  {calculatedProtein} г
+            <div className="nothing-dotted-divider" />
+
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="bg-[#111113] py-2 px-1 rounded-xl">
+                <span className="text-[10px] text-[#7A7A82] block">Белки</span>
+                <span className="font-ndot font-bold text-white text-sm">
+                  {calculatedProtein}г
                 </span>
               </div>
-              <div className="bg-[#141417]/80 py-2 px-1 sm:px-2 rounded-xl border border-neutral-800">
-                <span className="text-[10px] text-neutral-400 block">Жиры</span>
-                <span className="font-bold text-amber-400 text-xs sm:text-sm">
-                  {calculatedFat} г
+              <div className="bg-[#111113] py-2 px-1 rounded-xl">
+                <span className="text-[10px] text-[#7A7A82] block">Жиры</span>
+                <span className="font-ndot font-bold text-[#D4D4D8] text-sm">
+                  {calculatedFat}г
                 </span>
               </div>
-              <div className="bg-[#141417]/80 py-2 px-1 sm:px-2 rounded-xl border border-neutral-800">
-                <span className="text-[10px] text-neutral-400 block">Углеводы</span>
-                <span className="font-bold text-purple-400 text-xs sm:text-sm">
-                  {calculatedCarbs} г
+              <div className="bg-[#111113] py-2 px-1 rounded-xl">
+                <span className="text-[10px] text-[#7A7A82] block">Углеводы</span>
+                <span className="font-ndot font-bold text-[#A1A1AA] text-sm">
+                  {calculatedCarbs}г
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-2 pt-1">
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               onClick={onClose}
               disabled={isSubmitting || isAddedSuccess}
               className="flex-1 min-h-[44px]"
@@ -608,16 +578,12 @@ export const BarcodePortionModal: React.FC<BarcodePortionModalProps> = ({
               type="submit"
               disabled={isSubmitting || isAddedSuccess}
               isLoading={isSubmitting}
-              className={`flex-2 min-h-[44px] flex items-center justify-center gap-1.5 transition-all ${
-                isAddedSuccess
-                  ? 'bg-emerald-600 hover:bg-emerald-600 text-white'
-                  : ''
-              }`}
+              className="flex-[2] min-h-[44px]"
             >
               {isAddedSuccess ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-white animate-in zoom-in-50" />
-                  <span>Добавлено в рацион!</span>
+                  <CheckCircle2 className="w-4 h-4 animate-in zoom-in-50" />
+                  <span>Добавлено!</span>
                 </>
               ) : (
                 <>

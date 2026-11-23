@@ -12,23 +12,21 @@ export const Card: React.FC<CardProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'rounded-2xl transition-all duration-200 border'
+  const baseStyles = 'rounded-[22px] transition-colors duration-150'
 
   const variants = {
-    default:
-      'bg-gradient-to-b from-[#1a1a21] to-[#141419] border-white/[0.07] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)]',
-    elevated:
-      'bg-gradient-to-b from-[#23232c] to-[#191920] border-white/[0.11] shadow-[0_16px_40px_-10px_rgba(0,0,0,0.7)]',
-    glass: 'bg-[#191920]/80 backdrop-blur-xl border-white/10 shadow-xl',
+    default: 'bg-[#1A1A1D]',
+    elevated: 'bg-[#222226]',
+    glass: 'bg-[#1A1A1D]/90 backdrop-blur-xl border border-white/[0.07]',
     interactive:
-      'bg-gradient-to-b from-[#1a1a21] to-[#141419] border-white/[0.07] hover:border-emerald-500/40 hover:from-[#1f1f27] hover:to-[#18181f] active:scale-[0.99] cursor-pointer shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)]',
+      'bg-[#1A1A1D] hover:bg-[#222226] active:scale-[0.99] cursor-pointer transition-all',
   }
 
   const paddings = {
     none: 'p-0',
-    sm: 'p-3',
+    sm: 'p-3.5',
     md: 'p-4 sm:p-5',
-    lg: 'p-6',
+    lg: 'p-5 sm:p-6',
   }
 
   return (

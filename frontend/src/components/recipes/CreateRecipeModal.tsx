@@ -284,14 +284,14 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
     >
       <div className="space-y-4">
         {/* Mode Selector */}
-        <div className="flex bg-[#141417] p-1 rounded-xl border border-neutral-800">
+        <div className="flex bg-[#1A1A1D] p-1 rounded-full gap-1">
           <button
             type="button"
             onClick={() => setMode('quick')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
               mode === 'quick'
-                ? 'bg-emerald-500 text-white shadow-md'
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-white text-black'
+                : 'text-[#8E8E96] hover:text-white'
             }`}
           >
             Быстрый ввод КБЖУ
@@ -299,10 +299,10 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
           <button
             type="button"
             onClick={() => setMode('ingredients')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
               mode === 'ingredients'
-                ? 'bg-emerald-500 text-white shadow-md'
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-white text-black'
+                : 'text-[#8E8E96] hover:text-white'
             }`}
           >
             Из ингредиентов
@@ -332,15 +332,15 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
             />
 
             {/* Sub-toggle: Per 100g vs Total Recipe Weight */}
-            <div className="p-2.5 rounded-xl bg-[#16161b] border border-neutral-800 space-y-2">
-              <div className="grid grid-cols-2 gap-1 bg-[#111115] p-1 rounded-lg border border-neutral-800">
+            <div className="p-3 rounded-[20px] bg-[#1A1A1D] space-y-2.5">
+              <div className="grid grid-cols-2 gap-1 bg-[#111113] p-1 rounded-full">
                 <button
                   type="button"
                   onClick={() => setQuickBasis('per_100g')}
-                  className={`py-1.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                  className={`py-1.5 text-[11px] font-semibold rounded-full transition-colors cursor-pointer ${
                     quickBasis === 'per_100g'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'text-neutral-400 hover:text-white'
+                      ? 'bg-white text-black'
+                      : 'text-[#8E8E96] hover:text-white'
                   }`}
                 >
                   КБЖУ на 100 г
@@ -348,13 +348,13 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setQuickBasis('total_weight')}
-                  className={`py-1.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                  className={`py-1.5 text-[11px] font-semibold rounded-full transition-colors cursor-pointer ${
                     quickBasis === 'total_weight'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'text-neutral-400 hover:text-white'
+                      ? 'bg-white text-black'
+                      : 'text-[#8E8E96] hover:text-white'
                   }`}
                 >
-                  За весь вес рецепта
+                  За весь рецепт
                 </button>
               </div>
 
@@ -365,10 +365,10 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                     onClick={() =>
                       setQuickForm((prev) => ({ ...prev, calories: String(quickMacroCal) }))
                     }
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-lg cursor-pointer"
+                    className="inline-flex items-center gap-1 font-ndot text-[11px] font-bold text-black bg-white px-2.5 py-0.5 rounded-full cursor-pointer"
                   >
                     <Calculator className="w-3 h-3" />
-                    <span>Авто по БЖУ: {quickMacroCal} ккал</span>
+                    <span>Авто: {quickMacroCal}</span>
                   </button>
                 </div>
               )}
@@ -432,13 +432,12 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-1 text-xs border-t border-neutral-800/80">
-                <span className="text-neutral-400">
+              <div className="flex items-center justify-between pt-2 text-xs border-t border-white/10">
+                <span className="text-[#7A7A82]">
                   Итого за рецепт ({Math.round(quickWeight)} г):
                 </span>
-                <span className="font-bold text-emerald-400">
-                  {quickTotalCalories} ккал • Б: {quickTotalProtein}г • Ж: {quickTotalFat}г • У:{' '}
-                  {quickTotalCarbs}г
+                <span className="font-ndot font-semibold text-white">
+                  {quickTotalCalories} ккал · Б {quickTotalProtein} · Ж {quickTotalFat} · У {quickTotalCarbs}
                 </span>
               </div>
             </div>
@@ -478,29 +477,29 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
             />
 
             {/* Add ingredient box */}
-            <div className="p-3 rounded-xl bg-[#18181c] border border-neutral-800 space-y-2.5">
-              <span className="text-xs font-semibold text-neutral-300 block">
+            <div className="p-3.5 rounded-[18px] bg-[#1A1A1D] border border-white/10 space-y-2.5">
+              <span className="text-[11px] uppercase tracking-wider text-[#7A7A82] font-medium block">
                 Добавить ингредиент
               </span>
 
               {!selectedProduct ? (
                 <div className="relative">
                   <div className="relative">
-                    <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-3" />
+                    <Search className="w-4 h-4 text-[#7A7A82] absolute left-3 top-2.5" />
                     <input
                       type="text"
                       placeholder="Поиск продукта в базе..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-[#121214] border border-neutral-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-emerald-500"
+                      className="w-full bg-[#111113] border border-white/10 rounded-[14px] pl-9 pr-8 py-2 text-xs text-white placeholder-[#7A7A82] outline-none focus:border-white/40 transition-colors"
                     />
                     {isSearching && (
-                      <Loader2 className="w-3.5 h-3.5 text-emerald-400 absolute right-3 top-3 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 text-white absolute right-3 top-2.5 animate-spin" />
                     )}
                   </div>
 
                   {searchResults.length > 0 && (
-                    <div className="mt-2 bg-[#202025] border border-neutral-700 rounded-xl max-h-44 overflow-y-auto shadow-lg">
+                    <div className="mt-2 bg-[#111113] border border-white/10 rounded-[14px] max-h-44 overflow-y-auto shadow-lg">
                       {searchResults.map((p) => (
                         <button
                           key={p.id}
@@ -510,10 +509,10 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                             setSearchResults([])
                             setSearchQuery('')
                           }}
-                          className="w-full text-left p-2 hover:bg-neutral-800 text-xs text-white flex items-center justify-between border-b border-neutral-800 last:border-0 cursor-pointer"
+                          className="w-full text-left p-2.5 hover:bg-white/5 text-xs text-white flex items-center justify-between border-b border-white/5 last:border-0 cursor-pointer"
                         >
                           <span className="font-medium truncate">{p.name}</span>
-                          <span className="text-neutral-400 text-[11px] shrink-0 ml-2">
+                          <span className="text-[#7A7A82] text-[11px] font-ndot shrink-0 ml-2">
                             {p.calories_per_100g} ккал / 100г
                           </span>
                         </button>
@@ -523,12 +522,12 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 flex items-center justify-between bg-[#121214] border border-emerald-500/50 rounded-xl px-3 py-1.5 text-xs text-emerald-300 font-medium truncate">
+                  <div className="flex-1 flex items-center justify-between bg-[#111113] border border-white/30 rounded-[14px] px-3 py-1.5 text-xs text-white font-medium truncate">
                     <span className="truncate">{selectedProduct.name} ({selectedProduct.calories_per_100g} ккал/100г)</span>
                     <button
                       type="button"
                       onClick={() => setSelectedProduct(null)}
-                      className="text-neutral-400 hover:text-white p-0.5 ml-1 transition-colors cursor-pointer shrink-0"
+                      className="text-[#7A7A82] hover:text-white p-0.5 ml-1 transition-colors cursor-pointer shrink-0"
                       title="Отменить выбор"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -539,7 +538,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                     placeholder="Вес, г"
                     value={ingredientWeight}
                     onChange={(e) => setIngredientWeight(e.target.value)}
-                    className="w-20 bg-[#121214] border border-neutral-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none text-center focus:border-emerald-500"
+                    className="w-20 bg-[#111113] border border-white/10 rounded-[14px] px-2.5 py-1.5 text-xs text-white outline-none text-center font-ndot focus:border-white/40"
                   />
                   <Button
                     type="button"
@@ -556,19 +555,19 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
             {/* Added ingredients list */}
             {ingredients.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-neutral-400">
-                  Состав рецепта ({ingredients.length}):
+                <span className="text-[11px] uppercase tracking-wider text-[#7A7A82] font-medium">
+                  Состав рецепта ({ingredients.length})
                 </span>
                 <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                   {ingredients.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between bg-[#19191d] border border-neutral-800 px-3 py-1.5 rounded-lg text-xs"
+                      className="flex items-center justify-between bg-[#1A1A1D] border border-white/10 px-3 py-2 rounded-[14px] text-xs"
                     >
                       <div className="truncate mr-2">
                         <span className="font-medium text-white">{item.product.name}</span>
-                        <span className="text-neutral-400 text-[11px] ml-1.5">
-                          ({item.weight_grams}г •{' '}
+                        <span className="text-[#7A7A82] text-[11px] ml-1.5 tabular-nums">
+                          ({item.weight_grams}г ·{' '}
                           {Math.round(
                             (item.product.calories_per_100g * item.weight_grams) / 100
                           )}{' '}
@@ -578,7 +577,7 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRemoveIngredient(idx)}
-                        className="text-neutral-500 hover:text-red-400 transition-colors p-1 cursor-pointer"
+                        className="text-[#7A7A82] hover:text-[#E02424] transition-colors p-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -587,18 +586,17 @@ export const CreateRecipeModal: React.FC<CreateRecipeModalProps> = ({
                 </div>
 
                 {/* Auto Calculated Totals */}
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1">
-                  <div className="flex justify-between font-bold text-emerald-400">
-                    <span>Итого по рецепту:</span>
-                    <span>
-                      {Math.round(ingredientsTotals.calories)} ккал (
-                      {Math.round(ingredientsTotals.weight)}г)
+                <div className="p-3 rounded-[16px] bg-[#1A1A1D] border border-white/15 text-xs space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#A1A1AA]">Итого по рецепту:</span>
+                    <span className="font-ndot font-semibold text-white">
+                      {Math.round(ingredientsTotals.calories)} ккал ({Math.round(ingredientsTotals.weight)}г)
                     </span>
                   </div>
-                  <div className="flex justify-between text-[11px] text-neutral-300">
-                    <span>Б: {Math.round(ingredientsTotals.protein * 10) / 10}г</span>
-                    <span>Ж: {Math.round(ingredientsTotals.fat * 10) / 10}г</span>
-                    <span>У: {Math.round(ingredientsTotals.carbs * 10) / 10}г</span>
+                  <div className="flex justify-between text-[11px] text-[#7A7A82] tabular-nums">
+                    <span>Б: <strong className="text-white">{Math.round(ingredientsTotals.protein * 10) / 10}г</strong></span>
+                    <span>Ж: <strong className="text-white">{Math.round(ingredientsTotals.fat * 10) / 10}г</strong></span>
+                    <span>У: <strong className="text-white">{Math.round(ingredientsTotals.carbs * 10) / 10}г</strong></span>
                   </div>
                 </div>
               </div>

@@ -49,38 +49,39 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
   children,
 }) => {
   return (
-    <div className="bg-[#18181c] border border-neutral-800/80 rounded-2xl overflow-hidden shadow-sm transition-all">
+    <div className="bg-[#1A1A1D] rounded-[22px] overflow-hidden transition-colors">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3.5 sm:p-4 text-left hover:bg-neutral-800/30 transition-colors cursor-pointer select-none"
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-[#222226] transition-colors cursor-pointer select-none"
       >
         <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-          <div className="w-8 h-8 rounded-xl bg-neutral-800/80 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full bg-[#2A2A2F] flex items-center justify-center shrink-0 text-white">
             {icon}
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-white tracking-tight my-0">
+            <h3 className="text-sm font-semibold text-white tracking-tight my-0">
               {title}
             </h3>
             {subtitle && (
-              <p className="text-[11px] text-neutral-400 truncate mt-0.5 font-medium">
+              <p className="text-[11px] text-[#7A7A82] truncate mt-0.5 my-0">
                 {subtitle}
               </p>
             )}
           </div>
         </div>
-        <div className="shrink-0 text-neutral-400">
+        <div className="shrink-0 text-[#7A7A82]">
           <ChevronDown
             className={`w-4 h-4 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-emerald-400' : ''
+              isOpen ? 'rotate-180 text-[#E02424]' : ''
             }`}
           />
         </div>
       </button>
 
       {isOpen && (
-        <div className="border-t border-neutral-800/80 p-3.5 sm:p-4 space-y-3.5 animate-in fade-in duration-150">
+        <div className="px-4 pb-4 space-y-3.5 animate-in fade-in duration-150">
+          <div className="nothing-dotted-divider" />
           {children}
         </div>
       )}
@@ -335,23 +336,29 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Desktop Heading */}
+      <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-white my-0">
+        Профиль
+      </h1>
+
       {/* User Header Card */}
-      <Card variant="default" padding="md" className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-lg font-bold text-white shadow-lg shadow-emerald-500/20">
+      <Card variant="default" padding="md" className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-lg font-bold text-black shrink-0">
             {(user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
           </div>
-          <div>
-            <h2 className="text-base font-bold text-white tracking-tight my-0">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-white tracking-tight truncate my-0">
               {user?.name || 'Пользователь'}
             </h2>
-            <p className="text-xs text-neutral-400 mt-0.5">{user?.email}</p>
+            <p className="text-xs text-[#7A7A82] truncate mt-0.5 my-0">{user?.email}</p>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={logout}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#E02424] hover:bg-[#E02424]/10 rounded-full transition-colors cursor-pointer shrink-0"
           title="Выйти из аккаунта"
         >
           <LogOut className="w-4 h-4" />
@@ -359,340 +366,341 @@ export const ProfilePage: React.FC = () => {
         </button>
       </Card>
 
-      {/* 1. Accordion: Body Parameters */}
-      <AccordionSection
-        id="body"
-        title="Параметры тела"
-        subtitle={
-          [
-            currentWeight && `${currentWeight} кг`,
-            height && `${height} см`,
-            age && `${age} лет`,
-          ]
-            .filter(Boolean)
-            .join(' • ') || 'Рост, вес, возраст, уровень активности'
-        }
-        icon={<User className="w-4 h-4 text-emerald-400" />}
-        isOpen={openSections.body}
-        onToggle={() => toggleSection('body')}
-      >
+      {/* Desktop Adaptive 2-Column Bento Settings Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-start">
         <div className="space-y-3.5">
-          <Input
-            label="Имя"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ваше имя"
-          />
+          {/* 1. Body Parameters */}
+          <AccordionSection
+            id="body"
+            title="Параметры тела"
+            subtitle={
+              [
+                currentWeight && `${currentWeight} кг`,
+                height && `${height} см`,
+                age && `${age} лет`,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'Рост, вес, возраст, активность'
+            }
+            icon={<User className="w-4 h-4" />}
+            isOpen={openSections.body}
+            onToggle={() => toggleSection('body')}
+          >
+            <div className="space-y-3.5">
+              <Input
+                label="Имя"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ваше имя"
+              />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Рост (см)"
-              type="number"
-              placeholder="175"
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
-            />
-            <Input
-              label="Возраст"
-              type="number"
-              placeholder="25"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-            />
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Рост (см)"
+                  type="number"
+                  placeholder="175"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                />
+                <Input
+                  label="Возраст"
+                  type="number"
+                  placeholder="25"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Текущий вес (кг)"
-              type="number"
-              step="0.1"
-              placeholder="80"
-              value={currentWeight}
-              onChange={(e) => setCurrentWeight(e.target.value)}
-            />
-            <Input
-              label="Целевой вес (кг)"
-              type="number"
-              step="0.1"
-              placeholder="72"
-              value={targetWeight}
-              onChange={(e) => setTargetWeight(e.target.value)}
-            />
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Текущий вес (кг)"
+                  type="number"
+                  step="0.1"
+                  placeholder="80"
+                  value={currentWeight}
+                  onChange={(e) => setCurrentWeight(e.target.value)}
+                />
+                <Input
+                  label="Целевой вес (кг)"
+                  type="number"
+                  step="0.1"
+                  placeholder="72"
+                  value={targetWeight}
+                  onChange={(e) => setTargetWeight(e.target.value)}
+                />
+              </div>
 
-          {/* Gender selection */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-neutral-300 block">
-              Пол
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#A1A1AA] block">Пол</label>
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-[#111113]">
+                  <button
+                    type="button"
+                    onClick={() => setGender('male')}
+                    className={`py-2 px-3 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
+                      gender === 'male'
+                        ? 'bg-white text-black'
+                        : 'text-[#8E8E96] hover:text-white'
+                    }`}
+                  >
+                    Мужской
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender('female')}
+                    className={`py-2 px-3 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
+                      gender === 'female'
+                        ? 'bg-white text-black'
+                        : 'text-[#8E8E96] hover:text-white'
+                    }`}
+                  >
+                    Женский
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#A1A1AA] block">
+                  Уровень активности
+                </label>
+                <select
+                  value={activity}
+                  onChange={(e) => setActivity(e.target.value as ActivityLevel)}
+                  className="w-full min-h-[44px] bg-[#111113] border border-white/[0.08] text-white rounded-2xl px-3.5 py-2.5 text-xs outline-none focus:border-white/40"
+                >
+                  <option value="sedentary">Сидячий образ жизни (мало или нет тренировок)</option>
+                  <option value="light">Лёгкая активность (1–3 тренировки в неделю)</option>
+                  <option value="moderate">Умеренная активность (3–5 тренировок в неделю)</option>
+                  <option value="active">Высокая активность (6–7 тренировок в неделю)</option>
+                  <option value="very_active">Экстремальная активность (тяжёлый спорт/труд)</option>
+                </select>
+              </div>
+
+              <Button
                 type="button"
-                onClick={() => setGender('male')}
-                className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                  gender === 'male'
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'bg-[#141417] border-neutral-800 text-neutral-400 hover:text-white'
-                }`}
+                className="w-full"
+                size="md"
+                isLoading={isSaving}
+                onClick={() => handleSaveProfile(undefined, 'Параметры тела сохранены!')}
+                leftIcon={<Save className="w-4 h-4" />}
               >
-                Мужской
-              </button>
-              <button
-                type="button"
-                onClick={() => setGender('female')}
-                className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                  gender === 'female'
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'bg-[#141417] border-neutral-800 text-neutral-400 hover:text-white'
-                }`}
-              >
-                Женский
-              </button>
+                Сохранить параметры
+              </Button>
             </div>
-          </div>
+          </AccordionSection>
 
-          {/* Activity Level */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-neutral-300 block">
-              Уровень активности
-            </label>
-            <select
-              value={activity}
-              onChange={(e) => setActivity(e.target.value as ActivityLevel)}
-              className="w-full bg-[#141417] border border-neutral-800 text-white rounded-xl px-3 py-2.5 text-xs outline-none focus:border-emerald-500"
-            >
-              <option value="sedentary">Сидячий образ жизни (мало или нет тренировок)</option>
-              <option value="light">Легкая активность (тренировки 1-3 раза в неделю)</option>
-              <option value="moderate">Умеренная активность (тренировки 3-5 раз в неделю)</option>
-              <option value="active">Высокая активность (тренировки 6-7 раз в неделю)</option>
-              <option value="very_active">Экстремальная активность (тяжелый спорт/труд)</option>
-            </select>
-          </div>
-
-          <Button
-            type="button"
-            className="w-full mt-2"
-            size="md"
-            isLoading={isSaving}
-            onClick={() => handleSaveProfile(undefined, 'Параметры тела успешно сохранены!')}
-            leftIcon={<Save className="w-4 h-4" />}
+          {/* 2. KBJU Goals */}
+          <AccordionSection
+            id="goals"
+            title="Дневная цель КБЖУ"
+            subtitle={`${goalCalories || 2000} ккал · Б ${goalProtein || 140} · Ж ${goalFat || 70} · У ${goalCarbs || 250}`}
+            icon={<Calculator className="w-4 h-4" />}
+            isOpen={openSections.goals}
+            onToggle={() => toggleSection('goals')}
           >
-            Сохранить параметры тела
-          </Button>
-        </div>
-      </AccordionSection>
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#7A7A82]">Суточные нормы</span>
+                <button
+                  type="button"
+                  onClick={handleCalculateMifflinStJeor}
+                  disabled={isCalculating}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[#2A2A2F] hover:bg-white hover:text-black px-3 py-1 rounded-full transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Mifflin-St Jeor</span>
+                </button>
+              </div>
 
-      {/* 2. Accordion: KBJU Goals */}
-      <AccordionSection
-        id="goals"
-        title="Дневная цель КБЖУ"
-        subtitle={`${goalCalories || 2000} ккал • Б:${goalProtein || 140}г Ж:${goalFat || 70}г У:${goalCarbs || 250}г`}
-        icon={<Calculator className="w-4 h-4 text-sky-400" />}
-        isOpen={openSections.goals}
-        onToggle={() => toggleSection('goals')}
-      >
+              <Input
+                label="Калории (ккал/день) *"
+                type="number"
+                value={goalCalories}
+                onChange={(e) => setGoalCalories(e.target.value)}
+                required
+              />
+
+              <div className="grid grid-cols-3 gap-2 items-end">
+                <Input
+                  label="Белки (г)"
+                  type="number"
+                  value={goalProtein}
+                  onChange={(e) => setGoalProtein(e.target.value)}
+                />
+                <Input
+                  label="Жиры (г)"
+                  type="number"
+                  value={goalFat}
+                  onChange={(e) => setGoalFat(e.target.value)}
+                />
+                <Input
+                  label="Углеводы (г)"
+                  type="number"
+                  value={goalCarbs}
+                  onChange={(e) => setGoalCarbs(e.target.value)}
+                />
+              </div>
+
+              <Button
+                type="button"
+                className="w-full"
+                size="md"
+                isLoading={isSaving}
+                onClick={() => handleSaveProfile(undefined, 'Цели КБЖУ сохранены!')}
+                leftIcon={<Save className="w-4 h-4" />}
+              >
+                Сохранить цели
+              </Button>
+            </div>
+          </AccordionSection>
+
+          {/* 3. Weight Log */}
+          <AccordionSection
+            id="weight"
+            title="Журнал веса"
+            subtitle={currentWeight ? `Текущий: ${currentWeight} кг` : 'Ежедневный замер'}
+            icon={<Scale className="w-4 h-4" />}
+            isOpen={openSections.weight}
+            onToggle={() => toggleSection('weight')}
+          >
+            <div className="space-y-3">
+              <p className="text-xs text-[#7A7A82] my-0">
+                Внесите текущий вес для обновления графика динамики в статистике
+              </p>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Например: 78.5"
+                  value={newWeightLog}
+                  onChange={(e) => setNewWeightLog(e.target.value)}
+                  className="flex-1 min-w-0 min-h-[44px] bg-[#111113] border border-white/[0.08] rounded-full px-4 py-2 font-ndot text-sm font-bold text-white placeholder-[#6E6E75] outline-none focus:border-white/40"
+                />
+                <Button
+                  type="button"
+                  size="md"
+                  className="shrink-0 whitespace-nowrap"
+                  onClick={handleLogQuickWeight}
+                  isLoading={isLoggingWeight}
+                >
+                  Записать
+                </Button>
+              </div>
+            </div>
+          </AccordionSection>
+        </div>
+
         <div className="space-y-3.5">
-          <div className="flex items-center justify-between pb-1">
-            <span className="text-xs text-neutral-400">
-              Целевые суточные нормы питания
-            </span>
-            <button
-              type="button"
-              onClick={handleCalculateMifflinStJeor}
-              disabled={isCalculating}
-              className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Рассчитать (Mifflin)</span>
-            </button>
-          </div>
-
-          <Input
-            label="Калории (ккал/день) *"
-            type="number"
-            value={goalCalories}
-            onChange={(e) => setGoalCalories(e.target.value)}
-            required
-          />
-
-          <div className="grid grid-cols-3 gap-2 items-end">
-            <Input
-              label="Белки (г)"
-              type="number"
-              value={goalProtein}
-              onChange={(e) => setGoalProtein(e.target.value)}
-            />
-            <Input
-              label="Жиры (г)"
-              type="number"
-              value={goalFat}
-              onChange={(e) => setGoalFat(e.target.value)}
-            />
-            <Input
-              label="Углеводы (г)"
-              type="number"
-              value={goalCarbs}
-              onChange={(e) => setGoalCarbs(e.target.value)}
-            />
-          </div>
-
-          <Button
-            type="button"
-            className="w-full mt-2"
-            size="md"
-            isLoading={isSaving}
-            onClick={() => handleSaveProfile(undefined, 'Цели КБЖУ успешно сохранены!')}
-            leftIcon={<Save className="w-4 h-4" />}
+          {/* 4. Telegram Bot */}
+          <AccordionSection
+            id="telegram"
+            title="Telegram-бот"
+            subtitle="Добавление еды фото, текстом и голосом"
+            icon={<Send className="w-4 h-4" />}
+            isOpen={openSections.telegram}
+            onToggle={() => toggleSection('telegram')}
           >
-            Сохранить цели КБЖУ
-          </Button>
-        </div>
-      </AccordionSection>
+            <TelegramBotCard embedded />
+          </AccordionSection>
 
-      {/* 3. Accordion: Weight Log */}
-      <AccordionSection
-        id="weight"
-        title="Журнал веса"
-        subtitle={currentWeight ? `Текущий вес: ${currentWeight} кг` : 'Внесение ежедневного замера'}
-        icon={<Scale className="w-4 h-4 text-amber-400" />}
-        isOpen={openSections.weight}
-        onToggle={() => toggleSection('weight')}
-      >
-        <div className="space-y-3">
-          <p className="text-xs text-neutral-400">
-            Внесите текущий вес сегодня для отслеживания динамики на графике статистики
-          </p>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              step="0.1"
-              placeholder="Например: 78.5"
-              value={newWeightLog}
-              onChange={(e) => setNewWeightLog(e.target.value)}
-              className="flex-1 min-w-0 bg-[#141417] border border-neutral-800 rounded-xl px-3.5 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-emerald-500"
-            />
-            <Button
-              type="button"
-              size="md"
-              variant="secondary"
-              className="shrink-0 whitespace-nowrap"
-              onClick={handleLogQuickWeight}
-              isLoading={isLoggingWeight}
-            >
-              Записать вес
-            </Button>
-          </div>
-        </div>
-      </AccordionSection>
-
-      {/* 4. Accordion: Telegram Bot */}
-      <AccordionSection
-        id="telegram"
-        title="Telegram-бот"
-        subtitle="Уведомления и добавление еды через бота"
-        icon={<Send className="w-4 h-4 text-sky-400" />}
-        isOpen={openSections.telegram}
-        onToggle={() => toggleSection('telegram')}
-      >
-        <TelegramBotCard embedded />
-      </AccordionSection>
-
-      {/* 5. Accordion: AI Models Settings */}
-      <AccordionSection
-        id="ai"
-        title="Настройки ИИ-моделей"
-        subtitle="Приоритеты моделей Gemini и OpenRouter"
-        icon={<Cpu className="w-4 h-4 text-purple-400" />}
-        isOpen={openSections.ai}
-        onToggle={() => toggleSection('ai')}
-      >
-        <AISettingsCard embedded />
-      </AccordionSection>
-
-      {/* 6. Accordion: Security & Password */}
-      <AccordionSection
-        id="security"
-        title="Пароль и безопасность"
-        subtitle="Смена пароля аккаунта"
-        icon={<Lock className="w-4 h-4 text-rose-400" />}
-        isOpen={openSections.security}
-        onToggle={() => toggleSection('security')}
-      >
-        <form onSubmit={handleChangePassword} className="space-y-3.5">
-          <Input
-            label="Текущий пароль"
-            type="password"
-            placeholder="••••••••"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            required
-          />
-          <Input
-            label="Новый пароль"
-            type="password"
-            placeholder="Минимум 6 символов"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-          />
-          <Input
-            label="Подтверждение нового пароля"
-            type="password"
-            placeholder="Повторите новый пароль"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-          />
-          <Button
-            type="submit"
-            className="w-full mt-2"
-            size="md"
-            variant="secondary"
-            isLoading={isChangingPassword}
-            leftIcon={<Lock className="w-4 h-4" />}
+          {/* 5. AI Models Settings */}
+          <AccordionSection
+            id="ai"
+            title="Настройки ИИ-моделей"
+            subtitle="Приоритеты Gemini и OpenRouter"
+            icon={<Cpu className="w-4 h-4" />}
+            isOpen={openSections.ai}
+            onToggle={() => toggleSection('ai')}
           >
-            Сменить пароль
-          </Button>
-        </form>
-      </AccordionSection>
+            <AISettingsCard embedded />
+          </AccordionSection>
 
-      {/* Bottom Download App Card (Always visible on Web; in Native Android app visible ONLY when hasAppUpdate) */}
+          {/* 6. Security & Password */}
+          <AccordionSection
+            id="security"
+            title="Пароль и безопасность"
+            subtitle="Смена пароля аккаунта"
+            icon={<Lock className="w-4 h-4" />}
+            isOpen={openSections.security}
+            onToggle={() => toggleSection('security')}
+          >
+            <form onSubmit={handleChangePassword} className="space-y-3.5">
+              <Input
+                label="Текущий пароль"
+                type="password"
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+              <Input
+                label="Новый пароль"
+                type="password"
+                placeholder="Минимум 6 символов"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <Input
+                label="Подтверждение"
+                type="password"
+                placeholder="Повторите новый пароль"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              <Button
+                type="submit"
+                className="w-full"
+                size="md"
+                variant="secondary"
+                isLoading={isChangingPassword}
+                leftIcon={<Lock className="w-4 h-4" />}
+              >
+                Сменить пароль
+              </Button>
+            </form>
+          </AccordionSection>
+        </div>
+      </div>
+
+      {/* Download Android App Card */}
       {(!isNativeApp() || hasAppUpdate) && (
-        <div className="bg-gradient-to-r from-emerald-500/10 via-[#18181c] to-[#18181c] border border-emerald-500/25 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-[#1A1A1D] rounded-[22px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+            <div className="w-10 h-10 rounded-full bg-[#2A2A2F] flex items-center justify-center text-white shrink-0">
               <Smartphone className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-white my-0">
-                  {isNativeApp() ? 'Обновление KaloriiAI для Android' : 'Приложение KaloriiAI для Android'}
+                <h3 className="text-sm font-semibold text-white my-0">
+                  {isNativeApp() ? 'Обновление для Android' : 'KaloriiAI для Android'}
                 </h3>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span className="font-ndot text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2A2A2F] text-white">
                   v{serverVersion}
                 </span>
                 {hasAppUpdate && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                    Доступно обновление
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E02424] text-white">
+                    Обновление
                   </span>
                 )}
               </div>
-              <p className="text-xs text-neutral-400 mt-1 my-0">
+              <p className="text-xs text-[#7A7A82] mt-1 my-0">
                 {isNativeApp()
-                  ? `Доступна новая версия v${serverVersion}. Обновите приложение для доступа к новым функциям и улучшениям.`
-                  : 'Скачайте последнюю версию приложения (APK) — мгновенный запуск, камера и синхронизация с вашим аккаунтом'}
+                  ? `Доступна новая версия v${serverVersion}.`
+                  : 'Скачайте APK — быстрый запуск, камера и полная синхронизация'}
               </p>
             </div>
           </div>
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={() => downloadLatestApk(serverVersion)}
-            className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-colors cursor-pointer active:scale-95"
+            leftIcon={<Download className="w-4 h-4" />}
+            className="shrink-0"
           >
-            <Download className="w-4 h-4" />
-            <span>{isNativeApp() || hasAppUpdate ? 'Скачать обновление' : 'Скачать приложение'}</span>
-          </button>
+            {isNativeApp() || hasAppUpdate ? 'Обновить' : 'Скачать APK'}
+          </Button>
         </div>
       )}
     </div>

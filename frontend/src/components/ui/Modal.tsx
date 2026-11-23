@@ -4,9 +4,6 @@ import { X } from 'lucide-react'
 const modalStack: Array<() => void> = []
 const customBackHandlers: Array<() => boolean> = []
 
-/**
- * Регистрирует приоритетный обработчик кнопки «Назад» (например, для возврата из подрежима в хаб AddMealModal или закрытия лайтбокса).
- */
 export function registerBackHandler(handler: () => boolean): () => void {
   customBackHandlers.push(handler)
   return () => {
@@ -15,10 +12,6 @@ export function registerBackHandler(handler: () => boolean): () => void {
   }
 }
 
-/**
- * Закрывает верхний активный слой (подрежим или модальное окно).
- * Возвращает true, если что-то было закрыто, иначе false.
- */
 export function closeTopModal(): boolean {
   for (let i = customBackHandlers.length - 1; i >= 0; i--) {
     if (customBackHandlers[i]()) {
@@ -96,58 +89,64 @@ export const Modal: React.FC<ModalProps> = ({
   const zIndexClass = isTopModal ? 'z-[60]' : 'z-50'
 
   return (
-    <div className={`fixed inset-0 ${zIndexClass} flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200`}>
-      {/* Backdrop */}
+    <div
+      className={`fixed inset-0 ${zIndexClass} flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200`}
+    >
       {!hideBackdrop && (
         <div
           className={`fixed inset-0 transition-opacity ${
-            isTopModal ? 'bg-black/40' : 'bg-black/75 backdrop-blur-sm'
+            isTopModal ? 'bg-black/55' : 'bg-black/85 backdrop-blur-sm'
           }`}
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Modal Dialog / Mobile Bottom Sheet */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-gradient-to-b from-[#1d1d24] to-[#141419] border border-white/[0.09] rounded-t-3xl sm:rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden max-h-[90dvh] flex flex-col z-10 transition-transform duration-200 ease-out`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#111113] border border-white/[0.08] rounded-t-[28px] sm:rounded-[26px] shadow-[0_24px_80px_rgba(0,0,0,0.9)] overflow-hidden max-h-[90dvh] flex flex-col z-10 transition-transform duration-200 ease-out`}
         style={{
           paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
         }}
         role="dialog"
         aria-modal="true"
       >
-        {/* Mobile handle indicator */}
+        {/* Mobile grab handle */}
         <button
           type="button"
           onClick={onClose}
           className="w-full flex items-center justify-center py-2.5 sm:hidden shrink-0 cursor-pointer focus:outline-none"
-          aria-label="Смахнуть вниз"
+          aria-label="Закрыть окно"
         >
-          <span className="w-12 h-1.5 bg-neutral-700/80 rounded-full" />
+          <span className="w-10 h-1 bg-[#3A3A40] rounded-full" />
         </button>
 
-        {/* Header */}
         {(title || description) && (
-          <div className="flex items-center justify-between px-4 sm:px-6 pt-1 sm:pt-4 pb-3 border-b border-neutral-800/80 shrink-0">
-            <div>
-              {title && <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>}
-              {description && (
-                <p className="text-xs text-neutral-400 mt-0.5">{description}</p>
-              )}
+          <div className="px-4 sm:px-6 pt-1 sm:pt-4 pb-3 shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                {title && (
+                  <h2 className="text-lg font-semibold text-white tracking-tight truncate">
+                    {title}
+                  </h2>
+                )}
+                {description && (
+                  <p className="text-xs text-[#7A7A82] mt-0.5">{description}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-full bg-[#1E1E22] hover:bg-[#2A2A30] text-[#A1A1AA] hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800/80 rounded-xl transition-colors cursor-pointer"
-              aria-label="Закрыть"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="nothing-dotted-divider mt-3" />
           </div>
         )}
 
-        {/* Content Body */}
-        <div className="px-4 sm:px-6 py-4 overflow-y-auto overflow-x-hidden flex-1 text-neutral-200">
+        <div className="px-4 sm:px-6 py-3.5 overflow-y-auto overflow-x-hidden flex-1 text-[#E4E4E7]">
           {children}
         </div>
       </div>

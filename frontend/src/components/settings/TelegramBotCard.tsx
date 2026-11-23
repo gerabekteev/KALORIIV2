@@ -64,33 +64,31 @@ export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = fal
 
   const content = (
     <div className="space-y-3.5">
-      <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Send className="w-4 h-4 text-sky-400" />
-          <h3 className="text-sm font-bold text-white my-0">
+          <Send className="w-4 h-4 text-white" />
+          <h3 className="text-sm font-semibold text-white my-0">
             Telegram-бот KaloriiAI
           </h3>
         </div>
         {status?.is_linked && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-black bg-white px-2.5 py-0.5 rounded-full">
             <CheckCircle2 className="w-3 h-3" /> Привязан
           </span>
         )}
       </div>
 
-      <p className="text-xs text-neutral-400 leading-relaxed">
-        Отправляйте боту <b>фото еды с подписью</b>, <b>текстовые сообщения</b> или{' '}
-        <b>голосовые сообщения</b> — бот автоматически распознает блюдо через AI и
-        добавит его в ваш дневник (с сохранением расшифровки голоса в описание блюда на сайте).
+      <p className="text-xs text-[#7A7A82] leading-relaxed my-0">
+        Отправляйте боту фото еды, текст или голосовые сообщения — AI автоматически распознает блюдо и добавит в дневник.
       </p>
 
       {isLoading ? (
-        <div className="h-12 rounded-xl bg-neutral-800/50 animate-pulse" />
+        <div className="h-12 rounded-2xl bg-[#111113] animate-pulse" />
       ) : status?.is_linked ? (
-        <div className="flex items-center justify-between bg-[#141418] border border-neutral-800 p-3 rounded-xl">
+        <div className="flex items-center justify-between bg-[#111113] p-3.5 rounded-2xl">
           <div className="text-xs">
-            <span className="text-neutral-400 block">Подключённый аккаунт:</span>
-            <span className="font-bold text-white">
+            <span className="text-[#7A7A82] block">Подключённый аккаунт</span>
+            <span className="font-semibold text-white">
               {status.telegram_username ? `@${status.telegram_username}` : `Chat ID: ${status.telegram_chat_id}`}
             </span>
           </div>
@@ -109,7 +107,7 @@ export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = fal
             onClose={() => setShowUnlinkModal(false)}
             onConfirm={handleUnlink}
             title="Отвязать Telegram-аккаунт?"
-            description="Бот перестанет принимать голосовые и текстовые сообщения для вашего дневника питания."
+            description="Бот перестанет принимать сообщения для вашего дневника питания."
             confirmText="Да, отвязать"
             cancelText="Отмена"
             isDangerous
@@ -118,15 +116,13 @@ export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = fal
       ) : (
         <div className="space-y-3">
           {status?.link_code ? (
-            <div className="bg-[#141418] border border-sky-500/30 p-3 rounded-xl space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-neutral-300">
-                  Отправьте этот код боту в Telegram:
-                </span>
+            <div className="bg-[#111113] p-3.5 rounded-2xl space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-[#A1A1AA]">Код для бота:</span>
                 <button
                   type="button"
                   onClick={() => copyCode(status.link_code!)}
-                  className="inline-flex items-center gap-1 text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 cursor-pointer whitespace-nowrap shrink-0"
+                  className="inline-flex items-center gap-1.5 font-ndot text-xs font-bold text-black bg-white px-3 py-1 rounded-full cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <span>{status.link_code}</span>
                   <Copy className="w-3 h-3" />
@@ -137,10 +133,10 @@ export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = fal
                 <button
                   type="button"
                   onClick={() => openExternalUrl(status.deep_link_url!)}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition-colors cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Открыть бота в Telegram и привязать в 1 клик</span>
+                  <span>Открыть в Telegram и привязать</span>
                 </button>
               )}
             </div>
@@ -156,15 +152,10 @@ export const TelegramBotCard: React.FC<TelegramBotCardProps> = ({ embedded = fal
               onClick={handleGenerateCode}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             >
-              {status?.link_code ? 'Обновить код' : 'Получить код привязки Telegram'}
+              {status?.link_code ? 'Обновить код' : 'Получить код привязки'}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={loadStatus}
-            >
-              Проверить статус
+            <Button type="button" variant="ghost" size="sm" onClick={loadStatus}>
+              Статус
             </Button>
           </div>
         </div>

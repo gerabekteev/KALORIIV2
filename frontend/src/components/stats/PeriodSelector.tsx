@@ -1,37 +1,54 @@
 import React from 'react'
 
-export type PeriodType = 'today' | 'week' | 'month' | 'year' | 'custom'
+export type PeriodType = 'week' | 'month' | 'year'
 
 interface PeriodSelectorProps {
   selectedPeriod: PeriodType
   onSelectPeriod: (period: PeriodType) => void
 }
 
+const PERIODS: { key: PeriodType; label: string }[] = [
+  { key: 'week', label: 'Неделя' },
+  { key: 'month', label: 'Месяц' },
+  { key: 'year', label: 'Год' },
+]
+
 export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
   selectedPeriod,
   onSelectPeriod,
 }) => {
-  const periods: { key: PeriodType; label: string }[] = [
-    { key: 'today', label: 'Сегодня' },
-    { key: 'week', label: '7 дней' },
-    { key: 'month', label: '30 дней' },
-    { key: 'year', label: 'Год' },
-    { key: 'custom', label: 'Период' },
-  ]
+  const activeIndex = Math.max(
+    0,
+    PERIODS.findIndex((p) => p.key === selectedPeriod)
+  )
 
   return (
-    <div className="flex bg-[#16161a] p-1 rounded-xl border border-neutral-800/80">
-      {periods.map((p) => {
+    <div
+      className="relative grid grid-cols-3 bg-[#1A1A1D] p-1 rounded-full select-none"
+      role="tablist"
+      aria-label="Период статистики"
+    >
+      {/* Smoothly Gliding Pure-White Active Pill */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1 bottom-1 left-1 rounded-full bg-white transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{
+          width: 'calc((100% - 8px) / 3)',
+          transform: `translate3d(${activeIndex * 100}%, 0, 0)`,
+        }}
+      />
+
+      {PERIODS.map((p) => {
         const isSelected = selectedPeriod === p.key
         return (
           <button
             key={p.key}
             type="button"
+            role="tab"
+            aria-selected={isSelected}
             onClick={() => onSelectPeriod(p.key)}
-            className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-              isSelected
-                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
-                : 'text-neutral-400 hover:text-neutral-200'
+            className={`relative z-10 py-2 px-3 text-xs font-semibold rounded-full transition-colors duration-200 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 ${
+              isSelected ? 'text-black' : 'text-[#8E8E96] hover:text-white'
             }`}
           >
             {p.label}

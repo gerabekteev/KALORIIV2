@@ -15,13 +15,13 @@ export const Spinner: React.FC<SpinnerProps> = ({
   const sizes = {
     sm: 'w-4 h-4',
     md: 'w-7 h-7',
-    lg: 'w-10 h-10',
+    lg: 'w-9 h-9',
   }
 
   return (
     <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
-      <Loader2 className={`${sizes[size]} animate-spin text-emerald-500`} />
-      {label && <span className="text-xs text-neutral-400 font-medium">{label}</span>}
+      <Loader2 className={`${sizes[size]} animate-spin text-white`} />
+      {label && <span className="text-xs text-[#7A7A82] font-medium">{label}</span>}
     </div>
   )
 }
@@ -36,14 +36,14 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   variant = 'rectangular',
 }) => {
   const variantStyles = {
-    rectangular: 'rounded-xl',
+    rectangular: 'rounded-[22px]',
     circular: 'rounded-full',
     text: 'rounded-md h-4',
   }
 
   return (
     <div
-      className={`animate-pulse bg-neutral-800/70 ${variantStyles[variant]} ${className}`}
+      className={`animate-pulse bg-[#1A1A1D] ${variantStyles[variant]} ${className}`}
     />
   )
 }

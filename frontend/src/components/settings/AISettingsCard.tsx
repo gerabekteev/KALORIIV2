@@ -305,22 +305,19 @@ export const AISettingsCard: React.FC<AISettingsCardProps> = ({ embedded = false
 
   const content = (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-emerald-400" />
-          <h3 className="text-sm font-bold text-white my-0">
-            Настройки AI моделей
-          </h3>
+          <Cpu className="w-4 h-4 text-white" />
+          <h3 className="text-sm font-semibold text-white my-0">Приоритет AI-моделей</h3>
         </div>
         <button
           type="button"
           onClick={() => setShowResetModal(true)}
-          className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+          className="text-[11px] text-[#7A7A82] hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
           title="Сбросить порядок по умолчанию"
         >
           <RotateCcw className="w-3 h-3" />
-          <span>По умолчанию</span>
+          <span>Сбросить</span>
         </button>
       </div>
 
@@ -329,126 +326,103 @@ export const AISettingsCard: React.FC<AISettingsCardProps> = ({ embedded = false
         onClose={() => setShowResetModal(false)}
         onConfirm={handleReset}
         title="Сбросить настройки AI?"
-        description="Порядок моделей будет возвращен к рекомендованным настройкам по умолчанию."
+        description="Порядок моделей вернётся к рекомендованным значениям по умолчанию."
         confirmText="Сбросить"
         cancelText="Отмена"
         isDangerous
       />
 
-      <p className="text-xs text-neutral-400 leading-relaxed">
-        Управляйте цепочкой fallback-распознавания блюд. Приоритет определяется
-        порядком в списке: первая активная модель выполняет анализ, последующие
-        служат автоматическим резервом.
+      <p className="text-xs text-[#7A7A82] leading-relaxed my-0">
+        Первая активная модель выполняет анализ, остальные работают как автоматический резерв.
       </p>
 
-      {/* Models Priority List */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-[11px] text-neutral-400 px-1 font-medium">
-          <span>Порядок приоритета (вверх/вниз)</span>
-          <span>Статус</span>
-        </div>
+      <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+        {models.map((model, index) => {
+          const isFirstActive = model.enabled && model.id === activeModelId
 
-        <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
-          {models.map((model, index) => {
-            const isFirstActive = model.enabled && model.id === activeModelId
+          return (
+            <div
+              key={model.id}
+              className={`flex items-center justify-between p-2.5 rounded-[16px] transition-colors ${
+                !model.enabled
+                  ? 'bg-[#111113] opacity-50'
+                  : isFirstActive
+                  ? 'bg-[#111113] ring-1 ring-white/25'
+                  : 'bg-[#111113] hover:bg-[#222226]'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <input
+                  type="checkbox"
+                  checked={model.enabled}
+                  onChange={() => handleToggle(model.id)}
+                  className="w-4 h-4 accent-[#E02424] rounded cursor-pointer shrink-0"
+                  title={model.enabled ? 'Отключить модель' : 'Включить модель'}
+                />
 
-            return (
-              <div
-                key={model.id}
-                className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-                  !model.enabled
-                    ? 'bg-[#141416]/60 border-neutral-800/50 opacity-60'
-                    : isFirstActive
-                    ? 'bg-emerald-950/20 border-emerald-500/40 shadow-sm shadow-emerald-500/10'
-                    : 'bg-[#18181c] border-neutral-800/80 hover:border-neutral-700'
-                }`}
-              >
-                {/* Left: Checkbox + Reorder + Info */}
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  {/* Enabled Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={model.enabled}
-                    onChange={() => handleToggle(model.id)}
-                    className="w-5 h-5 accent-emerald-500 rounded cursor-pointer shrink-0"
-                    title={model.enabled ? 'Отключить модель' : 'Включить модель'}
-                  />
-
-                  {/* Reorder Buttons (Clean 32x32px touch targets) */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={() => handleMoveUp(index)}
-                      className="w-8 h-8 rounded-lg bg-neutral-800/80 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-400 hover:text-white disabled:opacity-20 transition-colors cursor-pointer flex items-center justify-center active:scale-95 touch-manipulation"
-                      title="Повысить приоритет"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === models.length - 1}
-                      onClick={() => handleMoveDown(index)}
-                      className="w-8 h-8 rounded-lg bg-neutral-800/80 hover:bg-neutral-700 active:bg-neutral-600 text-neutral-400 hover:text-white disabled:opacity-20 transition-colors cursor-pointer flex items-center justify-center active:scale-95 touch-manipulation"
-                      title="Понизить приоритет"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Priority Number */}
-                  <span className="text-xs font-bold text-neutral-500 w-4 text-center shrink-0">
-                    {index + 1}
-                  </span>
-
-                  {/* Model Name & Description */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-semibold text-white truncate">
-                        {model.name}
-                      </span>
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                          model.provider === 'gemini'
-                            ? 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
-                            : 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
-                        }`}
-                      >
-                        {model.provider}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-neutral-400 truncate mt-0.5">
-                      {model.description}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => handleMoveUp(index)}
+                    className="w-7 h-7 rounded-full bg-[#222226] hover:bg-[#2F2F36] text-white disabled:opacity-20 transition-colors cursor-pointer flex items-center justify-center active:scale-95"
+                    title="Выше"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === models.length - 1}
+                    onClick={() => handleMoveDown(index)}
+                    className="w-7 h-7 rounded-full bg-[#222226] hover:bg-[#2F2F36] text-white disabled:opacity-20 transition-colors cursor-pointer flex items-center justify-center active:scale-95"
+                    title="Ниже"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                {/* Right: Status Badge */}
-                <div className="shrink-0 ml-2">
-                  {!model.enabled ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-500 bg-neutral-800/60 px-2 py-0.5 rounded-lg border border-neutral-800">
-                      <XCircle className="w-3 h-3 text-neutral-500" />
-                      <span>Откл.</span>
+                <span className="font-ndot text-xs font-bold text-[#7A7A82] w-4 text-center shrink-0">
+                  {index + 1}
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-medium text-white truncate">
+                      {model.name}
                     </span>
-                  ) : isFirstActive ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/30">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      <span>Активна</span>
+                    <span className="font-ndot text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase bg-[#222226] text-[#A1A1AA]">
+                      {model.provider}
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20">
-                      <Zap className="w-3 h-3 text-blue-400" />
-                      <span>Резерв</span>
-                    </span>
-                  )}
+                  </div>
+                  <p className="text-[11px] text-[#7A7A82] truncate mt-0.5 my-0">
+                    {model.description}
+                  </p>
                 </div>
               </div>
-            )
-          })}
-        </div>
+
+              <div className="shrink-0 ml-2">
+                {!model.enabled ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#6E6E75]">
+                    <XCircle className="w-3 h-3" />
+                    <span>Откл.</span>
+                  </span>
+                ) : isFirstActive ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-black bg-white px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Основная</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#A1A1AA] bg-[#222226] px-2 py-0.5 rounded-full">
+                    <Zap className="w-2.5 h-2.5" />
+                    <span>Резерв</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Save Button */}
       <Button
         type="button"
         size="md"

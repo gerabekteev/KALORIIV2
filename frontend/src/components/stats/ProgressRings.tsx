@@ -21,53 +21,48 @@ export const ProgressRings: React.FC<ProgressRingsProps> = ({
   protein,
   fat,
   carbs,
-  size = 200,
+  size = 188,
 }) => {
+  // Strict Nothing X monochrome + surgical red outer ring
   const rings: RingData[] = [
     {
       name: 'Калории',
       current: calories.current,
       target: calories.target || 2000,
-      color: '#10b981', // emerald
+      color: '#E02424',
       unit: 'ккал',
     },
     {
       name: 'Белки',
       current: protein.current,
       target: protein.target || 140,
-      color: '#3b82f6', // blue
+      color: '#FFFFFF',
       unit: 'г',
     },
     {
       name: 'Жиры',
       current: fat.current,
       target: fat.target || 70,
-      color: '#f59e0b', // amber
+      color: '#A1A1AA',
       unit: 'г',
     },
     {
       name: 'Углеводы',
       current: carbs.current,
       target: carbs.target || 250,
-      color: '#a855f7', // purple
+      color: '#63636B',
       unit: 'г',
     },
   ]
 
-  const strokeWidth = 9
-  const gap = 3
+  const strokeWidth = 8.5
+  const gap = 3.5
   const center = size / 2
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-2">
-      {/* Concentric SVG Rings */}
+    <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center justify-around gap-4 py-2">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <svg
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
-          className="rotate-[-90deg]"
-        >
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
           {rings.map((ring, idx) => {
             const radius = center - strokeWidth / 2 - idx * (strokeWidth + gap)
             const circumference = 2 * Math.PI * radius
@@ -77,17 +72,14 @@ export const ProgressRings: React.FC<ProgressRingsProps> = ({
 
             return (
               <g key={ring.name}>
-                {/* Background Track */}
                 <circle
                   cx={center}
                   cy={center}
                   r={radius}
-                  stroke={ring.color}
-                  strokeOpacity={0.18}
+                  stroke="#2A2A2F"
                   strokeWidth={strokeWidth}
                   fill="transparent"
                 />
-                {/* Active Progress */}
                 <circle
                   cx={center}
                   cy={center}
@@ -105,48 +97,36 @@ export const ProgressRings: React.FC<ProgressRingsProps> = ({
           })}
         </svg>
 
-        {/* Center Calories Display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-          <span className="text-xl font-bold text-white tracking-tight">
+          <span className="font-ndot text-lg font-bold text-white leading-none">
             {Math.round(calories.current)}
           </span>
-          <span className="text-[10px] text-neutral-400 font-medium">
-            из {Math.round(calories.target || 2000)} ккал
+          <span className="text-[10px] text-[#7A7A82] mt-1">
+            /{Math.round(calories.target || 2000)}
           </span>
         </div>
       </div>
 
-      {/* Ring Legends */}
-      <div className="grid grid-cols-2 gap-2.5 w-full sm:w-auto">
+      <div className="grid grid-cols-2 gap-2 w-full sm:flex-1 lg:w-full xl:flex-1 min-w-0">
         {rings.map((r) => {
           const pct = Math.round((r.current / (r.target || 1)) * 100)
           return (
-            <div
-              key={r.name}
-              className="p-2.5 rounded-xl bg-[#202025] border border-neutral-800 space-y-1"
-            >
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: r.color }}
-                />
-                <span className="text-xs font-semibold text-neutral-200">
-                  {r.name}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between text-xs">
-                <span className="font-bold text-white">
-                  {Math.round(r.current)}
-                  <span className="text-neutral-500 font-normal text-[11px]">
-                    {' '}/ {Math.round(r.target)} {r.unit}
-                  </span>
+            <div key={r.name} className="p-2.5 rounded-2xl bg-[#111113] space-y-1 min-w-0">
+              <div className="flex items-center justify-between gap-1.5 min-w-0">
+                <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#D4D4D8] truncate">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
+                  <span className="truncate">{r.name}</span>
                 </span>
                 <span
-                  className="text-[10px] font-bold ml-1.5"
-                  style={{ color: r.color }}
+                  className="font-ndot text-[10px] font-bold shrink-0"
+                  style={{ color: r.color === '#63636B' ? '#A1A1AA' : r.color }}
                 >
                   {pct}%
                 </span>
+              </div>
+              <div className="font-ndot text-xs font-bold text-white truncate">
+                {Math.round(r.current)}
+                <span className="text-[#7A7A82] font-normal">/{Math.round(r.target)}</span>
               </div>
             </div>
           )
