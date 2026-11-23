@@ -28,10 +28,27 @@ async def search_products(
 ):
     """Search and list products (both global database and user's custom products)."""
     # Base filter: either global products or user's custom products
+    # Exclude global barcode entries that are overshadowed by the user's own personal fork
+    user_forked_barcodes = (
+        select(Product.barcode)
+        .where(
+            and_(
+                Product.is_custom.is_(True),
+                Product.created_by_user_id == current_user.id,
+                Product.barcode.is_not(None),
+            )
+        )
+    )
     conditions = [
         or_(
-            Product.is_custom.is_(False),
             Product.created_by_user_id == current_user.id,
+            and_(
+                Product.is_custom.is_(False),
+                or_(
+                    Product.barcode.is_(None),
+                    Product.barcode.not_in(user_forked_barcodes),
+                ),
+            ),
         )
     ]
 
@@ -69,7 +86,11 @@ async def create_custom_product(
     If a barcode is provided, normalizes it (EAN / Chestny ZNAK), deduplicates against
     the user's existing custom products, and records it in user_scanned_products.
     """
-    from app.services.barcode_service import parse_and_normalize_barcode, record_user_scan
+    from app.services.barcode_service import (
+        ensure_shared_barcode_product,
+        parse_and_normalize_barcode,
+        record_user_scan,
+    )
 
     raw_barcode = product_in.barcode.strip() if product_in.barcode else None
     clean_barcode = None
@@ -94,6 +115,48 @@ async def create_custom_product(
         )
         product = existing_res.scalar_one_or_none()
 
+    # Optional shared local cache (used when confirming AI OCR scanned labels with a barcode)
+    inherited_image_url = None
+    shared_global_id_to_replace = None
+    if clean_barcode and product_in.share_to_catalog:
+        shared_prod, created_shared = await ensure_shared_barcode_product(
+            db=db,
+            barcode=clean_barcode,
+            name=product_in.name.strip(),
+            brand=product_in.brand.strip() if product_in.brand else None,
+            calories_per_100g=product_in.calories_per_100g,
+            protein_per_100g=product_in.protein_per_100g,
+            fat_per_100g=product_in.fat_per_100g,
+            carbs_per_100g=product_in.carbs_per_100g,
+            package_weight_grams=product_in.package_weight_grams or 100.0,
+            image_url=product_in.image_url,
+            category=product_in.category or "Скан",
+        )
+        inherited_image_url = shared_prod.image_url
+        shared_global_id_to_replace = shared_prod.id
+
+        # If we just created the shared entry (and user has no personal fork), reuse it directly
+        # Also reuse it if the user confirmed the OCR prefill without changing nutritional fields
+        if not product:
+            same_as_shared = created_shared or (
+                shared_prod.name.strip() == product_in.name.strip()
+                and (shared_prod.brand or "") == ((product_in.brand or "").strip())
+                and abs(shared_prod.calories_per_100g - round(product_in.calories_per_100g, 1)) < 0.2
+                and abs(shared_prod.protein_per_100g - round(product_in.protein_per_100g, 1)) < 0.2
+                and abs(shared_prod.fat_per_100g - round(product_in.fat_per_100g, 1)) < 0.2
+                and abs(shared_prod.carbs_per_100g - round(product_in.carbs_per_100g, 1)) < 0.2
+                and abs((shared_prod.package_weight_grams or 100.0) - max(1.0, round(product_in.package_weight_grams or 100.0, 1))) < 1.0
+            )
+            if same_as_shared:
+                await record_user_scan(
+                    db,
+                    user_id=current_user.id,
+                    product_id=shared_prod.id,
+                    barcode=clean_barcode,
+                    is_honest_sign=is_honest,
+                )
+                return ProductResponse.model_validate(shared_prod)
+
     if product:
         product.name = product_in.name.strip()
         product.calories_per_100g = round(product_in.calories_per_100g, 1)
@@ -106,9 +169,16 @@ async def create_custom_product(
             product.brand = product_in.brand.strip() if product_in.brand else None
         if product_in.image_url is not None:
             product.image_url = product_in.image_url.strip() if product_in.image_url else None
+        elif inherited_image_url and not product.image_url:
+            product.image_url = inherited_image_url
         if product_in.package_weight_grams is not None:
             product.package_weight_grams = max(1.0, round(product_in.package_weight_grams, 1))
     else:
+        resolved_image = (
+            product_in.image_url.strip()
+            if product_in.image_url
+            else inherited_image_url
+        )
         product = Product(
             name=product_in.name.strip(),
             calories_per_100g=round(product_in.calories_per_100g, 1),
@@ -118,7 +188,7 @@ async def create_custom_product(
             category=product_in.category,
             barcode=clean_barcode,
             brand=product_in.brand.strip() if product_in.brand else None,
-            image_url=product_in.image_url.strip() if product_in.image_url else None,
+            image_url=resolved_image,
             package_weight_grams=max(1.0, round(product_in.package_weight_grams or 100.0, 1)),
             is_custom=True,
             created_by_user_id=current_user.id,
@@ -129,6 +199,20 @@ async def create_custom_product(
     await db.refresh(product)
 
     if clean_barcode:
+        if shared_global_id_to_replace and shared_global_id_to_replace != product.id:
+            from sqlalchemy import delete
+            from app.models.scanned_product import UserScannedProduct
+
+            await db.execute(
+                delete(UserScannedProduct).where(
+                    and_(
+                        UserScannedProduct.user_id == current_user.id,
+                        UserScannedProduct.product_id == shared_global_id_to_replace,
+                    )
+                )
+            )
+            await db.commit()
+
         await record_user_scan(
             db,
             user_id=current_user.id,

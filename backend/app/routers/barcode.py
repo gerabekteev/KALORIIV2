@@ -1,7 +1,7 @@
 import re
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Response, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header, Response, status
 from sqlalchemy import select, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +18,7 @@ from app.schemas.barcode import (
 )
 from app.services.auth import get_current_user
 from app.services.barcode_service import (
+    ensure_shared_barcode_product,
     lookup_barcode_product,
     parse_and_normalize_barcode,
     record_user_scan,
@@ -106,6 +107,7 @@ async def update_barcode_product_endpoint(
 @router.post("/scan-image", response_model=BarcodeScanImageResponse)
 async def scan_barcode_image_endpoint(
     photo: UploadFile = File(..., description="Фотография товара со штрихкодом, Честным Знаком или этикеткой"),
+    barcode: Optional[str] = Form(None, description="Известный штрихкод товара (если уже отсканирован до фото этикетки)"),
     x_gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
     x_openrouter_key: Optional[str] = Header(None, alias="X-OpenRouter-Key"),
     x_ai_models: Optional[str] = Header(None, alias="X-AI-Models"),
@@ -115,6 +117,8 @@ async def scan_barcode_image_endpoint(
     """
     Upload a photo or screenshot of a product package or barcode.
     AI extracts product details and barcode, queries database or saves analyzed product.
+    When a valid barcode is provided or detected, caches the recognized product in the
+    shared global local catalog (is_custom=False) so other users get instant barcode hits.
     Enforces rate limiting, mime-type validation, and cleans up temporary files on errors.
     """
     # 1. Enforce rate limiting
@@ -156,15 +160,22 @@ async def scan_barcode_image_endpoint(
         detected_brand = getattr(analysis_result, "brand", None)
         grams = analysis_result.weight_grams or 100.0
 
-        # Check if AI detected any barcode in barcode field, name, or raw response
+        # Resolve barcode: explicit Form param > AI barcode field > regex in name/raw_response
         detected_code = None
         is_honest = False
-        explicit_barcode = getattr(analysis_result, "barcode", None)
-        if explicit_barcode:
-            c_code, c_honest = parse_and_normalize_barcode(explicit_barcode)
+        if barcode and barcode.strip():
+            c_code, c_honest = parse_and_normalize_barcode(barcode)
             if c_code and len(re.sub(r"\D", "", c_code)) >= 8:
                 detected_code = c_code
                 is_honest = c_honest
+
+        if not detected_code:
+            explicit_barcode = getattr(analysis_result, "barcode", None)
+            if explicit_barcode:
+                c_code, c_honest = parse_and_normalize_barcode(explicit_barcode)
+                if c_code and len(re.sub(r"\D", "", c_code)) >= 8:
+                    detected_code = c_code
+                    is_honest = c_honest
 
         if not detected_code:
             raw_resp = getattr(analysis_result, "raw_response", "") or ""
@@ -179,44 +190,78 @@ async def scan_barcode_image_endpoint(
                     is_honest = c_honest
                     break
 
-        # Check if product already exists by detected_code to avoid duplicates
-        existing_prod = None
-        if detected_code:
-            stmt = select(Product).where(
-                and_(
-                    Product.barcode == detected_code,
-                    or_(Product.is_custom.is_(False), Product.created_by_user_id == current_user.id),
-                )
-            ).limit(1)
-            res = await db.execute(stmt)
-            existing_prod = res.scalar_one_or_none()
+        cal_100 = round(float(analysis_result.calories or 0), 1)
+        prot_100 = round(float(analysis_result.protein or 0), 1)
+        fat_100 = round(float(analysis_result.fat or 0), 1)
+        carbs_100 = round(float(analysis_result.carbs or 0), 1)
 
-        if existing_prod:
-            if (
-                existing_prod.is_custom
-                and existing_prod.created_by_user_id == current_user.id
-                and not existing_prod.image_url
-            ):
-                existing_prod.image_url = relative_url_path
-                await db.commit()
-                await db.refresh(existing_prod)
+        if detected_code:
+            # Look up user's custom fork and shared global cache entry
+            stmt = (
+                select(Product)
+                .where(
+                    and_(
+                        Product.barcode == detected_code,
+                        or_(Product.is_custom.is_(False), Product.created_by_user_id == current_user.id),
+                    )
+                )
+                .order_by(Product.is_custom.desc())
+            )
+            res = await db.execute(stmt)
+            matching_prods = list(res.scalars().all())
+            user_custom_prod = next((p for p in matching_prods if p.is_custom), None)
+            global_prod = next((p for p in matching_prods if not p.is_custom), None)
+
+            used_uploaded_file = False
+
+            # Seed shared global local cache if this barcode is not cached globally yet
+            if not global_prod:
+                shared_img = (
+                    user_custom_prod.image_url
+                    if (user_custom_prod and user_custom_prod.image_url)
+                    else relative_url_path
+                )
+                global_prod, created_global = await ensure_shared_barcode_product(
+                    db=db,
+                    barcode=detected_code,
+                    name=name,
+                    brand=detected_brand,
+                    calories_per_100g=cal_100,
+                    protein_per_100g=prot_100,
+                    fat_per_100g=fat_100,
+                    carbs_per_100g=carbs_100,
+                    package_weight_grams=grams,
+                    image_url=shared_img,
+                    category="Скан",
+                )
+                if created_global and shared_img == relative_url_path:
+                    used_uploaded_file = True
+
+            if user_custom_prod:
+                if not user_custom_prod.image_url:
+                    user_custom_prod.image_url = relative_url_path
+                    await db.commit()
+                    await db.refresh(user_custom_prod)
+                    used_uploaded_file = True
+                target_prod = user_custom_prod
             else:
-                # Удаляем лишний загруженный файл (не модифицируем глобальные продукты чужими фото)
-                if dest_path.exists():
-                    try:
-                        dest_path.unlink()
-                    except Exception:
-                        pass
-            target_prod = existing_prod
+                target_prod = global_prod
+
+            if not used_uploaded_file and dest_path.exists():
+                try:
+                    dest_path.unlink()
+                except Exception:
+                    pass
         else:
+            # No barcode detected: keep private to the current user
             new_prod = Product(
                 name=name,
                 brand=detected_brand,
-                barcode=detected_code,
-                calories_per_100g=round(float(analysis_result.calories or 0), 1),
-                protein_per_100g=round(float(analysis_result.protein or 0), 1),
-                fat_per_100g=round(float(analysis_result.fat or 0), 1),
-                carbs_per_100g=round(float(analysis_result.carbs or 0), 1),
+                barcode=None,
+                calories_per_100g=cal_100,
+                protein_per_100g=prot_100,
+                fat_per_100g=fat_100,
+                carbs_per_100g=carbs_100,
                 package_weight_grams=grams,
                 image_url=relative_url_path,
                 category="Скан",

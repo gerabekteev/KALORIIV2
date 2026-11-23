@@ -213,3 +213,248 @@ async def test_custom_product_image_url_validation():
             headers=headers,
         )
         assert res_bad.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_ai_ocr_shared_local_barcode_cache_and_forking():
+    """Tests shared local cache for AI OCR scanned labels with barcodes, IDOR forking, and deduplicated search."""
+    import io
+    from pathlib import Path
+    from unittest.mock import AsyncMock, patch
+    from PIL import Image
+    from app.config import settings
+    from app.schemas.ai import FoodAnalysisResult
+
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 64), (240, 240, 240)).save(buf, format="JPEG")
+    jpeg_bytes = buf.getvalue()
+
+    uploaded_to_cleanup = []
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+            ts = int(time.time() * 1000)
+            r1 = await client.post(
+                "/api/auth/register",
+                json={"email": f"ocr_u1_{ts}@example.com", "password": "Password123!", "name": "OCR User 1"},
+            )
+            h1 = {"Authorization": f"Bearer {r1.json()['access_token']}"}
+
+            r2 = await client.post(
+                "/api/auth/register",
+                json={"email": f"ocr_u2_{ts}@example.com", "password": "Password123!", "name": "OCR User 2"},
+            )
+            h2 = {"Authorization": f"Bearer {r2.json()['access_token']}"}
+
+            shared_barcode = f"460777{ts % 1000000:06d}1"
+            unique_name = f"Сырок ВкусВилл OCR {ts}"
+            mock_result = FoodAnalysisResult(
+                name=unique_name,
+                brand="ВкусВилл",
+                barcode=None,  # barcode is passed via Form field, not visible on nutrition table photo
+                weight_grams=45.0,
+                calories=385.0,
+                protein=8.5,
+                fat=24.0,
+                carbs=33.5,
+                confidence="high",
+            )
+
+            with patch(
+                "app.routers.barcode.ai_router.recognize_food",
+                new=AsyncMock(return_value=(mock_result, "gemini", "gemini-test")),
+            ):
+                scan_res = await client.post(
+                    "/api/barcode/scan-image",
+                    files={"photo": ("label.jpg", jpeg_bytes, "image/jpeg")},
+                    data={"barcode": shared_barcode},
+                    headers=h1,
+                )
+
+            assert scan_res.status_code == 200, scan_res.text
+            scan_data = scan_res.json()
+            assert scan_data["detected_code"] == shared_barcode
+            ocr_prod = scan_data["product"]
+            assert ocr_prod["name"] == unique_name
+            assert ocr_prod["calories_per_100g"] == 385.0
+            if ocr_prod.get("image_url"):
+                uploaded_to_cleanup.append(ocr_prod["image_url"])
+
+            # Verify product is stored in the shared global cache (is_custom=False, created_by_user_id=None)
+            async with AsyncSessionLocal() as session:
+                db_prod = await session.get(Product, ocr_prod["product_id"])
+                assert db_prod is not None
+                assert db_prod.is_custom is False
+                assert db_prod.created_by_user_id is None
+                assert db_prod.barcode == shared_barcode
+
+            # User 2 scans the same barcode -> instant hit from shared local cache!
+            u2_lookup = await client.post(
+                "/api/barcode/lookup",
+                json={"barcode": shared_barcode},
+                headers=h2,
+            )
+            assert u2_lookup.status_code == 200
+            u2_data = u2_lookup.json()
+            assert u2_data["source"] == "local"
+            assert u2_data["name"] == unique_name
+            assert u2_data["calories_per_100g"] == 385.0
+            assert u2_data["image_url"] == ocr_prod["image_url"]
+
+            # User 2 edits the product -> forks personal copy without modifying shared global cache
+            u2_fork = await client.put(
+                f"/api/barcode/product/{u2_data['product_id']}",
+                json={
+                    "name": f"{unique_name} (правки U2)",
+                    "brand": "ВкусВилл",
+                    "calories_per_100g": 399.0,
+                    "protein_per_100g": 9.0,
+                    "fat_per_100g": 25.0,
+                    "carbs_per_100g": 34.0,
+                    "package_weight_grams": 45.0,
+                },
+                headers=h2,
+            )
+            assert u2_fork.status_code == 200
+            assert u2_fork.json()["calories_per_100g"] == 399.0
+
+            # User 1 still gets the untouched shared OCR entry
+            u1_lookup = await client.post(
+                "/api/barcode/lookup",
+                json={"barcode": shared_barcode},
+                headers=h1,
+            )
+            assert u1_lookup.status_code == 200
+            assert u1_lookup.json()["calories_per_100g"] == 385.0
+
+            # User 2's GET /api/products search should NOT return duplicate rows for the forked barcode
+            u2_search = await client.get(
+                "/api/products",
+                params={"search": unique_name},
+                headers=h2,
+            )
+            assert u2_search.status_code == 200
+            matched_barcodes = [p for p in u2_search.json() if p.get("barcode") == shared_barcode]
+            assert len(matched_barcodes) == 1
+            assert matched_barcodes[0]["calories_per_100g"] == 399.0
+    finally:
+        for rel_url in uploaded_to_cleanup:
+            fname = Path(rel_url).name
+            fp = settings.UPLOAD_DIR / fname
+            if fp.exists():
+                try:
+                    fp.unlink()
+                except Exception:
+                    pass
+
+
+@pytest.mark.asyncio
+async def test_ai_ocr_without_barcode_stays_private_and_share_to_catalog():
+    """Tests that barcode-less OCR stays private, while share_to_catalog=True populates shared cache."""
+    import io
+    from pathlib import Path
+    from unittest.mock import AsyncMock, patch
+    from PIL import Image
+    from app.config import settings
+    from app.schemas.ai import FoodAnalysisResult
+
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 64), (200, 220, 240)).save(buf, format="JPEG")
+    jpeg_bytes = buf.getvalue()
+
+    uploaded_to_cleanup = []
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+            ts = int(time.time() * 1000)
+            r1 = await client.post(
+                "/api/auth/register",
+                json={"email": f"ocr_priv1_{ts}@example.com", "password": "Password123!", "name": "Priv User 1"},
+            )
+            h1 = {"Authorization": f"Bearer {r1.json()['access_token']}"}
+            u1_id = r1.json()["user"]["id"]
+
+            r2 = await client.post(
+                "/api/auth/register",
+                json={"email": f"ocr_priv2_{ts}@example.com", "password": "Password123!", "name": "Priv User 2"},
+            )
+            h2 = {"Authorization": f"Bearer {r2.json()['access_token']}"}
+
+            # 1. OCR without any barcode stays private to User 1
+            priv_name = f"Домашний Пирог Без Кода {ts % 100000}"
+            mock_no_code = FoodAnalysisResult(
+                name=priv_name,
+                brand=None,
+                barcode=None,
+                weight_grams=100.0,
+                calories=260.0,
+                protein=6.0,
+                fat=10.0,
+                carbs=36.0,
+                confidence="medium",
+            )
+            with patch(
+                "app.routers.barcode.ai_router.recognize_food",
+                new=AsyncMock(return_value=(mock_no_code, "gemini", "gemini-test")),
+            ):
+                res_priv = await client.post(
+                    "/api/barcode/scan-image",
+                    files={"photo": ("pie.jpg", jpeg_bytes, "image/jpeg")},
+                    headers=h1,
+                )
+            assert res_priv.status_code == 200
+            priv_prod = res_priv.json()["product"]
+            if priv_prod.get("image_url"):
+                uploaded_to_cleanup.append(priv_prod["image_url"])
+
+            async with AsyncSessionLocal() as session:
+                db_priv = await session.get(Product, priv_prod["product_id"])
+                assert db_priv.is_custom is True
+                assert db_priv.created_by_user_id == u1_id
+
+            u2_search = await client.get("/api/products", params={"search": priv_name}, headers=h2)
+            assert u2_search.status_code == 200
+            assert all(p["name"] != priv_name for p in u2_search.json())
+
+            # 2. Confirming OCR product with barcode + share_to_catalog=True seeds shared global cache
+            shared_code = f"460555{ts % 1000000:06d}9"
+            shared_name = f"Творог Савушкин OCR {ts}"
+            create_shared = await client.post(
+                "/api/products",
+                json={
+                    "name": shared_name,
+                    "brand": "Савушкин",
+                    "barcode": shared_code,
+                    "calories_per_100g": 121.0,
+                    "protein_per_100g": 17.2,
+                    "fat_per_100g": 5.0,
+                    "carbs_per_100g": 1.8,
+                    "package_weight_grams": 180.0,
+                    "share_to_catalog": True,
+                },
+                headers=h1,
+            )
+            assert create_shared.status_code == 201
+            created_data = create_shared.json()
+            assert created_data["is_custom"] is False
+            assert created_data["created_by_user_id"] is None
+
+            # User 2 finds it immediately via barcode lookup
+            u2_hit = await client.post(
+                "/api/barcode/lookup",
+                json={"barcode": shared_code},
+                headers=h2,
+            )
+            assert u2_hit.status_code == 200
+            assert u2_hit.json()["source"] == "local"
+            assert u2_hit.json()["name"] == shared_name
+            assert u2_hit.json()["calories_per_100g"] == 121.0
+    finally:
+        for rel_url in uploaded_to_cleanup:
+            fname = Path(rel_url).name
+            fp = settings.UPLOAD_DIR / fname
+            if fp.exists():
+                try:
+                    fp.unlink()
+                except Exception:
+                    pass

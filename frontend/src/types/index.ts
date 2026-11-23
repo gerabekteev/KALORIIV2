@@ -148,6 +148,7 @@ export interface CreateProductPayload {
   barcode?: string | null
   brand?: string | null
   image_url?: string | null
+  share_to_catalog?: boolean
 }
 
 export interface RecipeItem {

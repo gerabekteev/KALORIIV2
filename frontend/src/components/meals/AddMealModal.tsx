@@ -88,6 +88,8 @@ export const AddMealModal: React.FC = () => {
   const [manualBarcode, setManualBarcode] = useState('')
   const [manualBrand, setManualBrand] = useState('')
   const [manualPackageWeight, setManualPackageWeight] = useState('')
+  const [manualImageUrl, setManualImageUrl] = useState('')
+  const [manualFromOcr, setManualFromOcr] = useState(false)
   const [saveToCatalog, setSaveToCatalog] = useState(true)
   const [manualForm, setManualForm] = useState({
     name: '',
@@ -140,6 +142,8 @@ export const AddMealModal: React.FC = () => {
       setManualBarcode('')
       setManualBrand('')
       setManualPackageWeight('')
+      setManualImageUrl('')
+      setManualFromOcr(false)
       setSaveToCatalog(true)
       const timePreset = addMealPresetTime || new Date().toTimeString().slice(0, 5)
       setManualForm({
@@ -406,10 +410,14 @@ export const AddMealModal: React.FC = () => {
   const handleScanManualLabelFile = async (file: File) => {
     setIsScanningManualLabel(true)
     try {
-      const res = await barcodeApi.scanImage(file)
+      const res = await barcodeApi.scanImage(file, manualBarcode.trim() || undefined)
       if (res.product) {
         const p = res.product
         setManualCalcMode('per_100g')
+        setManualFromOcr(true)
+        if (p.image_url) {
+          setManualImageUrl(p.image_url)
+        }
         if (p.barcode && !manualBarcode) {
           setManualBarcode(p.barcode)
         }
@@ -487,12 +495,14 @@ export const AddMealModal: React.FC = () => {
             name: cleanName,
             brand: cleanBrand || null,
             barcode: manualBarcode.trim() || null,
+            image_url: manualImageUrl || null,
             package_weight_grams: packageWeightGrams > 0 ? packageWeightGrams : null,
             calories_per_100g: effectiveBaseCalories,
             protein_per_100g: rawProtein,
             fat_per_100g: rawFat,
             carbs_per_100g: rawCarbs,
             category: manualBarcode.trim() ? 'Штрихкоды' : 'Мои продукты',
+            share_to_catalog: Boolean(manualFromOcr && manualBarcode.trim()),
           })
           setRecentRefreshTrigger((prev) => prev + 1)
         } catch (catalogErr) {
@@ -622,7 +632,7 @@ export const AddMealModal: React.FC = () => {
         title={mode === 'hub' ? 'Добавить еду' : modeTitles[mode]}
         maxWidth="md"
       >
-        <div className="min-h-[420px] flex flex-col">
+        <div key={mode} className="min-h-[420px] flex flex-col modal-subview-in">
         {/* Back navigation header when inside a submode */}
         {mode !== 'hub' && (
           <div className="mb-4 space-y-2.5">
@@ -815,6 +825,8 @@ export const AddMealModal: React.FC = () => {
             onSwitchToManual={(initialName, barcode, prefill) => {
               setManualCalcMode('per_100g')
               setManualBarcode(prefill?.barcode || barcode || '')
+              setManualImageUrl(prefill?.image_url || '')
+              setManualFromOcr(Boolean(prefill?.from_ocr))
               setSaveToCatalog(true)
               if (prefill) {
                 const pkgW =

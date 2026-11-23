@@ -5,6 +5,7 @@ import urllib.parse
 from typing import Optional, Dict, Any, Tuple
 import httpx
 from sqlalchemy import select, and_, or_, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import HTTPException, status
@@ -386,6 +387,67 @@ async def lookup_barcode_product(
             )
 
     return None
+
+
+async def ensure_shared_barcode_product(
+    db: AsyncSession,
+    barcode: str,
+    name: str,
+    calories_per_100g: float,
+    protein_per_100g: float,
+    fat_per_100g: float,
+    carbs_per_100g: float,
+    brand: Optional[str] = None,
+    package_weight_grams: Optional[float] = 100.0,
+    image_url: Optional[str] = None,
+    category: Optional[str] = "Скан",
+) -> Tuple[Product, bool]:
+    """
+    Ensures a shared global cache entry (is_custom=False, created_by_user_id=None)
+    exists for the given normalized barcode.
+    Never overwrites an existing global product (preserves IDOR/catalog integrity).
+    Handles concurrent unique-index races safely.
+    Returns (product, was_created).
+    """
+    existing_res = await db.execute(
+        select(Product)
+        .where(and_(Product.barcode == barcode, Product.is_custom.is_(False)))
+        .limit(1)
+    )
+    existing_global = existing_res.scalar_one_or_none()
+    if existing_global:
+        return existing_global, False
+
+    shared_prod = Product(
+        name=name.strip() or "Продукт по скану",
+        brand=brand.strip() if brand else None,
+        barcode=barcode,
+        calories_per_100g=round(max(0.0, float(calories_per_100g)), 1),
+        protein_per_100g=round(max(0.0, float(protein_per_100g)), 1),
+        fat_per_100g=round(max(0.0, float(fat_per_100g)), 1),
+        carbs_per_100g=round(max(0.0, float(carbs_per_100g)), 1),
+        package_weight_grams=max(1.0, round(float(package_weight_grams or 100.0), 1)),
+        image_url=image_url.strip() if image_url else None,
+        category=category or "Скан",
+        is_custom=False,
+        created_by_user_id=None,
+    )
+    db.add(shared_prod)
+    try:
+        await db.commit()
+        await db.refresh(shared_prod)
+        return shared_prod, True
+    except IntegrityError:
+        await db.rollback()
+        retry_res = await db.execute(
+            select(Product)
+            .where(and_(Product.barcode == barcode, Product.is_custom.is_(False)))
+            .limit(1)
+        )
+        raced_global = retry_res.scalar_one_or_none()
+        if raced_global:
+            return raced_global, False
+        raise
 
 
 async def record_user_scan(

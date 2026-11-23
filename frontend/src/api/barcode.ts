@@ -25,9 +25,12 @@ export const barcodeApi = {
     })
   },
 
-  scanImage: async (file: File): Promise<BarcodeScanImageResponse> => {
+  scanImage: async (file: File, barcode?: string): Promise<BarcodeScanImageResponse> => {
     const formData = new FormData()
     formData.append('photo', file)
+    if (barcode && barcode.trim()) {
+      formData.append('barcode', barcode.trim())
+    }
 
     return apiClient<BarcodeScanImageResponse>('/barcode/scan-image', {
       method: 'POST',

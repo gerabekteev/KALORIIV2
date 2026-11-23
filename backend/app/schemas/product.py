@@ -32,6 +32,10 @@ class ProductCreate(BaseModel):
     brand: Optional[str] = Field(None, max_length=255)
     image_url: Optional[str] = Field(None, max_length=500)
     package_weight_grams: Optional[float] = Field(100.0, ge=0, le=25000)
+    share_to_catalog: bool = Field(
+        default=False,
+        description="Сохранить подтверждённый товар со штрихкодом в общий локальный кэш",
+    )
 
     _check_img = field_validator("image_url")(classmethod(lambda cls, v: _validate_safe_product_image(v)))
 

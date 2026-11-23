@@ -35,6 +35,8 @@ export interface ManualPrefillData {
   fat_per_100g?: number
   carbs_per_100g?: number
   package_weight_grams?: number | null
+  image_url?: string | null
+  from_ocr?: boolean
 }
 
 interface BarcodeScannerViewProps {
@@ -514,10 +516,11 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
   const handleScanLabelViaAI = async (file: File, attachBarcode?: string) => {
     setIsScanningOcr(true)
     try {
-      const res = await barcodeApi.scanImage(file)
+      const knownBarcode = attachBarcode || notFoundState?.code || undefined
+      const res = await barcodeApi.scanImage(file, knownBarcode)
       if (res.product) {
         if (navigator.vibrate) navigator.vibrate(60)
-        const resolvedBarcode = attachBarcode || notFoundState?.code || res.product.barcode || ''
+        const resolvedBarcode = knownBarcode || res.product.barcode || ''
         addToast(
           'Этикетка считана! Проверьте данные на 100 г и укажите вес порции.',
           'success',
@@ -532,6 +535,8 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
           fat_per_100g: res.product.fat_per_100g,
           carbs_per_100g: res.product.carbs_per_100g,
           package_weight_grams: res.product.package_weight_grams,
+          image_url: res.product.image_url,
+          from_ocr: true,
         })
       } else {
         addToast(

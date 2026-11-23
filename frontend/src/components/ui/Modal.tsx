@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 
 const modalStack: Array<() => void> = []
@@ -38,6 +38,8 @@ export interface ModalProps {
   hideBackdrop?: boolean
 }
 
+const EXIT_DURATION_MS = 240
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -47,7 +49,36 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = 'md',
   hideBackdrop = false,
 }) => {
-  const [depth, setDepth] = React.useState(1)
+  const [depth, setDepth] = useState(1)
+  const [shouldRender, setShouldRender] = useState(isOpen)
+  const [isVisible, setIsVisible] = useState(false)
+
+  // Smooth mount -> enter (double rAF) -> exit -> unmount lifecycle
+  useEffect(() => {
+    let raf1 = 0
+    let raf2 = 0
+    let unmountTimer = 0
+
+    if (isOpen) {
+      setShouldRender(true)
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => {
+          setIsVisible(true)
+        })
+      })
+    } else {
+      setIsVisible(false)
+      unmountTimer = window.setTimeout(() => {
+        setShouldRender(false)
+      }, EXIT_DURATION_MS)
+    }
+
+    return () => {
+      if (raf1) window.cancelAnimationFrame(raf1)
+      if (raf2) window.cancelAnimationFrame(raf2)
+      if (unmountTimer) window.clearTimeout(unmountTimer)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -75,7 +106,7 @@ export const Modal: React.FC<ModalProps> = ({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  if (!shouldRender) return null
 
   const maxWidthClasses = {
     sm: 'max-w-sm',
@@ -90,20 +121,28 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 ${zIndexClass} flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200`}
+      className={`fixed inset-0 ${zIndexClass} flex items-end sm:items-center justify-center p-0 sm:p-4 ${
+        isVisible ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
     >
+      {/* Smooth Fading Backdrop */}
       {!hideBackdrop && (
         <div
-          className={`fixed inset-0 transition-opacity ${
-            isTopModal ? 'bg-black/55' : 'bg-black/85 backdrop-blur-sm'
-          }`}
+          className={`fixed inset-0 transition-opacity duration-[260ms] ease-out ${
+            isTopModal ? 'bg-black/55' : 'bg-black/80 backdrop-blur-[4px]'
+          } ${isVisible ? 'opacity-100' : 'opacity-0'}`}
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
+      {/* Smooth Rising Mobile Bottom-Sheet / Scaling Desktop Dialog */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#111113] border border-white/[0.08] rounded-t-[28px] sm:rounded-[26px] shadow-[0_24px_80px_rgba(0,0,0,0.9)] overflow-hidden max-h-[90dvh] flex flex-col z-10 transition-transform duration-200 ease-out`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#111113] border border-white/[0.08] rounded-t-[28px] sm:rounded-[26px] shadow-[0_24px_80px_rgba(0,0,0,0.9)] overflow-hidden max-h-[90dvh] flex flex-col z-10 will-change-transform transition-[transform,opacity] ${
+          isVisible
+            ? 'duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] translate-y-0 sm:scale-100 opacity-100'
+            : 'duration-[230ms] ease-[cubic-bezier(0.32,0.72,0,1)] translate-y-full sm:translate-y-5 sm:scale-[0.96] sm:opacity-0'
+        }`}
         style={{
           paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
         }}

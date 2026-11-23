@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Download, X } from 'lucide-react'
-import { BottomNav, NAV_ITEMS, getNavIndexForPath } from './BottomNav'
+import { BottomNav, BottomNavHandle, NAV_ITEMS, getNavIndexForPath } from './BottomNav'
 import { Header } from './Header'
 import { AddMealModal } from '../meals/AddMealModal'
 import { EditMealModal } from '../meals/EditMealModal'
@@ -17,6 +17,14 @@ import {
 } from '../../utils/platform'
 
 const DISMISSED_UPDATE_KEY = 'kalorii_dismissed_update_version'
+const PAGER_SPRING = 'transform 340ms cubic-bezier(0.22, 1, 0.36, 1)'
+const PANE_SPRING = 'transform 340ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease-out'
+
+// Memoized page wrappers so parent Layout never triggers unnecessary re-renders during gestures
+const MemoTodayPage = React.memo(TodayPage)
+const MemoMealPlanPage = React.memo(MealPlanPage)
+const MemoStatsPage = React.memo(StatsPage)
+const MemoProfilePage = React.memo(ProfilePage)
 
 function isSwipeBlockedTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
@@ -47,37 +55,39 @@ export const Layout: React.FC = () => {
   const [availableUpdateVersion, setAvailableUpdateVersion] = useState<string | null>(null)
 
   const currentTabIndex = getNavIndexForPath(location.pathname)
-  const viewportRef = useRef<HTMLDivElement>(null)
-  const [viewportWidth, setViewportWidth] = useState<number>(390)
+  const currentTabIndexRef = useRef(currentTabIndex)
+  currentTabIndexRef.current = currentTabIndex
 
-  // Live drag & animated desktop-paging state (Android Launcher ViewPager)
-  const [dragX, setDragX] = useState(0)
-  const [isSwiping, setIsSwiping] = useState(false)
-  const [isAnimatingPage, setIsAnimatingPage] = useState(false)
-  const prevIndexRef = useRef<number>(currentTabIndex)
-  const animTimerRef = useRef<number | null>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const paneRefs = useRef<Array<HTMLElement | null>>([null, null, null, null])
+  const bottomNavRef = useRef<BottomNavHandle>(null)
+  const viewportWidthRef = useRef<number>(390)
+  const rafIdRef = useRef<number>(0)
 
   const touchRef = useRef<{
     startX: number
     startY: number
     startTime: number
+    dragX: number
     active: boolean
     locked: 'horizontal' | 'vertical' | null
   }>({
     startX: 0,
     startY: 0,
     startTime: 0,
+    dragX: 0,
     active: false,
     locked: null,
   })
 
-  // Measure pager viewport width for exact 1:1 finger tracking
+  // Measure pager viewport width once + on resize (stored in ref, zero React re-renders)
   useEffect(() => {
     const el = viewportRef.current
     if (!el) return
     const measure = () => {
       const w = el.getBoundingClientRect().width
-      if (w > 0) setViewportWidth(w)
+      if (w > 0) viewportWidthRef.current = w
     }
     measure()
     if (typeof ResizeObserver !== 'undefined') {
@@ -89,22 +99,24 @@ export const Layout: React.FC = () => {
     return () => window.removeEventListener('resize', measure)
   }, [])
 
-  // Trigger brief 3D depth-transform state while gliding between desktops
+  // Sync smooth GPU track glide whenever route changes (via dock tap, sidebar, or back button)
   useEffect(() => {
-    if (prevIndexRef.current !== currentTabIndex) {
-      prevIndexRef.current = currentTabIndex
-      setIsAnimatingPage(true)
-      if (animTimerRef.current) window.clearTimeout(animTimerRef.current)
-      animTimerRef.current = window.setTimeout(() => {
-        setIsAnimatingPage(false)
-        animTimerRef.current = null
-      }, 420)
+    const track = trackRef.current
+    if (track) {
+      track.style.transition = PAGER_SPRING
+      track.style.transform = `translate3d(${-currentTabIndex * 100}%, 0, 0)`
     }
+    paneRefs.current.forEach((pane, idx) => {
+      if (!pane) return
+      pane.style.transition = PANE_SPRING
+      pane.style.transform = idx === currentTabIndex ? 'scale(1)' : 'scale(0.96)'
+      pane.style.opacity = idx === currentTabIndex ? '1' : '0.82'
+    })
   }, [currentTabIndex])
 
   useEffect(() => {
     return () => {
-      if (animTimerRef.current) window.clearTimeout(animTimerRef.current)
+      if (rafIdRef.current) window.cancelAnimationFrame(rafIdRef.current)
     }
   }, [])
 
@@ -156,6 +168,47 @@ export const Layout: React.FC = () => {
     downloadLatestApk(targetVersion)
   }
 
+  // Pure GPU-composited frame update during finger drag (ZERO React re-renders!)
+  const applyLiveDragFrame = () => {
+    rafIdRef.current = 0
+    const t = touchRef.current
+    if (!t.active || t.locked !== 'horizontal') return
+
+    const idx = currentTabIndexRef.current
+    const w = viewportWidthRef.current || 390
+    const dx = t.dragX
+    const progress = -dx / w // positive = moving to right tab, negative = moving to left tab
+
+    const track = trackRef.current
+    if (track) {
+      track.style.transition = 'none'
+      track.style.transform = `translate3d(${-idx * w + dx}px, 0, 0)`
+    }
+
+    // Update ONLY the current pane and the neighbor being revealed (cheap GPU scale + opacity)
+    const neighborIdx = dx < 0 ? idx + 1 : dx > 0 ? idx - 1 : -1
+    const absProg = Math.min(1, Math.abs(progress))
+
+    const curPane = paneRefs.current[idx]
+    if (curPane) {
+      curPane.style.transition = 'none'
+      curPane.style.transform = `scale(${(1 - absProg * 0.045).toFixed(4)})`
+      curPane.style.opacity = `${(1 - absProg * 0.22).toFixed(3)}`
+    }
+
+    if (neighborIdx >= 0 && neighborIdx < NAV_ITEMS.length) {
+      const nextPane = paneRefs.current[neighborIdx]
+      if (nextPane) {
+        nextPane.style.transition = 'none'
+        nextPane.style.transform = `scale(${(0.955 + absProg * 0.045).toFixed(4)})`
+        nextPane.style.opacity = `${(0.78 + absProg * 0.22).toFixed(3)}`
+      }
+    }
+
+    // Sync bottom dock pill + docked quick submenu live at 60/120fps
+    bottomNavRef.current?.setLiveSwipe(progress, true)
+  }
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length !== 1) return
     if (document.body.style.overflow === 'hidden') return
@@ -166,6 +219,7 @@ export const Layout: React.FC = () => {
       startX: touch.clientX,
       startY: touch.clientY,
       startTime: Date.now(),
+      dragX: 0,
       active: true,
       locked: null,
     }
@@ -179,10 +233,9 @@ export const Layout: React.FC = () => {
     const dy = e.touches[0].clientY - t.startY
 
     if (t.locked === null) {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
-      if (Math.abs(dx) > Math.abs(dy) * 1.25) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+      if (Math.abs(dx) > Math.abs(dy) * 1.15) {
         t.locked = 'horizontal'
-        setIsSwiping(true)
       } else {
         t.locked = 'vertical'
         t.active = false
@@ -191,11 +244,16 @@ export const Layout: React.FC = () => {
     }
 
     if (t.locked === 'horizontal') {
-      const atLeftEdge = currentTabIndex === 0 && dx > 0
-      const atRightEdge = currentTabIndex === NAV_ITEMS.length - 1 && dx < 0
-      const clampedDx = atLeftEdge || atRightEdge ? dx * 0.28 : dx
-      const maxDrag = viewportWidth * 0.95
-      setDragX(Math.max(-maxDrag, Math.min(maxDrag, clampedDx)))
+      const idx = currentTabIndexRef.current
+      const w = viewportWidthRef.current || 390
+      const atLeftEdge = idx === 0 && dx > 0
+      const atRightEdge = idx === NAV_ITEMS.length - 1 && dx < 0
+      const clampedDx = atLeftEdge || atRightEdge ? dx * 0.24 : dx
+      t.dragX = Math.max(-w * 0.96, Math.min(w * 0.96, clampedDx))
+
+      if (!rafIdRef.current) {
+        rafIdRef.current = window.requestAnimationFrame(applyLiveDragFrame)
+      }
     }
   }
 
@@ -204,42 +262,53 @@ export const Layout: React.FC = () => {
     if (!t.active) return
     t.active = false
 
+    if (rafIdRef.current) {
+      window.cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = 0
+    }
+
     const wasHorizontal = t.locked === 'horizontal'
+    const dx = t.dragX
     t.locked = null
+    t.dragX = 0
 
-    if (wasHorizontal) {
-      const elapsed = Math.max(1, Date.now() - t.startTime)
-      const velocity = Math.abs(dragX) / elapsed
-      const threshold = Math.min(95, viewportWidth * 0.22)
-      const shouldSwitch =
-        Math.abs(dragX) >= threshold || (Math.abs(dragX) >= 28 && velocity > 0.3)
+    if (!wasHorizontal) return
 
-      if (shouldSwitch) {
-        if (dragX < 0 && currentTabIndex < NAV_ITEMS.length - 1) {
-          haptics.release()
-          navigate(NAV_ITEMS[currentTabIndex + 1].to)
-        } else if (dragX > 0 && currentTabIndex > 0) {
-          haptics.release()
-          navigate(NAV_ITEMS[currentTabIndex - 1].to)
-        }
+    const idx = currentTabIndexRef.current
+    const w = viewportWidthRef.current || 390
+    const elapsed = Math.max(1, Date.now() - t.startTime)
+    const velocity = Math.abs(dx) / elapsed
+    const threshold = Math.min(88, w * 0.2)
+    const shouldSwitch = Math.abs(dx) >= threshold || (Math.abs(dx) >= 24 && velocity > 0.28)
+
+    let targetIdx = idx
+    if (shouldSwitch) {
+      if (dx < 0 && idx < NAV_ITEMS.length - 1) {
+        targetIdx = idx + 1
+      } else if (dx > 0 && idx > 0) {
+        targetIdx = idx - 1
       }
     }
 
-    setIsSwiping(false)
-    setDragX(0)
+    // Start the smooth spring snap on the exact release frame (zero React frame lag!)
+    const track = trackRef.current
+    if (track) {
+      track.style.transition = PAGER_SPRING
+      track.style.transform = `translate3d(${-targetIdx * 100}%, 0, 0)`
+    }
+    paneRefs.current.forEach((pane, i) => {
+      if (!pane) return
+      pane.style.transition = PANE_SPRING
+      pane.style.transform = i === targetIdx ? 'scale(1)' : 'scale(0.96)'
+      pane.style.opacity = i === targetIdx ? '1' : '0.82'
+    })
+    bottomNavRef.current?.setLiveSwipe(0, false, targetIdx)
+
+    if (targetIdx !== idx) {
+      haptics.release()
+      navigate(NAV_ITEMS[targetIdx].to)
+    }
   }
-
-  // Exact 1:1 fractional offset (-1..+1) synced to both ViewPager 3D transform and BottomNav pill
-  const swipeProgress = isSwiping && viewportWidth > 0 ? -dragX / viewportWidth : 0
-  const virtualPage = currentTabIndex + swipeProgress
-  const isTransitionActive = isSwiping || isAnimatingPage
-
-  const pages = [
-    { key: 'today', node: <TodayPage /> },
-    { key: 'meal-plan', node: <MealPlanPage /> },
-    { key: 'stats', node: <StatsPage isActive={currentTabIndex === 2} /> },
-    { key: 'profile', node: <ProfilePage /> },
-  ]
 
   return (
     <div className="relative h-dvh bg-black text-white flex flex-col font-sans antialiased selection:bg-[#E02424] selection:text-white overflow-hidden lg:pl-[228px]">
@@ -287,59 +356,47 @@ export const Layout: React.FC = () => {
         </div>
       )}
 
-      {/* Android Launcher 4-Desktop Horizontal ViewPager */}
+      {/* 60/120fps Zero-Rerender Android ViewPager */}
       <div
         ref={viewportRef}
         className="relative z-10 flex-1 min-h-0 w-full overflow-hidden touch-pan-y"
-        style={{ perspective: '1200px' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={finishTouchSwipe}
         onTouchCancel={finishTouchSwipe}
       >
         <div
+          ref={trackRef}
           className="flex h-full w-full will-change-transform"
           style={{
-            transform: `translate3d(calc(${-currentTabIndex * 100}% + ${dragX}px), 0, 0)`,
-            transition: isSwiping
-              ? 'none'
-              : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1)',
-            transformStyle: 'preserve-3d',
+            transform: `translate3d(${-currentTabIndex * 100}%, 0, 0)`,
+            transition: PAGER_SPRING,
           }}
         >
-          {pages.map((page, idx) => {
-            const dist = idx - virtualPage
-            const absDist = Math.min(1, Math.abs(dist))
-            const isCurrent = idx === currentTabIndex
-
-            // Classic Android Launcher depth + gentle 3D desktop rotation while paging
-            const scale = isTransitionActive ? 1 - absDist * 0.065 : 1
-            const rotateY = isTransitionActive ? Math.max(-10, Math.min(10, dist * -8)) : 0
-            const opacity = isTransitionActive ? 1 - absDist * 0.28 : isCurrent ? 1 : 0.85
-
-            return (
-              <section
-                key={page.key}
-                aria-hidden={!isCurrent}
-                className="w-full h-full shrink-0 overflow-y-auto overflow-x-hidden"
-                style={{
-                  transform:
-                    isTransitionActive
-                      ? `scale(${scale.toFixed(4)}) rotateY(${rotateY.toFixed(2)}deg)`
-                      : undefined,
-                  transformOrigin: dist < 0 ? 'right center' : dist > 0 ? 'left center' : 'center center',
-                  opacity,
-                  transition: isSwiping
-                    ? 'none'
-                    : 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 320ms ease-out',
-                }}
-              >
-                <main className="w-full max-w-lg lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 py-3.5 lg:py-7 pb-28 lg:pb-10">
-                  {page.node}
-                </main>
-              </section>
-            )
-          })}
+          {[
+            { key: 'today', node: <MemoTodayPage /> },
+            { key: 'meal-plan', node: <MemoMealPlanPage /> },
+            { key: 'stats', node: <MemoStatsPage isActive={currentTabIndex === 2} /> },
+            { key: 'profile', node: <MemoProfilePage /> },
+          ].map((page, idx) => (
+            <section
+              key={page.key}
+              ref={(el) => {
+                paneRefs.current[idx] = el
+              }}
+              aria-hidden={idx !== currentTabIndex}
+              className="w-full h-full shrink-0 overflow-y-auto overflow-x-hidden will-change-transform"
+              style={{
+                transform: idx === currentTabIndex ? 'scale(1)' : 'scale(0.96)',
+                opacity: idx === currentTabIndex ? 1 : 0.82,
+                transition: PANE_SPRING,
+              }}
+            >
+              <main className="w-full max-w-lg lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 py-3.5 lg:py-7 pb-28 lg:pb-10">
+                {page.node}
+              </main>
+            </section>
+          ))}
         </div>
       </div>
 
@@ -347,8 +404,8 @@ export const Layout: React.FC = () => {
       <AddMealModal />
       <EditMealModal />
 
-      {/* Navigation (Mobile Split Dock + Desktop Left Sidebar) */}
-      <BottomNav swipeProgress={swipeProgress} isSwiping={isSwiping} />
+      {/* Navigation (Mobile Dock + Docked Quick Submenu + Desktop Sidebar) */}
+      <BottomNav ref={bottomNavRef} />
     </div>
   )
 }
