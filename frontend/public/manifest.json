@@ -4,8 +4,8 @@
   "description": "Веб-приложение для подсчёта калорий и макронутриентов с распознаванием еды через AI",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f0f",
-  "theme_color": "#0f0f0f",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait-primary",
   "icons": [
     {

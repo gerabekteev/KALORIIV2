@@ -41,9 +41,9 @@ def main():
         round_img = make_round(launcher_img)
         round_img.save(target_dir / "ic_launcher_round.png", "PNG")
 
-        # 3. Adaptive foreground icon (centered within 108dp safe zone ~62%)
-        fg_canvas = Image.new("RGBA", (fg_px, fg_px), (15, 15, 15, 0))
-        inner_px = int(fg_px * 0.62)
+        # 3. Adaptive foreground icon (seamless #0A0A0C fill with dot-matrix centered in 68% safe zone)
+        fg_canvas = Image.new("RGBA", (fg_px, fg_px), (10, 10, 12, 255))
+        inner_px = int(fg_px * 0.68)
         inner_img = src.resize((inner_px, inner_px), Image.Resampling.LANCZOS)
         offset = (fg_px - inner_px) // 2
         fg_canvas.paste(inner_img, (offset, offset), inner_img)

@@ -8,7 +8,7 @@ const DEFAULT_CLOUD_ORIGIN = 'https://kalorii.lopni.fun'
 /**
  * Текущая версия клиентского приложения (синхронизирована с backend /api/health).
  */
-export const APP_VERSION = '2.0.1'
+export const APP_VERSION = '2.0.2'
 
 /**
  * Сравнивает две semver-версии (например, '1.5.2' и '1.5.1').
@@ -215,7 +215,7 @@ export async function initNativeBridge(options: {
   try {
     await StatusBar.setOverlaysWebView({ overlay: false })
     await StatusBar.setStyle({ style: Style.Dark })
-    await StatusBar.setBackgroundColor({ color: '#0f0f0f' })
+    await StatusBar.setBackgroundColor({ color: '#000000' })
   } catch {
     // Игнорируем на платформах без StatusBar
   }

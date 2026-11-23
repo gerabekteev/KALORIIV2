@@ -96,8 +96,12 @@ export const BottomNav = React.memo(
           <div className="space-y-6">
             {/* Brand Wordmark */}
             <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E02424] shrink-0" />
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/icon.svg?v=2.0.2"
+                  alt="KaloriiAI"
+                  className="w-7 h-7 rounded-[8px] border border-white/[0.08] shrink-0"
+                />
                 <span className="font-ndot text-lg font-bold tracking-wider text-white">
                   KALORII<span className="text-[#7A7A82]">.AI</span>
                 </span>

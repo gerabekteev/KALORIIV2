@@ -58,12 +58,14 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-dvh bg-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Nothing Brand Header */}
-        <div className="text-center space-y-2.5">
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#1A1A1D]">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#E02424]" />
-            <span className="font-ndot text-lg font-bold tracking-wider text-white">
-              KALORII<span className="text-[#7A7A82]">.AI</span>
-            </span>
+        <div className="text-center space-y-3">
+          <img
+            src="/icon.svg?v=2.0.2"
+            alt="KaloriiAI"
+            className="w-16 h-16 mx-auto rounded-[18px] border border-white/[0.08] shadow-[0_8px_24px_rgba(0,0,0,0.65)]"
+          />
+          <div className="font-ndot text-lg font-bold tracking-wider text-white">
+            KALORII<span className="text-[#7A7A82]">.AI</span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-white my-0">
             Создать аккаунт

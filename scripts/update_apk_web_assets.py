@@ -15,9 +15,29 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 BASE_APK = ROOT_DIR / "kalorii-ai.apk"
 STATIC_APK = ROOT_DIR / "backend" / "static" / "kalorii-ai.apk"
 PUBLIC_ASSETS_DIR = ROOT_DIR / "frontend" / "android" / "app" / "src" / "main" / "assets" / "public"
+ANDROID_RES_DIR = ROOT_DIR / "frontend" / "android" / "app" / "src" / "main" / "res"
 CAPACITOR_CONFIG_JSON = ROOT_DIR / "frontend" / "android" / "app" / "src" / "main" / "assets" / "capacitor.config.json"
 KEYSTORE_PATH = ROOT_DIR / "frontend" / "android" / "app" / "kalorii-release-key.jks"
 APKSIGNER_JAR = ROOT_DIR / "scripts" / "tools" / "apksigner.jar"
+
+# Mapping of compiled AGP launcher PNG entries inside kalorii-ai.apk -> source mipmap PNGs
+APK_LAUNCHER_ICON_MAP = {
+    "res/9w.png": "mipmap-mdpi/ic_launcher.png",
+    "res/zR.png": "mipmap-mdpi/ic_launcher_round.png",
+    "res/QZ.png": "mipmap-mdpi/ic_launcher_foreground.png",
+    "res/yn.png": "mipmap-hdpi/ic_launcher.png",
+    "res/8c.png": "mipmap-hdpi/ic_launcher_round.png",
+    "res/zr.png": "mipmap-hdpi/ic_launcher_foreground.png",
+    "res/FS.png": "mipmap-xhdpi/ic_launcher.png",
+    "res/wb.png": "mipmap-xhdpi/ic_launcher_round.png",
+    "res/Em.png": "mipmap-xhdpi/ic_launcher_foreground.png",
+    "res/RJ.png": "mipmap-xxhdpi/ic_launcher.png",
+    "res/fO.png": "mipmap-xxhdpi/ic_launcher_round.png",
+    "res/Lf.png": "mipmap-xxhdpi/ic_launcher_foreground.png",
+    "res/o-.png": "mipmap-xxxhdpi/ic_launcher.png",
+    "res/Gc.png": "mipmap-xxxhdpi/ic_launcher_round.png",
+    "res/as.png": "mipmap-xxxhdpi/ic_launcher_foreground.png",
+}
 
 
 def _write_entry_aligned(
@@ -62,9 +82,10 @@ def main() -> None:
         unsigned_apk = Path(tmpdir) / "unsigned-aligned.apk"
         signed_apk = Path(tmpdir) / "signed.apk"
 
-        print("[1/4] Updating assets/public/* and aligning ZIP entries...")
+        print("[1/4] Updating assets/public/*, launcher icons, and aligning ZIP entries...")
+        replaced_icons = 0
         with zipfile.ZipFile(BASE_APK, "r") as zf_in, zipfile.ZipFile(unsigned_apk, "w") as zf_out:
-            # 1. Copy all non-public, non-signature entries from base APK
+            # 1. Copy all non-public, non-signature entries from base APK (patching launcher icons if present)
             for item in zf_in.infolist():
                 fn = item.filename
                 if fn.startswith("assets/public/") or fn == "assets/capacitor.config.json":
@@ -72,7 +93,16 @@ def main() -> None:
                 if fn in ("META-INF/MANIFEST.MF", "META-INF/CERT.SF", "META-INF/CERT.RSA") or fn.endswith((".SF", ".RSA", ".DSA")):
                     continue
 
-                raw_data = zf_in.read(fn)
+                if fn in APK_LAUNCHER_ICON_MAP:
+                    icon_src = ANDROID_RES_DIR / APK_LAUNCHER_ICON_MAP[fn]
+                    if icon_src.exists():
+                        raw_data = icon_src.read_bytes()
+                        replaced_icons += 1
+                    else:
+                        raw_data = zf_in.read(fn)
+                else:
+                    raw_data = zf_in.read(fn)
+
                 _write_entry_aligned(
                     zf_out=zf_out,
                     arcname=fn,
@@ -81,6 +111,7 @@ def main() -> None:
                     date_time=item.date_time,
                     external_attr=item.external_attr,
                 )
+            print(f"  Replaced {replaced_icons}/{len(APK_LAUNCHER_ICON_MAP)} compiled Android launcher icons.")
 
             # 2. Add fresh capacitor.config.json if available
             if CAPACITOR_CONFIG_JSON.exists():

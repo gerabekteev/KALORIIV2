@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaloriiai-v1'
+const CACHE_NAME = 'kaloriiai-v2.0.2'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
