@@ -39,6 +39,7 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
   const [isIngredientsOpen, setIsIngredientsOpen] = useState(false)
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [openMenuUpward, setOpenMenuUpward] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
 
@@ -95,6 +96,26 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       unregisterBack()
     }
   }, [isLightboxOpen])
+
+  const handleToggleMenu = () => {
+    if (isMenuOpen) {
+      setIsMenuOpen(false)
+      return
+    }
+    if (menuRef.current && typeof window !== 'undefined') {
+      const rect = menuRef.current.getBoundingClientRect()
+      const isMobile = window.innerWidth < 1024
+      const topSafe = isMobile ? 68 : 24
+      const bottomSafe = isMobile ? 148 : 24
+      const estimatedMenuHeight = 270
+      const spaceBelow = window.innerHeight - bottomSafe - rect.bottom
+      const spaceAbove = rect.top - topSafe
+      setOpenMenuUpward(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow)
+    } else {
+      setOpenMenuUpward(false)
+    }
+    setIsMenuOpen(true)
+  }
 
   const handleSaveAsRecipe = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -442,16 +463,23 @@ export const MealCard: React.FC<MealCardProps> = ({ meal }) => {
                   <div className="relative" ref={menuRef}>
                     <button
                       type="button"
-                      onClick={() => setIsMenuOpen(!isMenuOpen)}
+                      onClick={handleToggleMenu}
                       className="w-8 h-8 -mr-1 text-[#7A7A82] hover:text-white hover:bg-[#2A2A2F] rounded-full transition-colors cursor-pointer flex items-center justify-center"
                       title="Действия с блюдом"
                       aria-label="Действия с блюдом"
+                      aria-expanded={isMenuOpen}
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
 
                     {isMenuOpen && (
-                      <div className="absolute right-0 top-9 z-40 w-52 bg-[#111113] border border-white/[0.1] rounded-[20px] shadow-[0_16px_50px_rgba(0,0,0,0.9)] p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                      <div
+                        className={`absolute right-0 z-40 w-52 bg-[#111113] border border-white/[0.1] rounded-[20px] shadow-[0_16px_50px_rgba(0,0,0,0.9)] p-1.5 max-h-[calc(100dvh-160px)] overflow-y-auto animate-in fade-in zoom-in-95 duration-150 ${
+                          openMenuUpward
+                            ? 'bottom-9 origin-bottom-right'
+                            : 'top-9 origin-top-right'
+                        }`}
+                      >
                         {aiBadge && (
                           <div
                             className="px-3 py-1.5 text-[11px] text-[#7A7A82] mb-1 flex items-center justify-between"

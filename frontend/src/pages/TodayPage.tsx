@@ -556,7 +556,7 @@ export const TodayPage: React.FC = () => {
 
       {/* Top-to-Bottom Zero-Jitter Wipe Container */}
       <div
-        className="relative overflow-hidden rounded-[24px]"
+        className={`relative ${isWipeActive ? 'overflow-hidden rounded-[24px]' : ''}`}
         style={{ '--wipe-duration': `${DAY_WIPE_DURATION_MS}ms` } as React.CSSProperties}
       >
         {isWipeActive && dayWipe.prev
